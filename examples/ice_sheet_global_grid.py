@@ -4,13 +4,16 @@ from midas_grid_gen import *
 
 PI_180 = np.pi / 180.
 
-
-lat0=-78.0
+lat0=-75.0
 lon0=-280.
-lenlat=140.
+lenlat=130.
 lenlon=360.
-nx=360
-ny=180
+#nx=5760
+#ny=2240
+#ny_scap=480
+nx=720
+ny=400
+ny_scap=48
 
 print 'constructing a mercator grid with (ny,nx) = ',ny,nx
 print 'nominal starting lat and starting longitude =',lat0, lon0
@@ -24,13 +27,17 @@ print "mercator ending longitude=",mercator.x[0,-1]
 
 lenlat=90.0+mercator.y.min()
 
-antarctic_cap=supergrid(360,20,'spherical','degrees',-90.,lenlat,lon0,lenlon,)
+antarctic_cap=supergrid(nx,ny_scap,'spherical','degrees',-90.,lenlat,lon0,lenlon,)
 
 
-r,phi = antarctic_cap.displaced_sp(0.6,200.,0.5)
+r,phi = antarctic_cap.displaced_sp(0.25,130.,0.2)
 
 antarctic_cap.x=phi.copy()
 antarctic_cap.y=r.copy()
+antarctic_cap.grid_x=antarctic_cap.x[-1,:]
+antarctic_cap.grid_y=antarctic_cap.y[:,nx/4]
+
+antarctic_grid = generic_grid(supergrid=antarctic_cap,refine=1)
 
 ymax=antarctic_cap.y.max()
 
@@ -42,17 +49,17 @@ plt.clf()
 
 fig=plt.figure(1)
 
-ax1=fig.add_subplot(111)
 
-for  j in np.arange(0,phi.shape[0]):
+for  j in np.arange(0,phi.shape[0],5):
     plt.polar(phi[j,:],r[j,:],'r')
 
-for  i in np.arange(0,phi.shape[1]):
+for  i in np.arange(0,phi.shape[1],10):
     plt.polar(phi[:,i],r[:,i],'k')
 
 plt.polar(phi[:,0],r[:,0],'g',linewidth=3.0)
 
-plt.show()
+plt.title('Antarctica Grid')
+
 
 fig2=plt.figure(2)
 
@@ -63,7 +70,9 @@ print "max/min mercator latitude = ",mercator.y.min(),mercator.y.max()
 
 ax2=fig2.add_subplot(111)
 
-ax2.plot(mercator.grid_y)
+ax2.plot(mercator.grid_y,)
+
+plt.title('Mercator Grid Latitudes')
 
 fig3=plt.figure(3)
 
@@ -87,20 +96,21 @@ print "tripolar grid starting latitude = ",lat0
 theta = tripolar_n.x*PI_180
 r=(90.0-tripolar_n.y)/dlat
 
-for i in np.arange(0,nx/4):
+for i in np.arange(0,nx/4,5):
    plt.polar(theta[:,i],r[:,i],color='k')
-for i in np.arange(nx/4,nx/2):
+for i in np.arange(nx/4,nx/2,5):
    plt.polar(theta[:,i],r[:,i],color='r')
-for i in np.arange(nx/2,3*nx/4):
+for i in np.arange(nx/2,3*nx/4,5):
    plt.polar(theta[:,i],r[:,i],color='g')
-for i in np.arange(3*nx/4,nx):
+for i in np.arange(3*nx/4,nx,5):
    plt.polar(theta[:,i],r[:,i],color='b')        
 
 
-for j in np.arange(0,ny):
+for j in np.arange(0,ny,5):
    plt.polar(theta[j,:],r[j,:],'k')
           
-                                            
+plt.title('Bi-pole Northern Cap',fontsize=10)
+
 
 plt.show()    
 

@@ -23,7 +23,12 @@ from datetime import *
 from mpl_toolkits.basemap import shiftgrid,cm
 import types
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+try:
+    import matplotlib.animation as animation
+    HAVE_MATPLOTLIB_ANIMATION=True
+except:
+    HAVE_MATPLOTLIB_ANIMATION=False
+    pass
 import pickle
 import scipy as sp
 from midas_grid_gen import *
