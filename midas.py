@@ -538,6 +538,8 @@ class generic_grid(object):
       else:
           self.simple_grid = False
 
+      self.x_T,self.y_T = np.meshgrid(self.lonh,self.lath)
+      
       xtb=0.5*(self.x_T + np.roll(self.x_T,shift=1,axis=1))
       xtb0=2.0*xtb[:,-1]-xtb[:,-2]
       xtb0=xtb0[:,np.newaxis]
@@ -546,8 +548,8 @@ class generic_grid(object):
       xtb[:,0]=xtb0
       ytb=0.5*(self.y_T + np.roll(self.y_T,shift=1,axis=1))
       ytb0=2.0*ytb[-1,:]-ytb[-2,:]
-      ytb0=ytb0[:,np.newaxis]
-      ybt=np.hstack((ytb,ytb0))
+      ytb0=ytb0[np.newaxis,:]
+      ybt=np.vstack((ytb,ytb0))
       ytb0=2.0*ytb[1,:]-ytb[2,:]
       ytb[0,:]=ytb0
       self.x_T_bounds=xtb.copy()
@@ -2900,65 +2902,71 @@ class state(object):
     add_np=False
     add_sp=False    
 
-#    if target is not None:
-
-    nj=target.x_T.shape[0];ni=target.x_T.shape[1]
     nj_in = self.grid.lonh.shape[0]; ni_in = self.grid.lonh.shape[0]
-    
+
     if method=="conservative":
         if hasattr(self.grid,'x_T_bounds'):
-            lon_in=self.grid.x_T_bounds*deg_to_rad
-            lat_in=self.grid.y_T_bounds*deg_to_rad
-        else:
+            lon_in=self.grid.x_T_bounds
+            lat_in=self.grid.y_T_bounds
+        elif hasattr(self.grid,'lonq'):
             xax=self.grid.lonq
             yax=self.grid.latq
             lon_in,lat_in = np.meshgrid(xax,yax)
-            lon_in=lon_in*deg_to_rad
-            lat_in=lat_in*deg_to_rad            
-            
-        
+            lon_in=lon_in
+            lat_in=lat_in
+        else:
+            print """ Unable to read grid cell boundaries on input grid"""
+            return None
     else:
         if hasattr(self.grid,'x_T'):
-            xax=self.grid.x_T
-            yax=self.grid.y_T
-            print 'in hinterp xax max/min= '
-            print xax.min(),xax.max()
-            print 'in hinterp yax max/min= '            
-            print yax.min(),yax.max()            
-        else:
+            lon_in=self.grid.x_T
+            lat_in=self.grid.y_T
+        elif hasattr(self.grid,'lonh'):
             xax1=self.grid.lonh
             yax1=self.grid.lath
-            xax,yax = np.meshgrid(xax1,yax1)
-            print 'in hinterp 2 xax max/min=',xax.min(),xax.max()
-      
-        max_lat_in = np.max(yax)
-        if np.logical_and(max_lat_in < 90.0 - epsln,add_NP):
-            add_np=True
-            np_lat = np.reshape(np.tile([90.0],(ni_in)),(1,ni_in))
-            np_lon = np.reshape(xax[-1,:],(1,ni_in))            
-            yax=np.concatenate((yax,np_lat))
-            xax=np.concatenate((xax,np_lon))
+            lon_in,lat_in = np.meshgrid(xax1,yax1)
+        else:
+            print """ Unable to read grid cell boundaries on input grid"""
+            return None
             
-        min_lat_in = np.min(yax)
-        if np.logical_and(min_lat_in > -90.0 + epsln,add_SP):
-            add_sp=True
-            sp_lat = np.reshape(np.tile([-90.0],(ni_in)),(1,ni_in))
-            sp_lon = np.reshape(xax[0,:],(1,ni_in))                        
-            yax=np.concatenate((sp_lat,yax))
-            xax=np.concatenate((xax,sp_lon))
+    if hasattr(target,'x_T'):
+        nj=target.x_T.shape[0];ni=target.x_T.shape[1]
+        lon_out = target.x_T
+        lat_out = target.y_T
+    elif hasattr(target,'x'):
+        nj=target.x.shape[0];ni=target.x.shape[1]
+        lon_out = target.x
+        lat_out = target.y
+    
+        if method=="conservative":
+            print """Conservative interpolation not available for
+                  supergrids"""
+            return None
 
-        ny=yax.shape[0];nx=xax.shape[1]
-
-        lon_in=xax*deg_to_rad
-        lat_in=yax*deg_to_rad    
       
-    if method=="conservative":
-        lon_out = target.x_T_bounds*deg_to_rad
-        lat_out = target.y_T_bounds*deg_to_rad
-    else:
-        lon_out = target.x_T*deg_to_rad
-        lat_out = target.y_T*deg_to_rad
+    max_lat_in = np.max(lat_in)
+    if np.logical_and(max_lat_in < 90.0 - epsln,add_NP):
+        add_np=True
+        np_lat = np.reshape(np.tile([90.0],(ni_in)),(1,ni_in))
+        np_lon = np.reshape(lon_in[-1,:],(1,ni_in))            
+        lat_in=np.concatenate((lat_in,np_lat))
+        lon_in=np.concatenate((lon_in,np_lon))
+            
+    min_lat_in = np.min(lat_in)
+    if np.logical_and(min_lat_in > -90.0 + epsln,add_SP):
+        add_sp=True
+        sp_lat = np.reshape(np.tile([-90.0],(ni_in)),(1,ni_in))
+        sp_lon = np.reshape(lon_in[0,:],(1,ni_in))                        
+        lat_in=np.concatenate((sp_lat,lat_in))
+        lon_in=np.concatenate((lon_in,sp_lon))
+            
+    ny=lat_in.shape[0];nx=lon_in.shape[1]
 
+    lon_in=lon_in*deg_to_rad
+    lat_in=lat_in*deg_to_rad    
+      
+    lon_out = lon_out*deg_to_rad
+    lat_out = lat_out*deg_to_rad
       
 #    lon_in_shifted,xax_shifted = shiftgrid(lon_out.min(),lon_in,xax)
 
@@ -3064,7 +3072,43 @@ class state(object):
     
 
     return S
-  
+
+  def horiz_interp_refined(self,field=None,target=None,src_modulo=False,method='bilinear',PrevState=None,add_NP=True,add_SP=True):
+
+    deg_to_rad=np.pi/180.
+
+    add_np=False
+    add_sp=False    
+
+    nj_in = self.grid.lonh.shape[0]; ni_in = self.grid.lonh.shape[0]
+
+    if hasattr(self.grid,'x_T_bounds'):
+        lon_in=self.grid.x_T_bounds
+        lat_in=self.grid.y_T_bounds
+    elif hasattr(self.grid,'lonq'):
+        xax=self.grid.lonq
+        yax=self.grid.latq
+        lon_in,lat_in = np.meshgrid(xax,yax)
+        lon_in=lon_in
+        lat_in=lat_in
+    else:
+        print """ Unable to read grid cell boundaries on input grid"""
+        return None
+            
+    if hasattr(target,'x_T_bounds'):  # target grid is a model grid
+        nj=target.x_T.shape[0];ni=target.x_T.shape[1]
+        lon_out = target.x_T
+        lat_out = target.y_T
+    elif hasattr(target,'x'): # target grid is a supergrid
+        nj=target.x.shape[0];ni=target.x.shape[1]
+        lon_out = target.x
+        lat_out = target.y
+
+    i_indices = np.arange(0,ni_in).astype(int)
+    j_indices = np.arange(0,nj_in).astype(int)
+            
+    
+      
   def pickle_it(self,file):
     
     pickle.dump(self,open(file,'wb'))
