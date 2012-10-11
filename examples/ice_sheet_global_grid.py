@@ -1,6 +1,10 @@
 from midas import *
 from midas_grid_gen import *
 
+use_GEBCO = False
+use_CISM = True
+
+make_TOPOG = True
 
 PI_180 = np.pi / 180.
 
@@ -24,6 +28,18 @@ mercator=supergrid(nx,ny,'mercator','degrees',lat0,lenlat,lon0,lenlon)
 print "mercator max/min latitude=", mercator.y.max(),mercator.y.min()
 print "mercator starting longitude=",mercator.x[0,0]
 print "mercator ending longitude=",mercator.x[0,-1]
+
+if make_TOPOG is True:
+    if use_GEBCO:
+        min_y=mercator.y.min()
+        max_y=mercator.y.max()
+        gebco_grid=generic_grid('/tmp/GEBCO_08_v1.nc',var='depth',simple_grid=True)
+        gebco_grid.lonq[-1]=360.0-gebco_grid.lonq[-1]
+        gebco_grid.latq[0]=-90.0
+        merc=gebco_grid.geo_region(y=(min_y-0.1,max_y+0.1))
+        GEBCO=state('/tmp/GEBCO_08_v1.nc',grid=gebco_grid,geo_region=merc,fields=['depth'])
+        GEBCO.var_dict['depth']['Ztype']='Fixed'
+        R=GEBCO.horiz_interp('depth',target=mercator,src_modulo=True,add_NP=False,add_SP=False,method='bilinear')
 
 lenlat=90.0+mercator.y.min()
 

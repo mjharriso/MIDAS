@@ -171,7 +171,6 @@ class supergrid(object):
         self.jm=self.grid_y.shape[0]-1
         
         self.have_metrics = False
-
         
     def dy_dj(self,y):
 # Returns the grid increment in the j direction given y in radians
@@ -380,7 +379,7 @@ class supergrid(object):
         print 'ending latitude = ',self.grid_y[-1]
         print 'mapping to a normalized disk , original disk radius = ',radius, ' degrees'
         print 'displaced pole location (relative to unit sphere) = ',ra
-        print 'displaced pole angle ( clockwise degrees relative to Greenwich) = ', phia
+        print 'displaced pole angle ( clockwise degrees relative to Greenwich) = ', -phia+180.
         if excluded_fraction is not None:
             print 'excluding inner ',excluded_fraction*100.,' percent of the grid'
 
@@ -563,6 +562,14 @@ class supergrid(object):
             
     
 
+    def extract(self,geo_region=None):
+      if geo_region is None:
+        grid=copy.copy(self)
+        return grid
+      else:
+        print """Supergrid extraction not supported yet """
+        return None
+      
             
             
         

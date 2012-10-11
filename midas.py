@@ -1,3 +1,4 @@
+
 #==============================
 #
 #  This Python module contains a set of
@@ -441,9 +442,12 @@ class generic_grid(object):
                   X_T_bounds
   """
   
-  def __init__(self,path=None,cyclic=False,tripolar_n=False,var=None,simple_grid=False,supergrid=None,refine=1,lon=None,lat=None):
+  def __init__(self,path=None,cyclic=False,tripolar_n=False,var=None,simple_grid=False,supergrid=None,refine=1,lon=None,lat=None,is_latlon=True,is_cartesian=False):
 
 
+    self.is_latlon=is_latlon
+    self.is_cartesian=False
+      
 
     if supergrid is not None:
         var_dict = {}
@@ -455,17 +459,13 @@ class generic_grid(object):
         self.latq=grid_y[0::refine+1]
         self.x_T=x[1::refine+1,1::refine+1]
         self.y_T=y[1::refine+1,1::refine+1]
-
         self.x_T_bounds,self.y_T_bounds = np.meshgrid(self.lonq,self.latq)
         return
 
+    
     if lon is not None and lat is not None:
-        lon_range=lon.max()-lon.min()
-        delta_lon = lon_range/lon.shape[1]
-        lat_range=lat.max()-lat.min()
-        delta_lat = lat_range/lat.shape[0]        
-        self.lonh=np.arange(lon.min(),lon.min()+lon_range,delta_lon)
-        self.lath=np.arange(lat.min(),lat.max()+lat_range,delta_lat)
+        self.lonh=sq(lon[0,:])
+        self.lath=sq(lat[:,0])
         self.x_T=lon.copy()
         self.y_T=lat.copy()
     if lon is None and lat is None:
@@ -520,9 +520,9 @@ class generic_grid(object):
       self.lonq = 0.5*(self.lonh + np.roll(self.lonh,-1))
 
       self.lonq[-1] = 2.0*self.lonq[-2] -self.lonq[-3]
-      lon_end = self.lonq[-1]+2.0*(self.lonh[-1]-self.lonq[-1])
+      lon0 = self.lonq[0]-2.0*(self.lonq[0]-self.lonh[-0])
       
-      self.lonq=np.hstack((self.lonq,[lon_end]))
+      self.lonq=np.hstack(([lon0],self.lonq))
       self.latq = 0.5*(self.lath + np.roll(self.lath,-1))
 
       self.latq[-1] = 2.0*self.latq[-2]-self.latq[-3]
@@ -539,22 +539,28 @@ class generic_grid(object):
           self.simple_grid = False
 
       self.x_T,self.y_T = np.meshgrid(self.lonh,self.lath)
-      
+
       xtb=0.5*(self.x_T + np.roll(self.x_T,shift=1,axis=1))
       xtb0=2.0*xtb[:,-1]-xtb[:,-2]
       xtb0=xtb0[:,np.newaxis]
-      xbt=np.hstack((xtb,xtb0))
+      xtb=np.hstack((xtb,xtb0))
       xtb0=2.0*xtb[:,1]-xtb[:,2]
       xtb[:,0]=xtb0
-      ytb=0.5*(self.y_T + np.roll(self.y_T,shift=1,axis=1))
+      self.x_T_bounds=xtb.copy()
+      xtb0=self.x_T_bounds[-1,:]
+      self.x_T_bounds = np.vstack((self.x_T_bounds,xtb0))    
+      
+      ytb=0.5*(self.y_T + np.roll(self.y_T,shift=1,axis=0))
       ytb0=2.0*ytb[-1,:]-ytb[-2,:]
       ytb0=ytb0[np.newaxis,:]
-      ybt=np.vstack((ytb,ytb0))
+      ytb=np.vstack((ytb,ytb0))
       ytb0=2.0*ytb[1,:]-ytb[2,:]
       ytb[0,:]=ytb0
-      self.x_T_bounds=xtb.copy()
       self.y_T_bounds=ytb.copy()
-          
+      ytb0=self.y_T_bounds[:,-1]
+      ytb0=ytb0[:,np.newaxis]
+      self.y_T_bounds = np.hstack((self.y_T_bounds,ytb0))          
+
 #      xtb0=2.0*self.x_T_bounds[:,0]-self.x_T_bounds[:,1]
 #      xtb0=xtb0[:,np.newaxis]
 #      self.x_T_bounds = np.hstack((xtb0,self.x_T_bounds))
@@ -566,12 +572,12 @@ class generic_grid(object):
 #      ytb0=ytb0[:,np.newaxis]
 #      self.y_T_bounds = np.hstack((ytb0,self.y_T_bounds))
       dx = (self.x_T_bounds - np.roll(self.x_T_bounds,axis=1,shift=1))
+      dx=dx[1:,1:]
       dx=dx*np.pi/180.
-      dx[:,0] = dx[:,1]
       self.dxh = dx*R_earth*np.cos(self.y_T*np.pi/180.)
       dy = (self.y_T_bounds - np.roll(self.y_T_bounds,axis=0,shift=1))
+      dy = dy[1:,1:]
       dy = dy*np.pi/180.
-      dy[0,:]=dy[1,:]
       
       self.dyh = dy*R_earth
 
@@ -800,9 +806,12 @@ class gold_grid(object):
 
   
   
-  def __init__(self,path='ocean_geometry.nc',cyclic=False,tripolar_n=False,grid_type='gold_geometry'):
+  def __init__(self,path='ocean_geometry.nc',cyclic=False,tripolar_n=False,grid_type='gold_geometry',is_latlon=False,is_cartesian=False):
     f=nc.Dataset(path)
 
+    self.is_latlon = is_latlon
+    self.is_cartesian=False
+    
     if grid_type == 'gold_geometry':
         self.x_T = f.variables['geolon'][:]
         self.x_T_bounds = f.variables['geolonb'][:]
@@ -3073,41 +3082,157 @@ class state(object):
 
     return S
 
-  def horiz_interp_refined(self,field=None,target=None,src_modulo=False,method='bilinear',PrevState=None,add_NP=True,add_SP=True):
+  def grid_overlay_struct(self,field=None,target=None,src_modulo=False):
+      """
+      Only available for Cartesian or lat-lon grids.  Use corner locations
+      on target grid and centered locations on source grid to define overlap.
+      Using th overlap area, calculated un-weighted mean, maximum, minimum, and
+      standard deviation and number of valid points.  
 
-    deg_to_rad=np.pi/180.
+      This routine is not conservative.  Refer to horiz_interp or make_xgrid.
 
-    add_np=False
-    add_sp=False    
-
-    nj_in = self.grid.lonh.shape[0]; ni_in = self.grid.lonh.shape[0]
-
-    if hasattr(self.grid,'x_T_bounds'):
-        lon_in=self.grid.x_T_bounds
-        lat_in=self.grid.y_T_bounds
-    elif hasattr(self.grid,'lonq'):
-        xax=self.grid.lonq
-        yax=self.grid.latq
-        lon_in,lat_in = np.meshgrid(xax,yax)
-        lon_in=lon_in
-        lat_in=lat_in
-    else:
-        print """ Unable to read grid cell boundaries on input grid"""
-        return None
+      
+      X===Source grid centers
+      O===Target grid corners
             
-    if hasattr(target,'x_T_bounds'):  # target grid is a model grid
-        nj=target.x_T.shape[0];ni=target.x_T.shape[1]
-        lon_out = target.x_T
-        lat_out = target.y_T
-    elif hasattr(target,'x'): # target grid is a supergrid
-        nj=target.x.shape[0];ni=target.x.shape[1]
-        lon_out = target.x
-        lat_out = target.y
+              n-w X     X    X     X     X       X n-e
+                        
+                       O----------------------O
+                       |                      |
+                  X    |X    X     X     X    |  X 
+                       |                      |
+                       |                      |
+                       |                      |
+                       O----------------------O
+                  X     X    X     X     X       X
+              s-w                                  s-e
+      
+                       """
+      try:      
+          from mpl_toolkits.basemap import interp as Interp
+      except:
+          pass
 
-    i_indices = np.arange(0,ni_in).astype(int)
-    j_indices = np.arange(0,nj_in).astype(int)
+
+      if self.grid.is_latlon is False:
+          if target.is_latlon is False:
+              if target.is_cartesian is False:
+                  print target.is_latlon
+                  print """grid_overlay_struct does not work for non lat-lon or cartesian grids"""
+                  return None
+              
+      
+      
+      deg_to_rad=np.pi/180.
+
+      add_np=False
+      add_sp=False    
+
+      if field is not None:
+          shape_out=vars(self)[field].shape
+          if np.logical_or(shape_out[0]>1,shape_out[1]>1):
+              print "grid_overlay_struct is currently only written to handle lat-lon arrays without a time or vertical dimension"
+              return None
+          
+      nj_in = self.grid.lath.shape[0]; ni_in = self.grid.lonh.shape[0]
+
+      if hasattr(self.grid,'lonh'):
+          lon_in=self.grid.lonh.copy()
+          lat_in=self.grid.lath.copy()
+      else:
+          print """ Unable to read grid cell locations on input grid"""
+          return None
             
-    
+      if hasattr(target,'x'):  # target grid is a super grid
+          nj=target.x.shape[0]-1;ni=target.x.shape[1]-1
+          lon_out = target.x
+          lat_out = target.y
+      elif hasattr(target,'x_T_bounds'): # target grid is a model grid
+          nj=target.latq.shape[0]-1;ni=target.lonq.shape[0]-1
+          lon_out = target.x_T_bounds.copy()
+          lat_out = target.y_T_bounds.copy()
+
+
+      i_indices = np.arange(0,ni_in) #.astype(int)
+      i_indices = i_indices[np.newaxis,:]
+      i_indices = np.tile(i_indices,(nj_in,1))
+      j_indices = np.arange(0,nj_in) #.astype(int)
+      j_indices = j_indices[:,np.newaxis]
+      j_indices = np.tile(j_indices,(1,ni_in))
+      # Switch to numpy or sp interp1d dummy!!
+      x_out = Interp(i_indices,lon_in,lat_in,lon_out,lat_out)
+      y_out = Interp(j_indices,lon_in,lat_in,lon_out,lat_out)      
+
+      x_out=sq(x_out[0,:])
+      y_out=sq(y_out[:,0])
+
+      i_out = np.floor(x_out).astype(int)
+      j_out = np.floor(y_out).astype(int)      
+
+      if field is None:
+          return x_out, y_out
+      else:
+          data_in = np.ma.masked_invalid(sq(vars(self)[field]))
+          ieast = np.roll(i_out,shift=-1)
+          iwest = np.roll(i_out,shift=1)
+          jsouth = np.roll(j_out,shift=1)
+          jnorth = np.roll(j_out,shift=-1)
+          east = np.roll(x_out,shift=-1)
+          west = np.roll(x_out,shift=1)
+          south = np.roll(y_out,shift=1)
+          north = np.roll(y_out,shift=-1)          
+
+          meanval = np.ma.zeros((nj,ni))
+          maxval  = np.ma.zeros((nj,ni))
+          minval  = np.ma.zeros((nj,ni))
+          std     = np.ma.zeros((nj,ni))
+          count     = np.zeros((nj,ni)).astype(int)          
+
+          
+          for j in np.arange(0,nj):
+              for i in np.arange(0,ni):
+                  j_list=np.arange(jsouth[j],jnorth[j]+1)
+                  if jnorth[j]<jsouth[j]:
+                      if jsouth[j]>j_out[j]:
+                          j_list=np.arange(j_out[0],jnorth[j])
+                      else:
+                          j_list=np.arange(jsouth[j],j_out[-1])
+                  i_list=np.arange(iwest[i],ieast[i]+1)
+                  if ieast[i]<iwest[i]:
+                      if i_out[-1]<ni_in-1:
+                          i_list=np.arange(iwest[i],i_out[-1]+1)
+                      else:
+                          i_list=np.arange(iwest[i],ni_in)
+                          i_list=np.concatenate((i_list,np.arange(0,ieast[i])))
+                  i_arr,j_arr = np.meshgrid(i_list,j_list)
+                  i_arr=i_arr.flatten()
+                  j_arr=j_arr.flatten()
+                  b=data_in[j_arr,i_arr]
+                  meanval[j,i] = b.mean()
+                  maxval[j,i] = b.max()
+                  minval[j,i] = b.min()
+                  count[j,i]  = b.count()
+                  std[j,i]    = b.std()
+
+          S = state(grid=target)
+          var_dict=self.var_dict[field].copy()
+
+          if hasattr(target,'lonh'):
+              var_dict['xax_data']=target.lonh
+              var_dict['yax_data']=target.lath
+          else:
+              var_dict['xax_data']=target.grid_x
+              var_dict['yax_data']=target.grid_y              
+
+          S.mean=meanval
+          S.var_dict['mean']=var_dict.copy()
+          
+          S.max=maxval
+          S.min=minval
+          S.count=count
+          S.std=std
+
+          return S
       
   def pickle_it(self,file):
     
