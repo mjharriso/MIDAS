@@ -2,8 +2,8 @@ MIDAS
 =====
 
 Python for Oceanographic and Atmospheric Data Analysis . Modular Isosurface Data Analysis Software is 
-designed to operate using the MOM6 API (Hallberg, Adcroft, Griffies, in preparation). The Pythonic
-MIDAS interface rests at the level of the Python and interfaces with C/Fortran95 APIs to MOM6 using the
+designed to operate using the proposed MOM6 API (Hallberg, Adcroft, Griffies, in preparation). The
+MIDAS interface will interface via a Pywrapper with C/Fortran95 APIs to MOM6 using the
 FMS infrastructure.  The hierarchy of (class or subclass) objects is described here: 
 
 <- API (Pythonic User Interface)->
@@ -35,7 +35,7 @@ FMS infrastructure.  The hierarchy of (class or subclass) objects is described h
                         .land_ice[(t),(s),y,x]
                         
                         
-The current version of MIDAS (as of 11/29/2012) has the following structure fully or partially implemented:
+The current version of MIDAS (as of 11/29/2012) has the following, implemented:
 
 <- MIDAS Snapshot 11/29/2012 ->
                 .state  (global ocean) [(t),(s),y,x]              <--- Top level class object for MIDAS
@@ -47,23 +47,24 @@ The current version of MIDAS (as of 11/29/2012) has the following structure full
                         .interfaces[(t),s,y,x]                        <---  Interfaces reside on a static grid but vary in time in the vertical                  
                         .[tracers]                                    <--- Generic tracers    
 
-In summary, the current definition of the ocean "state" is limited and we only have generic variables.  However,
-experience indicates that it is easy to extend class attributes. 
     
-An object can be initialized using a set of pre-defined methods triggered by input parameters. These parameters are defined
-by the INPUT(and OVERRIDE) files or through Python arguments, e.g.:
+An object can be initialized using a set of pre-defined methods triggered by input parameters. These parameters are provided by 
+INPUT(and OVERRIDE) files or through Python arguments, e.g.:
 
-sgrid=supergrid(path=None,lon=None,lat=None,rotate_sp=False,tripolar_n=False)
+sgrid=supergrid(path=None,lon=None,lat=None,rotate_sp=False,tripolar_n=False,cyclic_x=False)
 grid=sgrid.mom6_grid
 
-A MOM6 state is instantiated at runtime using F95 APIs. In Python, we will call the same APIs but through a different
-interface
+A MOM6 state is instantiated at runtime using F95 APIs. In Python, run interactively or potentially at runtime,
+we will reference the same APIs but through a different interface, likely involving a mediator F90 layer in order to
+pass contiguous address spaces of native float,double,string or logical arrays. Currently, we can only instantiate a 
+state through an external file. The file can be a regular path or OpenDAP or Python-NetCDF aggregation virtual file:
 
 S=MOM6_state(path=None,grid=grid,fields=[None],...)
 
 A newer option could be:
 
 S=MOM6_state(npes=1,task_names=['ocean','sea_ice','icebergs','land_ice'],pe_list=[None],...)
+
 
 
 
