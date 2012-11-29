@@ -1,8 +1,40 @@
 MIDAS
 =====
 
-Python for Oceanographic and Atmospheric Data Analysis . Modular Isosurface Data Analysis Software is 
-designed to operate using the proposed MOM6 API (Hallberg, Adcroft, Griffies, in preparation). The
+Modular Isosurface Data Analysis Software is designed for working 
+across multiple environments:
+
+Offline mode:   Read a restart or history file and use to initialize a state.
+                State is limited to what is provided (e.g. tracers without
+                dynamics). Any number of generic tracers lying on a simple 
+                grid with chosen stagger which may or may not include metrics.
+                
+                Example:
+                
+                from midas import *
+                sgrid=supergrid(MOM6_override)
+                grid=sgrid.mom6_rectgrid(refine=2)
+                State=generic_state(grid=grid,path='/tmp/foo.nc',fields=['temp','salt'],stagger=['11','11'])
+                State.add_field(['taux','/tmp/foo_tau.nc',stagger=['21'])
+                
+                
+                
+Online mode:    Initialize a GOLD or MOM6 object from "scratch" or from a restart
+                or history file.  Uses "GOLD_input" and "GOLD_override". 
+                
+                State=mom6_state(grid=grid,params="MOM6_override")
+                State.time_step_tracers()
+                State.time_step_dynamics()
+                State.write_diagnostics()
+                
+
+                
+
+
+
+
+
+using the proposed MOM6 API (Hallberg, Adcroft, Griffies, in preparation). The
 MIDAS interface will interface via a Pywrapper with C/Fortran95 APIs to MOM6 using the
 FMS infrastructure.  The hierarchy of (class or subclass) objects is described here: 
 
