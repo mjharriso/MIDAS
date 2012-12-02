@@ -1,5 +1,44 @@
+INSTALL
+=======
+
+                mkdir projects
+                cd projects
+                git clone git@github.com:mjharriso/MIDAS.git
+                cd MIDAS
+                mkdir fms_siena
+                cd fms_siena
+                cvs co -r testing bin site
+                cvs co -r siena_201204 shared
+                cvs update -d siena_20121201_mjh shared/horiz_interp/horiz_interp.F90
+                cvs update -d siena_20121201_mjh shared/horiz_interp/horiz_interp_bilinear.F90
+                cvs update -r siena_20121201_mjh site/hpcs/intel.mk
+                cvs update -r siena_20121201_mjh shared/mpp/include/mpp_comm_nocomm.inc
+                cvs update -r siena_20121201_mjh shared/mpp/include/mpp_do_update_nonblock.h
+                cd ../fms_build
+                ./build_fms.csh
+                cd../hinterp
+                ./build_hinterp.csh
+
+add this to your .cshrc
+
+                setenv PATH /net2/mjh/local/python-2.7.2/bin:${PATH}
+                setenv PYTHONPATH $HOME/projects/MIDAS
+                setenv GEOS_DIR /net2/mjh/local
+
+
+OR
+
+add the following to your .cshrc:
+
+                setenv PATH /net2/mjh/local/python-2.7.2/bin:${PATH}
+                setenv PYTHONPATH /net2/mjh/local/python-2.7.2/bin:${PATH}
+                setenv GEOS_DIR /net2/mjh/local
+
+
+
 MIDAS
 =====
+
 
 Modular Isosurface Data Analysis Software is built to
 function in multipe environments. In offline-mode, 
