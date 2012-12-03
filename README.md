@@ -24,6 +24,7 @@ INSTALL
 
 add this to your .cshrc
 
+                module load netcdf/4.1.2
                 setenv PATH /net2/mjh/local/bin:/net2/mjh/local/python-2.7.3/bin:${PATH}
                 setenv PYTHONPATH $HOME/projects/MIDAS
                 setenv GEOS_DIR /net2/mjh/local
@@ -34,6 +35,7 @@ OR
 
 add the following to your .cshrc:
 
+                module load netcdf/4.1.2
                 setenv PATH  /net2/mjh/local/bin:/net2/mjh/local/python-2.7.3/bin:${PATH}
                 setenv PYTHONPATH /net2/mjh/projects
                 setenv GEOS_DIR /net2/mjh/local
