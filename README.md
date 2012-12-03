@@ -37,26 +37,29 @@ add the following to your .cshrc:
 
 
 
-MIDAS Schematic Snapshot 12/01/2012
+MIDAS Class Definitions 12/01/2012
 ===================================
 
-                .state [(t),(s),y,x]              <--- Top level state
-                   .supergrid[y,x]                   <---  Top level grid (FMS supergrid)
-                      .grid[y,x]                        <---  Derived from supergrid (or externally)
-                                                        <---  fms mom4,gold grids and supergrids
-                                                        <---  can be imported
-                   .variables                           <---  generic [(t),(s),y,x] fields
-                        .interfaces[(t),s,y,x]          <---  Interfaces reside on a static grid but 
-                                                        <---  vary in time at each interface                  
-                        
-                grid methods
+                .supergrid[y,x]                   <---  FMS supergrid
+                
+                .generic_rectgrid[y,x]            <---  Derived from supergrid (or externally)
+                .ocean_rectgrid[y,x]              <---  fms-based ocean grids 
+
+                      grid methods
                                 .geo_region                     <--- Define a geographic region
                                 .indexed_region                 <--- Define a indexed region
                                 .extract                        <--- extract grid info to an indexed or geo region
                                 .add_mask                       <--- Define a mask
                                 
 
-                state methods
+
+                .state [(t),(s),y,x]              <--- Generic state
+                   .grid                          <--- Each state has an associated grid
+                   .variables                     <---  generic [(t),(s),y,x] fields
+
+
+
+                      state methods
                                 .create_field                   <--- Create a new field from existing state variables
                                 .add_field_from_array           <--- Use a array + dictionary to define a new state var
                                 .del_field
@@ -78,7 +81,7 @@ MIDAS Schematic Snapshot 12/01/2012
                                 .eof                            <--- Computes Eigenvectors and Eigenvalues of covariance
                                 .write_nc                       <--- Output NetCDF 
                                 
-
+                  
 Examples
 ========
                                 
