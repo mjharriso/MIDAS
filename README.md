@@ -37,7 +37,7 @@ add the following to your .cshrc:
 
 
 
-<- MIDAS Schematic Snapshot 12/01/2012 ->
+=== MIDAS Schematic Snapshot 12/01/2012 ===
 
                 .state [(t),(s),y,x]              <--- Top level state
                    .supergrid[y,x]                   <---  Top level grid (FMS supergrid)
