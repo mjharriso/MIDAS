@@ -15,31 +15,36 @@ module hinterp_mod
   
 contains
 
-
-  subroutine hinterp( lon_in,lat_in,mask_in,data_in,lon_out,lat_out,data_out,src_modulo,method,missing) 
+!
+! method  0=conservative; 1=bilinear; 2=bicubic
+  
+  subroutine hinterp( lon_in,lat_in,mask_in,data_in,lon_out,lat_out,mask_out,data_out,src_modulo,method,missing)
     real(kind=8), intent(in),  dimension(:,:)      :: lon_in
-    real(kind=8), intent(in),  dimension(size(lon_in,1),size(lon_in,2)) :: lat_in
+    real(kind=8), intent(in),  dimension(:,:) :: lat_in
     real(kind=8), intent(in),  dimension(:,:,:,:) :: mask_in
     real(kind=8), intent(in),  dimension(:,:,:,:) :: data_in            
     real(kind=8), intent(in),  dimension(:,:)      :: lon_out
-    real(kind=8), intent(in),  dimension(size(lon_out,1),size(lon_out,2)) :: lat_out
+    real(kind=8), intent(inout),  dimension(:,:)      :: mask_out    
+    real(kind=8), intent(in),  dimension(:,:) :: lat_out
     real(kind=8), intent(inout),  dimension(:,:,:,:) :: data_out
     real(kind=8), intent(in)                        :: missing
     
     logical, intent(in) :: src_modulo
-    character(len=*), intent(in) :: method
+    integer(kind=4), intent(in) :: method
 
-    real(kind=8),  dimension(size(mask_in,1),size(mask_in,2)) :: data_in_, mask_in_
-    real(kind=8),  dimension(size(data_out,1),size(data_out,2)) :: mask_out, data_out_
+    real,  dimension(size(data_in,1),size(data_in,2)) :: mask_in_
+    real,  dimension(size(data_in,1),size(data_in,2)) :: data_in_
+    real,  dimension(size(data_out,1),size(data_out,2)) :: data_out_
 
-    real(kind=8), dimension(size(lon_in,1)) :: xax_in
-    real(kind=8), dimension(size(lon_in,2)) :: yax_in    
+    real, dimension(size(lon_in,1)) :: xax_in
+    real, dimension(size(lon_in,2)) :: yax_in    
     
     integer :: ierr,nk,nt,k,m,ni,nj,i,j
 
 
-    integer(kind=4) :: verbose, num_nbrs
-    real(kind=8)    :: max_dist
+    integer :: verbose, num_nbrs
+    real    :: max_dist
+
 
     verbose=0;num_nbrs=0;max_dist=0.0
     
@@ -53,16 +58,17 @@ contains
     call horiz_interp_init()
     mask_in_(:,:)=mask_in(:,:,1,1)
 
-    if (method == 'conservative') then
+
+    if (method == 0) then
         call horiz_interp_new(Interp,lon_in,lat_in,lon_out,lat_out,interp_method="conservative")    
-    else if (method == 'bilinear') then
-        call horiz_interp_new(Interp,lon_in,lat_in,lon_out,lat_out,verbose,method,num_nbrs,max_dist,src_modulo,mask_in_,mask_out)
-    else if (method == 'bicubic') then
+    else if (method == 1) then
+        call horiz_interp_new(Interp,lon_in,lat_in,lon_out,lat_out,verbose,"bilinear",mask_in=mask_in_,mask_out=mask_out)
+    else if (method == 2) then
         xax_in=lon_in(:,1)
         yax_in=lat_in(1,:)
-        call horiz_interp_new(Interp,xax_in,yax_in,lon_out,lat_out,verbose,method,num_nbrs,max_dist,src_modulo,.true.,mask_in_,mask_out,.false.)
+        call horiz_interp_new(Interp,xax_in,yax_in,lon_out,lat_out,interp_method="bicubic")
     else
-        print *,'Invalid interpolation method passed to hinterp: ',trim(method)
+        print *,'Invalid interpolation method passed to hinterp: ',method
         return
     endif
     
