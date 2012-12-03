@@ -1,11 +1,44 @@
+INSTALL
+=======
+
+                mkdir projects
+                cd projects
+                git clone git@github.com:mjharriso/MIDAS.git
+                cd MIDAS
+                mkdir fms_siena
+                cd fms_siena
+                cvs co -r testing bin site
+                cvs co -r siena_201204 shared
+                cvs update -r siena_20121201_mjh shared/horiz_interp/horiz_interp.F90
+                cvs update -r siena_20121201_mjh shared/horiz_interp/horiz_interp_bilinear.F90
+                cvs update -r siena_20121201_mjh site/hpcs/intel.mk
+                cvs update -r siena_20121201_mjh shared/mpp/include/mpp_comm_nocomm.inc
+                cvs update -r siena_20121201_mjh shared/mpp/include/mpp_do_update_nonblock.h
+                cd ../fms_build
+                ./build_fms.csh
+                cd../hinterp
+                ./build_hinterp.csh
+
+add this to your .cshrc
+
+                setenv PATH /net2/mjh/local/python-2.7.2/bin:${PATH}
+                setenv PYTHONPATH $HOME/projects/MIDAS
+                setenv GEOS_DIR /net2/mjh/local
+
+
+OR
+
+add the following to your .cshrc:
+
+                setenv PATH /net2/mjh/local/python-2.7.2/bin:${PATH}
+                setenv PYTHONPATH /net2/mjh/local/python-2.7.2/bin:${PATH}
+                setenv GEOS_DIR /net2/mjh/local
+
+
+
 MIDAS
 =====
 
-Modular Isosurface Data Analysis Software is built to
-function in multipe environments. In offline-mode, 
-the user interacts with saved history/restart files. At runtime,
-the software is part of the on-line initialization procedure for
-tracers and interface positions in GOLD.  
 
 
 <- MIDAS Snapshot 11/29/2012 ->
@@ -18,7 +51,38 @@ tracers and interface positions in GOLD.
                         .interfaces[(t),s,y,x]          <---  Interfaces reside on a static grid but 
                                                         <---  vary in time at each interface                  
                         .variables                      <---  generic [(t),(s),y,x] fields    
+                        
+                grid methods
+                                .geo_region                     <--- Define a geographic region
+                                .indexed_region                 <--- Define a indexed region
+                                .extract                        <--- extract grid info to an indexed or geo region
+                                .add_mask                       <--- Define a mask
+                                
 
+                state methods
+                                .create_field                   <--- Create a new field from existing state variables
+                                .add_field_from_array           <--- Use a array + dictionary to define a new state var
+                                .del_field
+                                .rename_field
+                                .mask_field                     <--- Use grid mask 
+                                .unmask
+                                .mask_where
+                                .add_interface_bounds           <--- Define interface positions at cell boundaries
+                                .fill_interior                  <--- Fill masked points above topography
+                                .volume_integral                <--- X,Y,XY,XYZ,... finite volume integrals
+                                .time_avg                       <--- Time-weighted/Volume-weighted means
+                                .monthly_avg                    <--- Time/Volume-weighted means for calendar months
+                                .monthly_anom                   <--- Anomalies wrt monthly climatological values
+                                .time_smooth                    <--- Window-weighted averages
+                                .remap_Z_to_layers              <--- Convert from z to isopycnal
+                                .adjust_thickness               <--- Use topography for tracers
+                                .horiz_interp                   <--- 2-d interpolation via FMS horiz_interp
+                                .grid_overlap_struct            <--- cell remapping (mean/max/min/std)
+                                .eof                            <--- Computes Eigenvectors and Eigenvalues of covariance
+                                .write_nc                       <--- Output NetCDF 
+                                
+                                
+                                
 
                 Read a restart or history file and use to initialize a state.
                 Any number of generic tracers lying on a simple 
