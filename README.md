@@ -77,10 +77,11 @@ add the following to your .cshrc:
                                 .eof                            <--- Computes Eigenvectors and Eigenvalues of covariance
                                 .write_nc                       <--- Output NetCDF 
                                 
-                                
+
+=== Examples ====
                                 
 
-                Example:
+Read (z,y,x) annual mean temperature from NODA and plot surface values:
                 
                 from midas import *
                 grid=generic_rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an',cyclic=True)
@@ -106,6 +107,9 @@ MIDAS routines.  The user can fix a known attribute problem, e.g.
 MIDAS state variables have several useful methods , e.g. volume integrals are
 available for data on geopotential coordinate grids, s=s(z), or Lagrangian 
 coordinate, s=s(x,y,z,t):
+
+Read (z,y,x) annual temperature from NODC and calculate volume-weighted means
+(skipping masked values over land):
 
                 from midas import *
                 grid=generic_rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an',cyclic=True)
