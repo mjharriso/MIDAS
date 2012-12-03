@@ -4,6 +4,7 @@ INSTALL
                 mkdir projects
                 cd projects
                 git clone https://github.com/mjharriso/MIDAS.git
+                [or git clone git@github.com:mjharriso/MIDAS.git]
                 cd MIDAS
                 mkdir fms_siena
                 cd fms_siena
