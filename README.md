@@ -21,7 +21,7 @@ INSTALL
 
 add this to your .cshrc
 
-                setenv PATH /net2/mjh/local/python-2.7.2/bin:${PATH}
+                setenv PATH /net2/mjh/local/bin:/net2/mjh/local/python-2.7.3/bin:${PATH}
                 setenv PYTHONPATH $HOME/projects/MIDAS
                 setenv GEOS_DIR /net2/mjh/local
 
@@ -30,27 +30,23 @@ OR
 
 add the following to your .cshrc:
 
-                setenv PATH /net2/mjh/local/python-2.7.2/bin:${PATH}
-                setenv PYTHONPATH /net2/mjh/local/python-2.7.2/bin:${PATH}
+                setenv PATH  /net2/mjh/local/bin:/net2/mjh/local/python-2.7.3/bin:${PATH}
+                setenv PYTHONPATH /net2/mjh/projects
                 setenv GEOS_DIR /net2/mjh/local
 
 
 
-MIDAS
-=====
 
-
-
-<- MIDAS Snapshot 11/29/2012 ->
+<- MIDAS Schematic Snapshot 12/01/2012 ->
 
                 .state [(t),(s),y,x]              <--- Top level state
                    .supergrid[y,x]                   <---  Top level grid (FMS supergrid)
                       .grid[y,x]                        <---  Derived from supergrid (or externally)
                                                         <---  fms mom4,gold grids and supergrids
-                                                        <---  can be imported.
+                                                        <---  can be imported
+                   .variables                           <---  generic [(t),(s),y,x] fields
                         .interfaces[(t),s,y,x]          <---  Interfaces reside on a static grid but 
                                                         <---  vary in time at each interface                  
-                        .variables                      <---  generic [(t),(s),y,x] fields    
                         
                 grid methods
                                 .geo_region                     <--- Define a geographic region
@@ -84,10 +80,6 @@ MIDAS
                                 
                                 
 
-                Read a restart or history file and use to initialize a state.
-                Any number of generic tracers lying on a simple 
-                grid with chosen stagger which may or may not include metrics.
-                
                 Example:
                 
                 from midas import *
@@ -95,28 +87,36 @@ MIDAS
                 State=state(grid=grid,path='http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',fields=['t_an'])
                 print State.variables                
 
-
+                xax=State.grid.x_T
+                yax=State.grid.y_T
+                sout=sq(State.t_an[0,0,:])
+                cf=plt.contourf(xax,yax,sout,np.arange(-2,31,1),extend='both')
+                plt.colorbar(cf)
+                plt.show()
+                
     
-Information can be readily exchanged between the .state container and the user. For example, attribute detection
-is a frequent point of failure for MIDAS routines.  The user can fix a known attribute problem, e.g.
+Information can be readily read from the .state container and the user is able to modify its
+contents directly. For example, attribute detection is a frequent point of failure for 
+MIDAS routines.  The user can fix a known attribute problem, e.g.
 
                 print state.var_dict['t_an']['Ztype']
                 state.var_dict['t_an']['Ztype']='Fixed'
                 
                 
 MIDAS state variables have several useful methods , e.g. volume integrals are
-available for data on geopotential coordinate grids, s=s(z):
+available for data on geopotential coordinate grids, s=s(z), or Lagrangian 
+coordinate, s=s(x,y,z,t):
 
                 from midas import *
                 grid=generic_rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an',cyclic=True)
                 State=state(grid=grid,path='http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',fields=['t_an'])
                 State.volume_integral('t_an','XY',normalize=True)
+                plt.plot(sq(S.t_an_xyav))
+                plt.grid()
+                plt.show()
+                
                 print State.variables
                 print State.t_an_xyav
                 State.volume_integral('t_an','XYZ',normalize=True)
                 print State.t_an_xyzav
                 
-
-
-
-
