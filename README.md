@@ -37,7 +37,8 @@ add the following to your .cshrc:
 
 
 
-=== MIDAS Schematic Snapshot 12/01/2012 ===
+MIDAS Schematic Snapshot 12/01/2012
+===================================
 
                 .state [(t),(s),y,x]              <--- Top level state
                    .supergrid[y,x]                   <---  Top level grid (FMS supergrid)
@@ -78,7 +79,8 @@ add the following to your .cshrc:
                                 .write_nc                       <--- Output NetCDF 
                                 
 
-=== Examples ====
+Examples
+========
                                 
 
 Read (z,y,x) annual mean temperature from NODA and plot surface values:
