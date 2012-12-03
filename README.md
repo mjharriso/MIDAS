@@ -3,7 +3,7 @@ INSTALL
 
                 mkdir projects
                 cd projects
-                git clone git@github.com:mjharriso/MIDAS.git
+                git clone https://github.com/mjharriso/MIDAS.git
                 cd MIDAS
                 mkdir fms_siena
                 cd fms_siena
@@ -14,9 +14,11 @@ INSTALL
                 cvs update -r siena_20121201_mjh site/hpcs/intel.mk
                 cvs update -r siena_20121201_mjh shared/mpp/include/mpp_comm_nocomm.inc
                 cvs update -r siena_20121201_mjh shared/mpp/include/mpp_do_update_nonblock.h
-                cd ../fms_build
+                cd ..
+                ln -s fms_siena fms
+                cd fms_build
                 ./build_fms.csh
-                cd../hinterp
+                cd ../hinterp
                 ./build_hinterp.csh
 
 add this to your .cshrc
@@ -24,6 +26,7 @@ add this to your .cshrc
                 setenv PATH /net2/mjh/local/bin:/net2/mjh/local/python-2.7.3/bin:${PATH}
                 setenv PYTHONPATH $HOME/projects/MIDAS
                 setenv GEOS_DIR /net2/mjh/local
+                unlimit
 
 
 OR
@@ -33,6 +36,7 @@ add the following to your .cshrc:
                 setenv PATH  /net2/mjh/local/bin:/net2/mjh/local/python-2.7.3/bin:${PATH}
                 setenv PYTHONPATH /net2/mjh/projects
                 setenv GEOS_DIR /net2/mjh/local
+                unlimit
 
 
 
