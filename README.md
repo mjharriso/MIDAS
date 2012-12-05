@@ -5,6 +5,8 @@ INSTALL
                 cd projects
                 git clone https://github.com/mjharriso/MIDAS.git
                 [or git clone git@github.com:mjharriso/MIDAS.git]
+                [if both of these git commands fail, then download a zip file directly]
+                [from the github site on your browser and unpack to this directory]
                 cd MIDAS
                 mkdir fms_siena
                 cd fms_siena
@@ -20,12 +22,12 @@ INSTALL
                 cd fms_build
                 ./build_fms.csh
                 cd ../hinterp
-                ./build_hinterp.csh
+                ./build_hinterp_gfdl_an.csh
 
 add this to your .cshrc
 
                 module load netcdf/4.1.2
-                setenv PATH /net2/mjh/local/bin:/net2/mjh/local/python-2.7.3/bin:${PATH}
+                setenv PATH /net2/mjh/local/bin:/net2/mjh/local/python-2.7.2/bin:${PATH}
                 setenv PYTHONPATH $HOME/projects/MIDAS
                 setenv GEOS_DIR /net2/mjh/local
                 unlimit
@@ -36,7 +38,7 @@ OR
 add the following to your .cshrc:
 
                 module load netcdf/4.1.2
-                setenv PATH  /net2/mjh/local/bin:/net2/mjh/local/python-2.7.3/bin:${PATH}
+                setenv PATH  /net2/mjh/local/bin:/net2/mjh/local/python-2.7.2/bin:${PATH}
                 setenv PYTHONPATH /net2/mjh/projects
                 setenv GEOS_DIR /net2/mjh/local
                 unlimit
