@@ -1,13 +1,14 @@
-#!/bin/csh -fv
+#!/bin/csh -v
 
 
-module use /usr/local/Modules/x64/modulefiles
-module load intel_compilers
+#module use /usr/local/Modules/x64/modulefiles
+module load ifort
+module load icc
 module load netcdf/4.1.2
 
 
 #:/net2/mjh/local/bin
-setenv PATH /net2/mjh/local/python-2.7.3/bin:/usr/local/x64/netcdf-4.1.2/bin:/usr/local/x64/hdf5-1.8.6/bin:/usr/local/x64/intel/Compiler/11.1/073/bin/intel64:/home/gfdl/bin:/usr/local/OSoverlay/bin:/bin:/usr/bin:/usr/local/bin:
+setenv PATH /net2/mjh/local/python-2.7.2/bin:${PATH}
 
 unlimit
 

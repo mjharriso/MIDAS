@@ -1,5 +1,5 @@
 from midas import *
-grid=gold_grid('/net3/mjh/models/CM2G/ocean_geometry.nc')
+grid=gold_rectgrid('/net3/mjh/models/CM2G/ocean_geometry.nc')
 grid.add_mask('tmask','/net3/mjh/models/CM2G/regionmask.nc')
 S=state(path='/archive/mjh/CM2G63L/CM2G_1860_Control/gfdl.ncrc2-default-prod-openmp/history/unpacked/06000101.ocean_month.nc',grid=grid,geo_region=None,fields=['temp','salt','SW','PmE','LwLatSens','salt_flux'],z_indices=np.arange(0,1))
 S.mask_where('temp','grid.mask!=2.0')

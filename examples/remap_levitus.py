@@ -1,8 +1,8 @@
 from midas import *
 
 
-grid=gold_grid('/net3/mjh/models/CM2G/ocean_geometry.nc')
-grid_obs=generic_grid('/net2/mjh/data/Steele/ptemp_salt.nc',var='PTEMP')
+grid=ocean_rectgrid('/net3/mjh/models/CM2G/ocean_geometry.nc')
+grid_obs=generic_rectgrid('/net2/mjh/data/Steele/ptemp_salt.nc',var='PTEMP')
 S=state(path='/net2/mjh/data/Steele/ptemp_salt.nc',grid=grid_obs,geo_region=None,fields=['PTEMP','SALT'],date_bounds=[datetime(1900,1,1,0,0,0),datetime(1900,1,30,0,0,0)],default_calendar='noleap')
 
 
@@ -11,9 +11,9 @@ R=fvgrid.variables['R'][:]
 
 nkml=2;nkbl=2;min_depth=10.0;p_ref=2.e7;hml=5.0;fit_target=True
 
-T=S.horiz_interp('PTEMP',target=grid,src_modulo=True,method='bilinear')
-T=S.horiz_interp('SALT',target=grid,src_modulo=True,method='bilinear',PrevState=T)
-T.remap_Z_to_layers('PTEMP','SALT',R,p_ref,grid.wet,nkml,nkbl,hml,fit_target)
+T=S.horiz_interp('PTEMP',target=grid,src_modulo=True,method=1)
+T=S.horiz_interp('SALT',target=grid,src_modulo=True,method=1,PrevState=T)
+T.remap_to_isopycnals('PTEMP','SALT',R,p_ref,grid.wet,nkml,nkbl,hml,fit_target)
 
 
 print '... Done remapping '
