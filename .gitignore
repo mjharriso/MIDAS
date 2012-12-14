@@ -7,3 +7,22 @@ bin-release/
 .flexProperties
 .settings/
 .project
+
+# Additional
+*.so
+ALE
+*.pyc
+ferret.jnl*
+.figs
+fms
+fms_siena
+*.pyf
+ipython_log.py
+.nc
+streamplot.py
+data
+esgf
+esmf
+seawater-2.0.1
+
+
