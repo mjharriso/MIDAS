@@ -1642,7 +1642,8 @@ class state(object):
          self.shape_int_out = shape_int_out       
 
 
-       data_read = np.reshape(np.array(self.rootgrp.variables[v][slice_read]),(shape_read))
+       data_read=self.rootgrp.variables[v][slice_read[0],slice_read[1],slice_read[2],slice_read[3]]
+       data_read = np.reshape(np.array(data_read),(shape_read))
 
        if geo_region is not None:
          if geo_region['shifted']:
