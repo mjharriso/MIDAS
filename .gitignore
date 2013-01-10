@@ -24,5 +24,7 @@ data
 esgf
 esmf
 seawater-2.0.1
-
-
+*.png
+*.log
+*.out
+*nml

@@ -67,6 +67,8 @@ Omega=7.295e-5
 ##### shiftgrid and add_cyclic were copied directly from mpl_toolkits v1.0.2 by mjh
 
 def shiftgrid(lon0,datain,lonsin,start=True,cyclic=360.0):
+
+    import numpy.ma as ma
     """
     Shift global lat/lon grid east or west.
 
@@ -412,6 +414,9 @@ def get_axis_direction(dimension):
 
   dir = 1
 
+  if len(dimension) == 1:
+      return dir
+  
   if dimension[0] > dimension[1]:
       dir=-1
       
@@ -527,12 +532,11 @@ def get_months(dates_in):
     months = []
     for i in np.arange(0,len(dates_in)):
       mon=int(dates_in[i].strftime()[5:7])
-      print 'mon= ',mon, 'date= ',dates_in[i]
       months.append(mon)
   else:
     months = []
     for i in np.arange(0,len(dates_in)):
-      mon.append=dates_in[i].month
+      months.append(dates_in[i].month)
 
   return months
 
@@ -1046,6 +1050,10 @@ class ocean_rectgrid(object):
         self.dyh    = f.variables['dyt'][:]
         self.dxq    = f.variables['dxu'][:]
         self.dyq    = f.variables['dyu'][:]
+        self.dxv    = self.dxq  # MOM4 is on a B-grid
+        self.dyv    = self.dyq
+        self.dxu    = self.dxq  # MOM4 is on a B-grid
+        self.dyu    = self.dyq        
         self.Ah    = self.dxh*self.dyh
         self.Aq    = self.dxq*self.dyq
         self.wet    = f.variables['wet'][:]
@@ -1109,6 +1117,8 @@ class ocean_rectgrid(object):
     else:
       section['x']=np.arange(0,self.im)
       section['shifted']=False
+      section['lon0']=self.lonh[0]
+      section['xax_data']=self.lonh
       
     section['name'] = name
     section['parent_grid'] = self
@@ -1279,7 +1289,7 @@ class state(object):
   
      """
   
-  def __init__(self,path=None,grid=None,geo_region=None,time_indices=None,date_bounds=None,z_indices=None,fields=None,default_calendar=None,MFpath=None,interfaces=None,path_interfaces=None,MFpath_interfaces=None,stagger=None):
+  def __init__(self,path=None,grid=None,geo_region=None,time_indices=None,date_bounds=None,z_indices=None,fields=None,default_calendar=None,MFpath=None,interfaces=None,path_interfaces=None,MFpath_interfaces=None,stagger=None,layout=[1,1],pe=0):
 
     if path is not None:
       f=nc.Dataset(path)
@@ -1293,7 +1303,24 @@ class state(object):
       f=None
 
     self.rootgrp = f
-
+    self.layout = layout
+    self.pe = pe
+    
+    if self.layout == [1,1] and geo_region is not None:
+        print "Layout is not compatible with geo_region"
+        return
+    elif self.layout == [1,1]:
+        nxdiv=grid.im/layout[1]
+        nydiv=grid.jm/layout[0]
+        xs=(nxdiv)*np.mod(self.pe,layout[1])
+        xe=(nxdiv)*(np.mod(self.pe,layout[1])+1)
+        ys=(nydiv)*np.mod(self.pe,layout[0])
+        ye=(nydiv)*(np.mod(self.pe,layout[0])+1)
+        print xs,xe
+        print ys,ye
+        geo_region=grid.indexed_region(i=(xs,xe),j=(ys,ye))
+        return 
+        
 
     self.variables = {}
     self.var_dict = {}    
@@ -1783,7 +1810,7 @@ class state(object):
            dt = dt*3600. # convert to seconds
        else:
          if var_dict['T'] is not None:           
-           dt = np.ones((nt))
+           dt = np.ones((len(t_indices)))
          else:
            dt = 0.0
 
@@ -1933,7 +1960,12 @@ class state(object):
             var_dict['interface_variable']=True
         else:
             var_dict['interface_variable']=False
-        
+
+        if self.interfaces is not None:
+            var_dict['Ztype'] = 'Generalized'
+        else:
+            var_dict['Ztype'] = 'Fixed'
+            
     else:
         z_indices = None
         z_interfaces = None
@@ -2013,7 +2045,8 @@ class state(object):
         else:
           ny = len(f.variables[var_dict['Y']][:])
           nx = len(f.variables[var_dict['X']][:])
-          
+
+        var_dict['Zdir']=get_axis_direction(f.variables[var_dict['Z']])
         var_dict['z_interfaces']  = var_dict['Zdir']*np.tile(tmp,(1,ny,nx))
         tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))             
         var_dict['z'] = tmp[0:-1,:,:]
@@ -3162,7 +3195,7 @@ class state(object):
 #            exec(expr)
 
 
-  def remap_vertical(self,fields=None,z_bounds=None,zbax_data=None,method='pcm'):
+  def remap_vertical(self,fields=None,z_bounds=None,zbax_data=None,method='pcm',bndy_extrapolation=False):
 
     import pyale_mod
     """
@@ -3282,7 +3315,7 @@ class state(object):
             xb2=sq(xb2).T
 
             
-            pyale_mod.pyale_mod.remap(data,data2,xb1,xb2,method,missing=missing_value)
+            pyale_mod.pyale_mod.remap(data,data2,xb1,xb2,method,bndy_extrapolation=bndy_extrapolation,missing=missing_value)
 
             data2=data2.T
             xb2=xb2.T
