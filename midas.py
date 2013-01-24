@@ -429,6 +429,13 @@ def get_axis_direction(dimension):
   except:
     pass
 
+  try:
+    orient = getattr(dimension,'direction')
+    if orient == -1:
+      dir = -1
+  except:
+    pass
+  
   
 
   return dir
@@ -528,7 +535,6 @@ def find_date_bounds(dates_in,tmin,tmax):
 
 def get_months(dates_in):
   if type(dates_in[0]) is not datetime:
-    print ' Not datetime in call to get_months, dates_in[0]= ',dates_in[0]
     months = []
     for i in np.arange(0,len(dates_in)):
       mon=int(dates_in[i].strftime()[5:7])
@@ -1289,7 +1295,7 @@ class state(object):
   
      """
   
-  def __init__(self,path=None,grid=None,geo_region=None,time_indices=None,date_bounds=None,z_indices=None,fields=None,default_calendar=None,MFpath=None,interfaces=None,path_interfaces=None,MFpath_interfaces=None,stagger=None,layout=[1,1],pe=0):
+  def __init__(self,path=None,grid=None,geo_region=None,time_indices=None,date_bounds=None,z_indices=None,fields=None,default_calendar=None,MFpath=None,interfaces=None,path_interfaces=None,MFpath_interfaces=None,stagger=None,verbose=True):
 
     if path is not None:
       f=nc.Dataset(path)
@@ -1303,23 +1309,23 @@ class state(object):
       f=None
 
     self.rootgrp = f
-    self.layout = layout
-    self.pe = pe
+#    self.layout = layout
+#    self.pe = pe
     
-    if self.layout == [1,1] and geo_region is not None:
-        print "Layout is not compatible with geo_region"
-        return
-    elif self.layout == [1,1]:
-        nxdiv=grid.im/layout[1]
-        nydiv=grid.jm/layout[0]
-        xs=(nxdiv)*np.mod(self.pe,layout[1])
-        xe=(nxdiv)*(np.mod(self.pe,layout[1])+1)
-        ys=(nydiv)*np.mod(self.pe,layout[0])
-        ye=(nydiv)*(np.mod(self.pe,layout[0])+1)
-        print xs,xe
-        print ys,ye
-        geo_region=grid.indexed_region(i=(xs,xe),j=(ys,ye))
-        return 
+#    if self.layout == [1,1] and geo_region is not None:
+#        print "Layout is not compatible with geo_region"
+#        return
+#    elif self.layout == [1,1]:
+#        nxdiv=grid.im/layout[1]
+#        nydiv=grid.jm/layout[0]
+#        xs=(nxdiv)*np.mod(self.pe,layout[1])
+#        xe=(nxdiv)*(np.mod(self.pe,layout[1])+1)
+#        ys=(nydiv)*np.mod(self.pe,layout[0])
+#        ye=(nydiv)*(np.mod(self.pe,layout[0])+1)
+#        print xs,xe
+#        print ys,ye
+#        geo_region=grid.indexed_region(i=(xs,xe),j=(ys,ye))
+#        return 
         
 
     self.variables = {}
@@ -1669,8 +1675,7 @@ class state(object):
          self.shape_int_out = shape_int_out       
 
 
-       data_read=self.rootgrp.variables[v][slice_read[0],slice_read[1],slice_read[2],slice_read[3]]
-       data_read = np.reshape(np.array(data_read),(shape_read))
+       data_read = np.reshape(np.array(self.rootgrp.variables[v][slice_read]),(shape_read))
 
        if geo_region is not None:
          if geo_region['shifted']:
@@ -1681,7 +1686,7 @@ class state(object):
          vars(self)[v] = data_read
 
 
-       if DEBUG == 1:
+       if DEBUG == 1 or verbose == True:
          print " Successfully extracted data named %(nam)s from %(fil)s "%{'nam':v,'fil':self.path}
          print " Resulting shape = ",vars(self)[v].shape
          print " Dictionary keys = ", var_dict.keys()
@@ -1747,7 +1752,7 @@ class state(object):
                  else:
                      vars(self)[interfaces] = data_int_read
 
-                 if DEBUG == 1:
+                 if DEBUG == 1 or verbose == True:
                      print " Successfully extracted interface data named %(nam)s from %(fil)s "%{'nam':interfaces,'fil':path_interfaces}
                      print " Resulting shape = ",vars(self)[interfaces].shape
                      
@@ -1838,7 +1843,7 @@ class state(object):
 
     f.close()
     
-  def add_field(self,field,path=None,MFpath=None,use_interfaces=False):
+  def add_field(self,field,path=None,MFpath=None,use_interfaces=False,verbose=True):
     """Add a field to the existing state (e.g. more tracers).
        either from the current root file or from an alternate path.
          """
@@ -2008,7 +2013,7 @@ class state(object):
         var_dict['xax_data'] = var_dict['rootgrp'].variables[var_dict['X']][x_indices]
 
          
-    if DEBUG == 1:
+    if DEBUG == 1 or verbose == True:
       print " Successfully extracted data named %(nam)s from %(fil)s "%{'nam':field,'fil':var_dict['path']}
       print " Resulting shape = ",vars(self)[field].shape                 
 
