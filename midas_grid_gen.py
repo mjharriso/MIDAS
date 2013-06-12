@@ -113,7 +113,8 @@ class supergrid(object):
 
 """
       
-
+      self.yDir = 1
+      
       if file is not None:
         f=nc.Dataset(file)
         vdict={}
@@ -645,8 +646,8 @@ class supergrid(object):
     self.area=self.dx[:-1,:]*self.dy[:,:-1]
     self.angle_dx=np.zeros((nytot,nxtot))
 
-    self.angle_dx = np.arctan2(dy_i,dx_i)
-    self.angle_dx = self.angle_dx[:-1,:-1]
+    self.angle_dx = np.arctan2(dy_i,dx_i)*180.0/np.pi
+#    self.angle_dx = self.angle_dx[:-1,:-1]
                   
       
       
@@ -713,8 +714,8 @@ class supergrid(object):
       areav=f.createVariable('area','f8',('ny','nx'))
       areav.units='m2'
       areav[:]=self.area
-      anglev=f.createVariable('angle_dx','f8',('ny','nx'))
-      anglev.units='radians'
+      anglev=f.createVariable('angle_dx','f8',('nyp','nxp'))
+      anglev.units='degrees'
       anglev[:]=self.angle_dx            
 
     f.sync()
