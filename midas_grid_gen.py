@@ -227,7 +227,7 @@ class supergrid(object):
         self.y=np.tile(self.grid_y.reshape((nytot+1,1)),(1,nxtot+1))
       elif config == 'spherical':
         self.is_cartesian=False
-        self.is_latlon=True     
+        self.is_latlon=True
         self.grid_y=ystart+jindp*leny/nytot
         self.grid_x=xstart+iindp*lenx/nxtot
         self.x=np.tile(self.grid_x,(nytot+1,1))
@@ -587,6 +587,7 @@ class supergrid(object):
     if excluded_fraction is not None:
       if pole == -1:
         jmin=np.ceil(ny*excluded_fraction)
+        jmin=jmin-np.mod(jmin,2)
         return r_out[jmin:,:], phi_out[jmin:,:]        
       else:
         jmax=np.ceil(ny*(1.0 - excluded_fraction))
