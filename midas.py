@@ -30,7 +30,7 @@ import netCDF4 as nc
 from netCDF4 import num2date
 import string
 import copy
-from datetime import *
+from  datetime import *
 import types
 import matplotlib.pyplot as plt
 import pickle
@@ -49,7 +49,7 @@ except:
     pass
 
 try:
-    import gibbs
+    from seawater import gibbs
 except:
     pass
 
@@ -60,7 +60,7 @@ except:
 
 epsln = 1.e-20
 R_earth = 6371.e3
-DEBUG = 1
+DEBUG = 0
 Omega=7.295e-5
 
 
@@ -500,51 +500,115 @@ def find_axis_bounds(axis,x=None):
   xs=None;xe=None
   if x is not None:
     xmin=x[0];xmax=x[1]
-    xs = np.nonzero(np.abs(axis - xmin) <= max_dx)[0][0]
-    xe = np.nonzero(np.abs(axis - xmax) <= max_dx)[0][0]
+    xs = np.nonzero(np.abs(axis - xmin) <= 2*max_dx)[0][0]
+    xe = np.nonzero(np.abs(axis - xmax) <= 2*max_dx)[0][0]
 
   return xs,xe
 
+
+def instance_to_datetime(dates_in):
+
+    fmt='%Y-%m-%d %H:%M:%S'
+    dates=[datetime.strptime(str(d),fmt) for d in dates_in]
+
+    return dates
+
+#def instance_to_datetime(date_in):
+#    
+#    mon=int(date_in.strftime()[5:7])
+#    year=np.maximum(int(date_in.strftime()[0:4]),1)
+#    day=int(date_in.strftime()[8:10])
+#    hr=int(date_in.strftime()[11:13])
+#    mn=int(date_in.strftime()[14:16])
+#    sec=int(date_in.strftime()[17:19])      
+#    date=datetime(year,mon,day,hr,mn,sec)
+
+#    return date
+
 def find_date_bounds(dates_in,tmin,tmax):
   if type(dates_in[0]) is not datetime:
-    dates = []
-    for i in np.arange(0,len(dates_in)):
-      mon=int(dates_in[i].strftime()[5:7])
-      year=np.maximum(int(dates_in[i].strftime()[0:4]),1)
-      day=int(dates_in[i].strftime()[8:10])
-      date=datetime(year,mon,day)
-      dates.append(date)
-
+     dates=instance_to_datetime(dates_in)
   else:
-    dates = dates_in
-
+     dates = dates_in
 
   
   ts=-1;te=-1
   for i in np.arange(0,np.maximum(1,len(dates)-1)):
-    if ts == -1 and dates[i] >= tmin:
-      ts = i
-    if te == -1 and dates[i+1] > tmax:
-      te = i
-      break
+      if ts == -1 and tmin <= dates[i+1] and tmin > dates[i]:
+          ts = i+1
+      if ts > -1 and tmax < dates[i+1]:
+          te = i+1
+          break
 
-  if te == -1:
-    te=len(dates_in)-1
-    
+
+  if DEBUG == 1:
+      print tmin,tmax,dates[i],dates[te]
+  
   return ts,te
 
+def time_interp_weights(dates_in,target_in):
+
+    try:
+        nt = len(target_in)
+    except:
+        nt = 1
+
+    if type(dates_in[0]) is not datetime:
+        dates=instance_to_datetime(dates_in)
+    else:
+        dates=dates_in
+
+    if nt > 1:
+        if type(target_in[0]) is not datetime:
+            target=instance_to_datetime(target_in)
+        else:
+            target=target_in
+    else:
+        if type(target_in) is not datetime:
+            target=instance_to_datetime(target_in)
+        else:
+            target=target_in
+            
+    if nt > 1:
+        t1=np.zeros(nt,dtype=np.int); t2=np.zeros(nt,dtype=np.int)
+        w1=np.zeros(nt); w2=np.zeros(nt)        
+        for i in np.arange(0,nt):
+            t1[i],t2[i]=find_date_bounds(dates,target[i],target[i])
+            date1=dates[t1[i]]
+            date2=dates[t2[i]]
+            dt=date2-date1;dt=dt.total_seconds()
+            dt1=target[i]-date1;dt1=dt1.total_seconds()
+            if dt>0:
+                w1[i]=1.0-dt1/dt
+            else:
+                w1[i]=1.0
+            w2[i]=1.0-w1[i]
+            
+    else:
+        t1,t2=find_date_bounds(dates,target,target)
+        date1=dates[t1];date2=dates[t2]
+        dt=date2-date1;dt=dt.total_seconds()
+        dt1=target-date1;dt1=dt1.total_seconds()
+        if dt>0:
+            w1=1.0-dt1/dt
+        else:
+            w1=1.0
+        w2=1.0-w1
+        
+    return t1,t2,w1,w2
+
 def get_months(dates_in):
-  if type(dates_in[0]) is not datetime:
-    months = []
-    for i in np.arange(0,len(dates_in)):
-      mon=int(dates_in[i].strftime()[5:7])
-      months.append(mon)
-  else:
+  # if type(dates_in[0]) is not datetime:
+  #   months = []
+  #   for i in np.arange(0,len(dates_in)):
+  #     mon=int(dates_in[i].strftime()[5:7])
+  #     months.append(mon)
+  # else:
     months = []
     for i in np.arange(0,len(dates_in)):
       months.append(dates_in[i].month)
 
-  return months
+    return months
 
 
 def make_monthly_axis(year=1900):
@@ -660,14 +724,15 @@ class generic_rectgrid(object):
               self.lonh = sq(lon[0,:])
           else:
               print "Longitude axis not detected "
-              raise              
+              raise
+          
           if var_dict['Y'] is not None and lat is None:
               lat_axis = f.variables[var_dict['Y']]
-              dir=get_axis_direction(lat_axis)              
+              dir=get_axis_direction(lat_axis)
               self.lath = sq(f.variables[var_dict['Y']][:])
               if dir == -1:
                   self.yDir=-1
-                  self.lath=self.lath[::-1]              
+                  self.lath=self.lath[::-1]
           elif lat is not None:
               self.lath=sq(lat[:,0])
           else:
@@ -676,22 +741,44 @@ class generic_rectgrid(object):
       
 
 
-        
-
       self.lonq = 0.5*(self.lonh + np.roll(self.lonh,-1))
 
-      self.lonq[-1] = 2.0*self.lonq[-2] -self.lonq[-3]
-      lon0 = self.lonq[0]-2.0*(self.lonq[0]-self.lonh[-0])
+      if np.isscalar(self.lonq):
+          self.lonq=np.array([self.lonq])
+
+      if np.size(self.lonq) > 2:
+          self.lonq[-1] = 2.0*self.lonq[-2] -self.lonq[-3]
+
+      if np.size(self.lonq) > 1:
+          lon0 = self.lonq[0]-2.0*(self.lonq[0]-self.lonh[0])
+      else:
+          lon0 = self.lonq[0]
       
       self.lonq=np.hstack(([lon0],self.lonq))
       self.latq = 0.5*(self.lath + np.roll(self.lath,-1))
 
-      self.latq[-1] = 2.0*self.latq[-2]-self.latq[-3]
-      lat_end=self.latq[-1]+2.0*(self.lath[-1]-self.latq[-1])
-      self.latq=np.concatenate((self.latq,[lat_end]))      
-      
-      self.im = len(self.lonh)
-      self.jm = len(self.lath)
+      if np.isscalar(self.latq):
+          self.latq=np.array([self.latq])
+
+      if np.size(self.latq) > 2:
+          self.latq[-1] = 2.0*self.latq[-2]-self.latq[-3]
+
+      if np.size(self.latq) > 1:
+          lat_end=self.latq[-1]+2.0*(self.lath[-1]-self.latq[-1])
+          self.latq=np.concatenate((self.latq,[lat_end]))      
+
+
+      try:
+          self.im = len(self.lonh)
+      except:
+          self.lonh = np.array([self.lonh])
+          self.im = 1
+
+      try:
+          self.jm = len(self.lath)
+      except:
+          self.lath = np.array([self.lath])          
+          self.jm = 1
       
       if simple_grid is True:
           self.simple_grid = True
@@ -699,41 +786,45 @@ class generic_rectgrid(object):
       else:
           self.simple_grid = False
 
-      self.x_T,self.y_T = np.meshgrid(self.lonh,self.lath)
 
-      xtb=0.5*(self.x_T + np.roll(self.x_T,shift=1,axis=1))
-      xtb0=2.0*xtb[:,-1]-xtb[:,-2]
-      xtb0=xtb0[:,np.newaxis]
-      xtb=np.hstack((xtb,xtb0))
-      xtb0=2.0*xtb[:,1]-xtb[:,2]
-      xtb[:,0]=xtb0
-      self.x_T_bounds=xtb.copy()
-      xtb0=self.x_T_bounds[-1,:]
-      self.x_T_bounds = np.vstack((self.x_T_bounds,xtb0))    
-      
-      ytb=0.5*(self.y_T + np.roll(self.y_T,shift=1,axis=0))
-      ytb0=2.0*ytb[-1,:]-ytb[-2,:]
-      ytb0=ytb0[np.newaxis,:]
-      ytb=np.vstack((ytb,ytb0))
-      ytb0=2.0*ytb[1,:]-ytb[2,:]
-      ytb[0,:]=ytb0
-      self.y_T_bounds=ytb.copy()
-      ytb0=self.y_T_bounds[:,-1]
-      ytb0=ytb0[:,np.newaxis]
-      self.y_T_bounds = np.hstack((self.y_T_bounds,ytb0))          
+      if np.logical_and(self.im > 1, self.jm > 1):
+          self.x_T,self.y_T = np.meshgrid(self.lonh,self.lath)
 
-      dx = (self.x_T_bounds - np.roll(self.x_T_bounds,axis=1,shift=1))
-      dx=dx[1:,1:]
-      dx=dx*np.pi/180.
-      self.dxh = dx*R_earth*np.cos(self.y_T*np.pi/180.)
-      dy = (self.y_T_bounds - np.roll(self.y_T_bounds,axis=0,shift=1))
-      dy = dy[1:,1:]
-      dy = dy*np.pi/180.
-      
-      self.dyh = dy*R_earth
+          xtb=0.5*(self.x_T + np.roll(self.x_T,shift=1,axis=1))
+          xtb0=2.0*xtb[:,-1]-xtb[:,-2]
+          xtb0=xtb0[:,np.newaxis]
+          xtb=np.hstack((xtb,xtb0))
+          xtb0=2.0*xtb[:,1]-xtb[:,2]
+          xtb[:,0]=xtb0
+          self.x_T_bounds=xtb.copy()
+          xtb0=self.x_T_bounds[-1,:]
+          self.x_T_bounds = np.vstack((self.x_T_bounds,xtb0))    
+          
+          ytb=0.5*(self.y_T + np.roll(self.y_T,shift=1,axis=0))
+          ytb0=2.0*ytb[-1,:]-ytb[-2,:]
+          ytb0=ytb0[np.newaxis,:]
+          ytb=np.vstack((ytb,ytb0))
+          ytb0=2.0*ytb[1,:]-ytb[2,:]
+          ytb[0,:]=ytb0
+          self.y_T_bounds=ytb.copy()
+          ytb0=self.y_T_bounds[:,-1]
+          ytb0=ytb0[:,np.newaxis]
+          self.y_T_bounds = np.hstack((self.y_T_bounds,ytb0))          
+          
+          dx = (self.x_T_bounds - np.roll(self.x_T_bounds,axis=1,shift=1))
+          dx=dx[1:,1:]
+          dx=dx*np.pi/180.
+          self.dxh = dx*R_earth*np.cos(self.y_T*np.pi/180.)
+          dy = (self.y_T_bounds - np.roll(self.y_T_bounds,axis=0,shift=1))
+          dy = dy[1:,1:]
+          dy = dy*np.pi/180.
+          
+          self.dyh = dy*R_earth
 
-      self.Ah=self.dxh*self.dyh
-
+          self.Ah=self.dxh*self.dyh
+      else:
+          self.x_T=self.lonh; self.y_T=self.lath
+          
 
       self.cyclic_x = cyclic
 
@@ -777,8 +868,8 @@ class generic_rectgrid(object):
              section['shifted']=True
              section['x']=np.arange(xs,xe+1)        
              section['xax_data']= lon_shifted[section['x']][xs:xe+1]
-         elif x[0] > self.lonh[-1]:
-             result=find_axis_bounds(self.lonh+360.,x=[x[0],x[0]])        
+         elif x[1] > self.lonh[-1]:
+             result=find_axis_bounds(self.lonh+360.,x=[x[-1],x[-1]])        
              section['x_offset']=result[0]        
              x_T_shifted,lon_shifted = shiftgrid(x[0],x_T,self.lonh)
              result=find_axis_bounds(lon_shifted,x=x)
@@ -1081,6 +1172,7 @@ class ocean_rectgrid(object):
       section['yax_data']= self.lath[section['y']]
     else:
       section['y']=np.arange(0,self.jm)
+      section['yax_data']= self.lath.copy()
       
     if x is not None:
       if x[0] >= self.lonh[0] and x[1] <= self.lonh[-1]:
@@ -1100,9 +1192,9 @@ class ocean_rectgrid(object):
         section['shifted']=True
         section['x']=np.arange(xs,xe+1)        
         section['xax_data']= lon_shifted[section['x']][xs:xe+1]
-      elif x[0] > self.lonh[-1]:
-        result=find_axis_bounds(self.lonh+360.,x=[x[0],x[0]])        
-        section['x_offset']=result[0]        
+      elif x[1] > self.lonh[-1]:
+        result=find_axis_bounds(self.lonh,x=[x[0],x[0]])        
+        section['x_offset']=result[0]
         x_T_shifted,lon_shifted = shiftgrid(x[0],self.x_T,self.lonh)
         result=find_axis_bounds(lon_shifted,x=x)
         xs=result[0];xe=result[1]
@@ -1118,7 +1210,7 @@ class ocean_rectgrid(object):
         xs=result[0];xe=result[1]
         section['lon0']=x[0]
         section['shifted']=True
-        section['x']=np.arange(xs,xe+1)        
+        section['x']=np.arange(xs,xe+1)
         section['xax_data']= lon_shifted[section['x']][xs:xe+1]
     else:
       section['x']=np.arange(0,self.im)
@@ -1167,8 +1259,15 @@ class ocean_rectgrid(object):
       x_section = geo_region['x'];y_section = geo_region['y']
       if x_section is not None:
         xb_section = np.hstack((x_section,x_section[-1]+1))
+      else:
+        x_section = np.arange(0,grid.im)
+        xb_section = np.arange(0,grid.im+1)
+        
       if y_section is not None:
-        yb_section = np.hstack((y_section,y_section[-1]+1))        
+        yb_section = np.hstack((y_section,y_section[-1]+1))
+      else:
+        y_section = np.arange(0,grid.jm)
+        yb_section = np.arange(0,grid.jm+1)
 
       if not geo_region['shifted']:
         grid.x_T = np.take(np.take(self.x_T,y_section,axis=0),x_section,axis=1)
@@ -1180,20 +1279,30 @@ class ocean_rectgrid(object):
         grid.lonq = np.take(self.lonq,xb_section,axis=0)
         grid.latq = np.take(self.latq,yb_section,axis=0)
         grid.D = np.take(np.take(self.D,y_section,axis=0),x_section,axis=1)
-        grid.f = np.take(np.take(self.f,y_section,axis=0),x_section,axis=1)
+
+        if hasattr(grid,'f'):
+            grid.f = np.take(np.take(self.f,y_section,axis=0),x_section,axis=1)
 
         if hasattr(grid,'dxv'):
             grid.dxv = np.take(np.take(self.dxv,y_section,axis=0),x_section,axis=1)
             grid.dyu = np.take(np.take(self.dyu,y_section,axis=0),x_section,axis=1)
             grid.dxu = np.take(np.take(self.dxu,y_section,axis=0),x_section,axis=1)
             grid.dyv = np.take(np.take(self.dyv,y_section,axis=0),x_section,axis=1)
+
+        if hasattr(grid,'dxh'):            
+            grid.dxh = np.take(np.take(self.dxh,y_section,axis=0),x_section,axis=1)
+            grid.dyh = np.take(np.take(self.dyh,y_section,axis=0),x_section,axis=1)
+
+        if hasattr(grid,'dxq'):                        
+            grid.dxq = np.take(np.take(self.dxq,y_section,axis=0),x_section,axis=1)
+            grid.dyq = np.take(np.take(self.dyq,y_section,axis=0),x_section,axis=1)
+
+        if hasattr(grid,'Ah'):
+            grid.Ah = np.take(np.take(self.Ah,y_section,axis=0),x_section,axis=1)
+
+        if hasattr(grid,'Aq'):            
+            grid.Aq= np.take(np.take(self.Aq,y_section,axis=0),x_section,axis=1)
             
-        grid.dxh = np.take(np.take(self.dxh,y_section,axis=0),x_section,axis=1)
-        grid.dyh = np.take(np.take(self.dyh,y_section,axis=0),x_section,axis=1)
-        grid.dxq = np.take(np.take(self.dxq,y_section,axis=0),x_section,axis=1)
-        grid.dyq = np.take(np.take(self.dyq,y_section,axis=0),x_section,axis=1)
-        grid.Ah = np.take(np.take(self.Ah,y_section,axis=0),x_section,axis=1)
-        grid.Aq= np.take(np.take(self.Aq,y_section,axis=0),x_section,axis=1)
         grid.wet = np.take(np.take(self.wet,y_section,axis=0),x_section,axis=1)
         grid.im = np.shape(grid.lonh)[0]
         grid.jm = np.shape(grid.lath)[0]
@@ -1205,20 +1314,27 @@ class ocean_rectgrid(object):
         
       else:
         x_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.x_T,grid.lonh)
+        x_T_shifted[x_T_shifted<geo_region['lon0']]=x_T_shifted[x_T_shifted<geo_region['lon0']]+360.
         grid.x_T = np.take(np.take(x_T_shifted,y_section,axis=0),x_section,axis=1)
         y_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.y_T,grid.lonh)        
         grid.y_T = np.take(np.take(y_T_shifted,y_section,axis=0),x_section,axis=1)        
         lonb = grid.x_T_bounds[0,:]
+        
         x_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],grid.x_T_bounds,lonb)
+
+        x_T_bounds_shifted[x_T_bounds_shifted<geo_region['lon0']]=x_T_bounds_shifted[x_T_bounds_shifted<geo_region['lon0']]+360.        
         grid.x_T_bounds = np.take(np.take(x_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
         grid.lonq = np.take(lon_bounds_shifted,xb_section,axis=0)        
         y_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],grid.y_T_bounds,lonb)        
         grid.y_T_bounds = np.take(np.take(y_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
-        grid.lath = np.take(grid.lath,yb_section,axis=0)
+        grid.lath = np.take(grid.lath,y_section,axis=0)
         grid.latq = np.take(self.latq,yb_section,axis=0)
         D_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.D,grid.lonh)
         grid.D = np.take(np.take(D_shifted,y_section,axis=0),x_section,axis=1)
-        grid.f = np.take(np.take(self.f,y_section,axis=0),x_section,axis=1)
+
+        if hasattr(grid,'f'):
+            grid.f = np.take(np.take(self.f,y_section,axis=0),x_section,axis=1)
+            
         dxv_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxv,grid.lonh)
         grid.dxv = np.take(np.take(dxv_shifted,y_section,axis=0),x_section,axis=1)
         dyu_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyu,grid.lonh)
@@ -1309,24 +1425,7 @@ class state(object):
       f=None
 
     self.rootgrp = f
-#    self.layout = layout
-#    self.pe = pe
-    
-#    if self.layout == [1,1] and geo_region is not None:
-#        print "Layout is not compatible with geo_region"
-#        return
-#    elif self.layout == [1,1]:
-#        nxdiv=grid.im/layout[1]
-#        nydiv=grid.jm/layout[0]
-#        xs=(nxdiv)*np.mod(self.pe,layout[1])
-#        xe=(nxdiv)*(np.mod(self.pe,layout[1])+1)
-#        ys=(nydiv)*np.mod(self.pe,layout[0])
-#        ye=(nydiv)*(np.mod(self.pe,layout[0])+1)
-#        print xs,xe
-#        print ys,ye
-#        geo_region=grid.indexed_region(i=(xs,xe),j=(ys,ye))
-#        return 
-        
+
 
     self.variables = {}
     self.var_dict = {}    
@@ -1356,7 +1455,17 @@ class state(object):
         for v in fields:
             stagger[v]=var_stagger[n]
             n=n+1
-            
+
+    if grid is None:
+        if path is not None:
+            grid = generic_rectgrid(path,var=fields[0])
+        else:
+            grid = generic_rectgrid(MFpath[0],var=fields[0])
+        self.grid = grid
+    else:
+        new_grid = grid.extract(geo_region)
+        self.grid = new_grid
+        
     for v in fields:
        try: 
          self.variables[v] = self.rootgrp.variables[v]  # netCDF4 variable object
@@ -1498,8 +1607,8 @@ class state(object):
          elif date_bounds is not None:
            if var_dict['calendar'] is not None:
              ts,te = find_date_bounds(var_dict['date_bounds'][:],date_bounds[0],date_bounds[1])
-             t_indices=np.arange(ts,te+1)
-             tb_indices=np.arange(ts,te+2)             
+             t_indices=np.arange(ts,te)
+             tb_indices=np.arange(ts,te+1)             
              var_dict['tax_data']=var_dict['tax_data'][t_indices]
              var_dict['tbax_data']=var_dict['tbax_data'][tb_indices]                        
              var_dict['dates']=var_dict['dates'][t_indices]
@@ -1596,6 +1705,9 @@ class state(object):
                ny = len(self.rootgrp.variables[var_dict['Y']][:])
                y_indices = np.arange(0,ny)
                var_dict['yax_data'] = self.rootgrp.variables[var_dict['Y']][y_indices]
+               if grid is not None:
+                   if grid.yDir == -1:
+                       var_dict['yax_data']=var_dict['yax_data'][::-1]
                nx = len(self.rootgrp.variables[var_dict['X']][:])
                x_indices = np.arange(0,nx)
                var_dict['xax_data'] = self.rootgrp.variables[var_dict['X']][x_indices]
@@ -1685,7 +1797,10 @@ class state(object):
        else:
          vars(self)[v] = data_read
 
-
+       if grid is not None:
+           if self.grid.yDir == -1:
+               vars(self)[v] = vars(self)[v][:,:,::-1,:]
+           
        if DEBUG == 1 or verbose == True:
          print " Successfully extracted data named %(nam)s from %(fil)s "%{'nam':v,'fil':self.path}
          print " Resulting shape = ",vars(self)[v].shape
@@ -1833,12 +1948,9 @@ class state(object):
        z_indices = z_indices_in
 
     
-    if grid is not None:
-        new_grid = grid.extract(geo_region)
-        self.grid = new_grid
 
-        if self.grid.yDir == -1:
-            vars(self)[v] = vars(self)[v][:,:,::-1,:]
+
+
            
 
     f.close()
@@ -1927,6 +2039,13 @@ class state(object):
             else:
                 var_dict['tbax_data'] = f.variables[Tb][:]
 
+            if t_indices is not None:
+                tb_indices = np.hstack((t_indices,t_indices[-1]+1))
+                if var_dict['tbax_data'] is not None:
+                    var_dict['tbax_data']=var_dict['tbax_data'][tb_indices]
+                if var_dict['tbax_data'] is not None and var_dict['calendar'] is not None:
+                    var_dict['date_bounds']=num2date(var_dict['tbax_data'],var_dict['tunits'],var_dict['calendar'])
+                
         else:
             tdat=var_dict['tax_data']
             if len(tdat) > 1:
@@ -1939,22 +2058,17 @@ class state(object):
         if var_dict['tbax_data'] is not None and var_dict['calendar'] is not None:
             var_dict['date_bounds'] = num2date(var_dict['tbax_data'],var_dict['tunits'],var_dict['calendar'])
            
-        if t_indices is not None:
-            tb_indices = np.hstack((t_indices,t_indices[-1]+1))
-            if var_dict['tbax_data'] is not None:
-                var_dict['tbax_data']=var_dict['tbax_data'][tb_indices]
-            if var_dict['tbax_data'] is not None:
-                var_dict['date_bounds']=var_dict['date_bounds'][tb_indices]
       
     if var_dict['Z'] is not None:
         z_indices = self.slice_read[1]
+        zdat=f.variables[var_dict['Z']][z_indices]        
         nz=len(z_indices)
         z_interfaces = self.slice_int_read[1]
         var_dict['zax_data']= f.variables[var_dict['Z']][z_indices]
         if var_dict['Zb'] is not None:
             var_dict['zbax_data'] = f.variables[var_dict['Zb']][z_interfaces]
-        else:
-            zdat=f.variables[var_dict['Z']][:]
+#        else:
+#            zdat=f.variables[var_dict['Z']][:]
         if len(zdat) > 1:
             zint=np.hstack((1.5*zdat[0]-0.5*zdat[1],0.5*(zdat[0:-1]+zdat[1:])))
             zint=np.hstack((zint,zint[-1]+zdat[-1]-zdat[-2]))
@@ -2165,7 +2279,9 @@ class state(object):
          """
     
     f = self.rootgrp
-    cmd = string.join(['self.',field_new,'=self.',field,'.copy()'],sep='')
+#    cmd = string.join(['self.',field_new,'=self.',field,'.copy()'],sep='')
+    cmd = string.join(['self.',field_new,'=vars(self)[\'',field,'\'].copy()'],sep='')    
+
     exec(cmd)
     
     self.variables.pop(field)
@@ -2243,13 +2359,20 @@ class state(object):
     if field is None:
       return None
 
-    e=self.var_dict[field]['z_interfaces']
-    eb = 0.5*(e+np.roll(e,shift=-1,axis=3))
-    self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=3),eb),axis=3)
-    eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
-    self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=2),eb),axis=2)    
+    if self.var_dict[field]['Ztype'] is not 'Fixed':
+        e=self.var_dict[field]['z_interfaces']
+        eb = 0.5*(e+np.roll(e,shift=-1,axis=3))
+        self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=3),eb),axis=3)
+        eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
+        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=2),eb),axis=2)
+    else:
+        e=self.var_dict[field]['z_interfaces']
+        eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
+        self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=2),eb),axis=2)
+        eb = 0.5*(e+np.roll(e,shift=-1,axis=1))
+        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=1),eb),axis=1)            
     
-  def fill_interior(self,field=None):
+  def fill_interior(self,field=None,smooth=False):
     """
 
     Fill interior above the topography .
@@ -2289,7 +2412,7 @@ class state(object):
         good = np.zeros([tmp.shape[0],tmp.shape[1]])
         good[~mask_in]=1
         v_filled = np.zeros([tmp.shape[1],tmp.shape[0]])
-        v_filled=vmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=True,tripolar_n=True)
+        v_filled=vmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=True,tripolar_n=True,smooth=smooth)
         v_filled=v_filled.T
         v_filled[mask_out==1]=FVal_
         v_filled=np.ma.masked_where(mask_out==1,v_filled)
@@ -2318,9 +2441,9 @@ class state(object):
 
             if j>0:
                 # initialize with nearest fill or value at previous level
-                v_filled=vmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,val_prev.T,cyclic_x=True,tripolar_n=True)
+                v_filled=vmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,val_prev.T,cyclic_x=True,tripolar_n=True,smooth=smooth)
             else:
-                v_filled=vmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=True,tripolar_n=True)
+                v_filled=vmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=True,tripolar_n=True,smooth=smooth)
 
         
             v_filled=v_filled.T
@@ -2522,8 +2645,11 @@ class state(object):
       if var_dict['Z'] is not None:
         
         var_dict['dz'] = np.sum(dz_masked*dy_masked*dx_masked,axis=3)/np.sum(dy_masked*dx_masked,axis=3)      
-        var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],sout.shape[1],sout.shape[2],1))      
-        z0 = np.take(var_dict['z_interfaces'],[0],axis=0)
+        var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],sout.shape[1],sout.shape[2],1))
+        if var_dict['Ztype'] is 'Fixed':
+            z0 = np.take(var_dict['z_interfaces'],[0],axis=0)
+        else:
+            z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
         dy0 = np.take(dy_masked,[0],axis=1)
         dx0 = np.take(dx_masked,[0],axis=1)
         result = np.sum(z0*dy0*dx0,axis=3)/np.sum(dy0*dx0,axis=3)
@@ -2577,6 +2703,7 @@ class state(object):
             if var_dict['Ztype'] is 'Fixed':
                 z0 = [0]
                 z0 = np.reshape(z0,(1,1,1,1))
+                zi=np.take(zi,[0],axis=0)
                 zi=np.concatenate((z0,zi),axis=1)
                 var_dict['z_interfaces']=zi.copy()
                 tmp=0.5*(zi + np.roll(zi,axis=0,shift=-1))
@@ -2631,7 +2758,8 @@ class state(object):
       dy0 = np.take(dy_masked,[0],axis=1)
       dx0 = np.take(dx_masked,[0],axis=1)      
       result = np.sum(z0*dy0*dx0,axis=3)/np.sum(dy0*dx0,axis=3)
-      result = np.reshape(result,(sout.shape[0],1,sout.shape[2],1))
+      result = result[:,:,:,np.newaxis]
+
       var_dict['z_interfaces']=-np.reshape(np.sum(var_dict['dz'],axis=1),(sout.shape[0],1,sout.shape[2],1))
     
       var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=1)
@@ -2725,7 +2853,7 @@ class state(object):
       self.var_dict[name]=var_dict
       self.variables[name]=name
 
-  def time_avg(self,field=None,vol_weight=True):
+  def time_avg(self,field=None,vol_weight=True,target=None):
     """
 
     Calculate a finite-volume-weighted average of (field)
@@ -2733,6 +2861,8 @@ class state(object):
     
     """
 
+    missing=-1.e34
+    
     if self.var_dict[field]['T'] is None:
       return None
       
@@ -2743,6 +2873,11 @@ class state(object):
     var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent 
 
 
+    if target is not None:
+        nt = len(target['tax_data'])
+    else:
+        nt = 1
+        
     if vol_weight == True:
         if self.var_dict[field]['Z'] is not None:
             if self.var_dict[field]['Ztype'] is 'Fixed':
@@ -2772,35 +2907,47 @@ class state(object):
 
     shape=sout.shape
     w_masked = w_masked*np.tile(np.reshape(dt,(shape[0],1,1,1)),(1,shape[1],shape[2],shape[3]))
-    result = np.ma.zeros((np.hstack((1,sout.shape[1:]))))
+    result = np.ma.zeros((np.hstack((nt,sout.shape[1:]))))
+    result[:]=missing
     nz=shape[1]+1
-    result2 = np.ma.zeros((np.hstack((1,nz,shape[2:]))))
+
+    if var_dict['Z'] is not 'Fixed':
+        result2 = np.ma.zeros((np.hstack((nt,nz,shape[2:]))))
+    else:
+        result2 = np.ma.zeros((np.hstack((nz,shape[2:]))))
+
+    result2[:]=missing
     avg_time = 0.
-    for i in  np.arange(0,sout.shape[0]):
-      result[0,:,:,:]=sout[i,:,:,:]*w_masked[i,:,:,:] + result[0,:,:,:]
 
-      if var_dict['z_interfaces'] is not None:
-          if var_dict['Ztype'] is not 'Fixed':
-              result2[0,:,:,:]=var_dict['z_interfaces'][i,:,:,:]*dt[i] + result2[0,:,:,:]
-          else:
-              result2[0,:,:,:]=var_dict['z_interfaces'][:,:,:]*dt[i] + result2[0,:,:,:]
-              
-      avg_time = avg_time+dt[i]*var_dict['tax_data'][i]
+    for j in np.arange(0,nt):
 
-    result = result/np.sum(w_masked,axis=0)
+      if target is not None:
+          ts,te = find_date_bounds(self.var_dict[field]['dates'],target['date_bounds'][j],target['date_bounds'][j+1])
+          print 'j,ts,te= ',j,ts,te
+          
+          if ts != -1 and te != -1:
+              result[j,:,:,:]=np.sum(sout[ts:te,:,:,:]*w_masked[ts:te,:,:,:],axis=0)/np.sum(w_masked[ts:te,:,:,:],axis=0)
 
-    if var_dict['z_interfaces'] is not None:
-      result2 = result2/np.sum(dt)
-      
-    avg_time = avg_time/np.sum(dt)
-
+              if var_dict['z_interfaces'] is not None:
+                  if var_dict['Ztype'] is not 'Fixed':
+                      result2[j,:,:,:]=np.sum(var_dict['z_interfaces'][ts:te,:,:,:]*dt[ts:te],axis=0)/np.sum(dt[ts:te])
+      else:
+          result[j,:,:,:]=np.sum(sout*w_masked,axis=0)/np.sum(w_masked,axis=0)
+          
+    result = np.ma.masked_where(result == missing, result)
     
+    if var_dict['Ztype'] is 'Fixed':
+        if var_dict['z_interfaces'] is not None:        
+            result2=var_dict['z_interfaces'][:]
+            dz=np.ma.zeros(np.hstack(sout.shape[1:]))
+            for k in np.arange(0,sout.shape[1]):
+                dz[k,:,:]=result2[k,:,:]-result2[k+1,:,:]        
+    else:
+        dz = np.ma.zeros((np.hstack((nt,sout.shape[1:]))))
 
-    dz = np.ma.zeros((np.hstack((1,sout.shape[1:]))))
-
-    if var_dict['z_interfaces'] is not None:
-      for k in np.arange(0,sout.shape[1]):
-        dz[0,k,:,:]=result2[0,k,:,:]-result2[0,k+1,:,:]
+        if var_dict['z_interfaces'] is not None:
+            for k in np.arange(0,sout.shape[1]):
+                dz[:,k,:,:]=result2[:,k,:,:]-result2[:,k+1,:,:]
 
     if var_dict['Z'] is not None:
         if var_dict['Ztype'] is not 'Fixed':        
@@ -2808,25 +2955,36 @@ class state(object):
             var_dict['dz']=np.squeeze(dz)
             tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
             var_dict['z'] = tmp[:,0:-1,:,:]
-            var_dict['z'] = np.reshape(var_dict['z'],(1,shape[1],shape[2],shape[3]))
-            var_dict['dz'] = np.reshape(var_dict['dz'],(1,shape[1],shape[2],shape[3]))            
+            var_dict['z'] = np.reshape(var_dict['z'],(nt,shape[1],shape[2],shape[3]))
+            var_dict['dz'] = np.reshape(var_dict['dz'],(nt,shape[1],shape[2],shape[3]))            
 
         else:
-            shp_=result2.shape
-            result2=result2.reshape(shp_[1:])
             var_dict['z_interfaces']=result2
             var_dict['dz']=dz
             tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
             var_dict['z'] = tmp[0:-1,:,:]
             var_dict['z'] = np.reshape(var_dict['z'],(shape[1],shape[2],shape[3]))
-            var_dict['dz'] = np.reshape(var_dict['dz'],(shape[1],shape[2],shape[3]))                        
-    var_dict['tax_data'] = avg_time
-    tbax_data = [var_dict['tbax_data'][0],var_dict['tbax_data'][-1]]
-    var_dict['tbax_data']=tbax_data
-    date_bounds = [var_dict['date_bounds'][0],var_dict['date_bounds'][-1]]
-    var_dict['dates'] = num2date(avg_time,var_dict['tunits'],var_dict['calendar'])
-    var_dict['T'] = 'time'
-    var_dict['dt']=[np.sum(dt)]
+            var_dict['dz'] = np.reshape(var_dict['dz'],(shape[1],shape[2],shape[3]))
+
+    if target is not None:
+        var_dict['tbax_data'] = target['tbax_data']
+        var_dict['tax_data'] = target['tax_data']        
+        date_bounds = target['date_bounds']
+        var_dict['dates'] = target['dates']
+        var_dict['T'] = 'time'
+        var_dict['dt']=target['dt']
+
+    else:
+        tbax_data = [var_dict['tbax_data'][0],var_dict['tbax_data'][-1]]
+        var_dict['tbax_data']=tbax_data
+        date_bounds = [var_dict['date_bounds'][0],var_dict['date_bounds'][-1]]
+        avg_time = np.sum(dt*var_dict['tax_data'])/np.sum(dt)
+        var_dict['dates'] = num2date(avg_time,var_dict['tunits'],var_dict['calendar'])
+        var_dict['T'] = 'time'
+        var_dict['dt']=[np.sum(dt)]      
+        var_dict['tax_data'] = avg_time    
+
+
     var_dict['rootgrp']=None
 
     
@@ -2859,7 +3017,7 @@ class state(object):
         if self.var_dict[field]['Z'] is not None:
             if self.var_dict[field]['Ztype'] is 'Fixed':
 
-                w=self.var_dict[field]['dz'][:]
+                dz=self.var_dict[field]['dz'][:]
                 w = np.tile(dz,(sout.shape[0],1,1,1))
         
                 if self.var_dict[field]['masked']:
@@ -2946,6 +3104,111 @@ class state(object):
     self.var_dict[name]=var_dict
     self.variables[name]=name      
 
+
+  def time_interp(self,field=None,target=None,vol_weight=True,name=None):
+    """
+
+    Interpolate (field) from its time axis to the (target) axis
+    using linear interpolation.  If (vol_weight) is True, the
+    cell volume is interpolated as well.
+
+    (target) is a midas dictionary
+    
+    """
+
+    if name is None:
+        name = field+'_tinterp'
+    
+    if self.var_dict[field]['T'] is None:
+      return None
+      
+    if target is None:
+        return None
+    
+    cmd = string.join(['sout=self.',field],sep='')
+    exec(cmd)
+
+    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent 
+
+    do_interfaces=False
+    do_vol=False
+
+  
+    if vol_weight == True:
+        if self.var_dict[field]['Z'] is not None:
+            do_vol=True
+            if self.var_dict[field]['Ztype'] is 'Fixed':
+
+                dz=self.var_dict[field]['dz'][:]
+                w = np.tile(dz,(sout.shape[0],1,1,1))
+        
+                if self.var_dict[field]['masked']:
+                    w_masked = np.ma.masked_where(sout.mask,w)
+                else:
+                    w_masked = w
+            else:
+                do_interfaces=True
+                w=self.var_dict[field]['dz'][:]
+          
+                if self.var_dict[field]['masked']:
+                    w_masked = np.ma.masked_where(sout.mask,w)
+                else:
+                    w_masked = w
+        else:
+            w = np.ones((sout.shape))      
+            w_masked = w
+    else:
+        w = np.ones((sout.shape))      
+        w_masked = w
+
+        
+    shape=sout.shape
+    nt = len(target['dates'])
+
+    result = np.ma.zeros((np.hstack((nt,sout.shape[1:]))))
+    nzp=shape[1]+1
+
+    if do_interfaces:
+        result2 = np.ma.zeros((np.hstack((nt,nzp,shape[2:]))))
+        
+
+    t1,t2,w1,w2 = time_interp_weights(self.var_dict[field]['dates'],target['dates'])
+
+    for i in  np.arange(0,nt):
+
+        if w1[i]>1.0:
+            result[i,:]=-999.
+        else:
+            result[i,:,:,:]=sout[t1[i],:,:,:]*w_masked[t1[i],:,:,:]*w1[i] + sout[t2[i],:,:,:]*w_masked[t2[i],:,:,:]*w2[i]
+
+        if do_interfaces:
+            if w1[i]>1.0:
+                result2[i,:]=-999.
+            else:
+                result2[i,:,:,:]=var_dict['z_interfaces'][t1[i],:,:,:]*w1[i] + var_dict['z_interfaces'][t2[i],:,:,:]*w2[i]
+                    
+
+
+    if do_interfaces:
+        dz = np.ma.zeros((np.hstack((nt,sout.shape[1:]))))        
+        for i in np.arange(0,nt):
+            for k in np.arange(0,sout.shape[1]):
+                dz[i,k,:,:]=result2[i,k,:,:]-result2[i,k+1,:,:]
+
+        var_dict['z_interfaces']=result2
+        var_dict['dz']=dz
+        tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=1,shift=-1))
+        var_dict['z'] = tmp[:,0:-1,:,:]          
+
+    var_dict['tax_data']=target['tax_data']
+    var_dict['tunits']=target['tunits']
+    var_dict['dates'] = target['dates']
+    var_dict['T'] = target['T']
+
+    self.var_dict[name]=var_dict
+    self.variables[name]=name      
+    vars(self)[name]=np.ma.masked_where(result==-999.,result)
+    
   def monthly_anom(self,field=None):
     """
 
@@ -3116,6 +3379,7 @@ class state(object):
         zi_n = zi[:,n]
         print '...Finding interface positions '
         zi_n=vmap.midas_vertmap.find_interfaces(rho,zax,Rb,depth,nlevs,nkml,nkbl,hml)
+        zi_n[:,:,1:][zi_n[:,:,1:]>-hml]=-hml
         ptemp=vars(self)[temp_name][n,:].T
         salinity=vars(self)[salt_name][n,:].T
         print '...Remapping temperature '
@@ -3185,7 +3449,7 @@ class state(object):
     var_dict['zbax_data']=Rb
     var_dict['z_interfaces']=zi
     var_dict['dz']=h
-    var_dict['Z']='potential_density'
+    var_dict['Z']='Layer'
     var_dict['z']=zout
     var_dict['zunits']='kg m-3'
     var_dict['Ztype']='Isopycnal'
@@ -3237,9 +3501,10 @@ class state(object):
     else:
         if z_bounds.ndim == 4:
             nx2=z_bounds.shape[1]-1
+            ztype='Generalized'
         else:
             nx2=z_bounds.shape[0]-1
-
+            ztype='Fixed'
     
     for fld in fields:
 
@@ -3269,8 +3534,13 @@ class state(object):
         vdict['z_interfaces']=z_bounds.copy()
 
 
-        vdict['dz']=np.zeros((nt,nx2,nj,ni))
-        
+        if ztype == 'Fixed':
+            vdict['dz']=np.zeros((nx2,nj,ni))            
+            vdict['z']=np.zeros((nx2,nj,ni))
+        else:
+            vdict['z']=np.zeros((nx2,nj,ni))            
+            vdict['dz']=np.zeros((nt,nx2,nj,ni))
+            
         for n in np.arange(nt):
 
             # Convention is x is monotonic and increasing.
@@ -3284,13 +3554,18 @@ class state(object):
         
             if self.var_dict[fld]['Ztype'] in ['Isopycnal','Generalized','Sigma']:
                 xb1 = -self.var_dict[fld]['z_interfaces'][n,:]
-                h1=self.var_dict[fld]['dz'][n,:]
-                xb2=-np.take(z_bounds,[n],axis=0)                
+                if ztype == 'Fixed':
+                    xb2=-z_bounds
+                else:
+                    xb2=-np.take(z_bounds,[n],axis=0)                                
             else:
                 xb1 = -self.var_dict[fld]['z_interfaces'][:]
-                h1=self.var_dict[fld]['dz'][:]
-                xb2=-z_bounds.copy() # Force an array copy since we will be adjusting these
+                if ztype == 'Fixed':
+                    xb2=-z_bounds.copy() # Force an array copy since we will be adjusting these
                                         # coordinates to match the outer edges of x1
+                else:
+                    xb2=-np.take(z_bounds,[n],axis=0)
+
 
             nx1=xb1.shape[0]-1
             xb2=sq(xb2)
@@ -3305,10 +3580,20 @@ class state(object):
             h2=np.roll(xb2,shift=-1,axis=0)-xb2
             h2=h2[:-1,:]
 
-            vdict['dz'][n,:]=h2
-
-            vdict['z_interfaces'][n,:]=xb2
             
+
+
+            if ztype == 'Fixed':
+                vdict['z_interfaces'][:]=-xb2
+                zout=xb2-np.roll(xb2,shift=-1,axis=0)
+                vdict['z']=zout[:-1,:]
+                vdict['dz'][:]=h2                
+            else:
+                vdict['z_interfaces'][n,:]=-xb2
+                zout=xb2-np.roll(xb2,shift=-1,axis=0)
+                vdict['z'][n,:]=zout[:-1,:]                
+                vdict['dz'][n,:]=h2
+                
             data=np.take(vars(self)[fld],[n],axis=0)
             data2=np.zeros((nx2,nj,ni))
 
@@ -3343,7 +3628,7 @@ class state(object):
 
 
     
-  def adjust_thickness(self,field=None):
+  def adjust_thickness(self,field=None,min_thickness=0.0):
     """
 
     Adjust cell thicknesses based on grid.D 
@@ -3355,26 +3640,56 @@ class state(object):
       
 
     if self.var_dict[field]['Ztype'] == 'Fixed':
+        
         dz = self.var_dict[field]['dz']
-        dz_cumsum=np.cumsum(dz,axis=0)
+        dz[dz<epsln]=epsln
+        zb=np.cumsum(dz,axis=0)
 
         nz = vars(self)[field].shape[1]    
         D = np.tile(self.grid.D,(nz,1,1))
-
-        floor_dz=D - np.roll(dz_cumsum,shift=1,axis=0)
-        mask=np.logical_and(dz_cumsum > D,np.roll(dz_cumsum,shift=1,axis=0) <= D)
+        floor_dz=D - np.roll(zb,shift=1,axis=0) # Distance from depth
+        mask=np.logical_and(zb > D,np.roll(zb,shift=1,axis=0) <= D) # mask for bottom-most cell
         dz[mask]=floor_dz[mask]
-        dz_cumsum=np.cumsum(dz,axis=0)
-        dz[dz_cumsum>D]=0.0
-
-        z=np.cumsum(dz,axis=0)
-        z=0.5*(z+np.roll(z,axis=0,shift=1))
+        zb=np.cumsum(dz,axis=0)
+        dz[zb>D]=epsln
+        zb=np.cumsum(dz,axis=0)
+        z=0.5*(zb+np.roll(zb,axis=0,shift=1))
         z[0,:]=0.5*dz[0,:]
-    
-        self.var_dict[field]['dz']=dz
-        self.var_dict[field]['z']=z
+        zb=np.concatenate((np.zeros((1,self.grid.jm,self.grid.im)),zb),axis=0)
+
+        self.var_dict[field]['dz']=dz        
+        if self.var_dict[field]['Zdir']==-1:
+            self.var_dict[field]['z']=-z
+            self.var_dict[field]['z_interfaces']=-zb
+        else:
+            self.var_dict[field]['z']=z
+            self.var_dict[field]['z_interfaces']=zb
     else:
-        print """ Adjust thickness not enabled for Lagrangian vertical coordinate """
+        
+        dz = self.var_dict[field]['dz']
+
+        zb=np.cumsum(dz,axis=1)
+        
+        nt= dz.shape[0]
+        nz = vars(self)[field].shape[1]    
+        D = np.tile(self.grid.D,(nt,nz,1,1))
+
+        floor_dz=D - np.roll(zb,shift=1,axis=1) # Distance from depth
+        mask=np.logical_and(zb > D,np.roll(zb,shift=1,axis=1) <= D) # mask for bottom-most cell
+        dz[mask]=floor_dz[mask]
+        dz= np.maximum(dz,min_thickness)
+        zb=np.cumsum(dz,axis=1)
+        z=0.5*(zb+np.roll(zb,axis=1,shift=1))
+        z[:,0,:]=0.5*dz[:,0,:]
+        zb=np.concatenate((np.zeros((nt,1,self.grid.jm,self.grid.im)),zb),axis=1)
+
+        self.var_dict[field]['dz']=dz        
+        if self.var_dict[field]['Zdir']==-1:
+            self.var_dict[field]['z']=-z
+            self.var_dict[field]['z_interfaces']=-zb
+        else:
+            self.var_dict[field]['z']=z
+            self.var_dict[field]['z_interfaces']=zb                        
         
   def horiz_interp(self,field=None,target=None,src_modulo=False,method=1,PrevState=None,field_x=None,field_y=None):
     """
@@ -4294,7 +4609,9 @@ class state(object):
       return None
 
 
-  def write_nc(self,filename=None,fields=None,format='NETCDF3_CLASSIC'):
+  def write_nc(self,filename=None,fields=None,format='NETCDF3_CLASSIC',append=False):
+
+    import os.path      
     """
 
     Write (fields) to an NC file. 
@@ -4306,151 +4623,262 @@ class state(object):
     if filename is None:
       return None
 
-
-    f=nc.Dataset(filename,'w',format=format)
-    write_interfaces=False
-    
+    file_exists = False
     dims=[]
     vars=[]
 
-
     
-    for field in fields:
-      dim_nam=str(self.var_dict[field]['T'])
-      if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
-          dims.append(dim_nam)
-          tdat_=self.var_dict[field]['tax_data']
-          if np.isscalar(tdat_):
-              tdat=[]
-              tdat.append(tdat_)
-          else:
-              tdat=tdat_
-          tdim=f.createDimension(dim_nam,None)
-          tv=f.createVariable(dim_nam,'f8',(dim_nam,))
-          if self.var_dict[field].has_key('tunits'):
-              tv.units= self.var_dict[field]['tunits']
-          if self.var_dict[field].has_key('calendar'):              
-              tv.calendar= self.var_dict[field]['calendar']
-          nt=len(tdat)
-          tv.cartesian_axis = 'T'          
-      dim_nam=str(self.var_dict[field]['Z'])
-      if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
-        dims.append(dim_nam)
-        xdat=self.var_dict[field]['zax_data'][:]
-        xdim=f.createDimension(dim_nam,len(xdat))
-        xv=f.createVariable(dim_nam,'f8',(dim_nam,))
-        xv[:]=xdat
-        xv.units =   self.var_dict[field]['zunits']
-        xv.direction = self.var_dict[field]['Zdir']
-        xv.cartesian_axis = 'Z'
-        if self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal'] and write_interfaces is False:
-          if 'z_interfaces'  in self.var_dict[field]:
-              if self.var_dict[field]['z_interfaces'] is not None:
-                  write_interfaces = True
-                  ifield=field
-                  zi=self.var_dict[field]['z_interfaces'][:]
-                  ziax=self.var_dict[field]['zbax_data'][:]
-      dim_nam=str(self.var_dict[field]['Y'])
-      if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
-        dims.append(dim_nam)
-        xdat=self.var_dict[field]['yax_data'][:]
-        xdim=f.createDimension(dim_nam,len(xdat))
-        xv=f.createVariable(dim_nam,'f8',(dim_nam,))
-        xv.units =   self.var_dict[field]['yunits']
-        xv[:]=xdat
-        xv.cartesian_axis='Y'
-      dim_nam=str(self.var_dict[field]['X'])
-      if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
-        dims.append(dim_nam)
-        xdat=self.var_dict[field]['xax_data'][:]
-        xdim=f.createDimension(dim_nam,len(xdat))
-        xv=f.createVariable(dim_nam,'f8',(dim_nam,))
-        xv.units =   self.var_dict[field]['xunits']
-        xv[:]=xdat
-        xv.cartesian_axis='X'
-      vars.append(field)
+    if append == True:
+        if os.path.exists(filename):
+            print '%s exists, appending ' %(filename)
+            file_exists = True
+            f=nc.Dataset(filename,'a',format=format)
+            dimlist = f.dimensions
+            for d in dimlist:
+                dims.append(str(d))
+            varlist = f.variables
+            for v in varlist:
+                vars.append(str(v))
+        else:
+            f=nc.Dataset(filename,'w',format=format)            
+    else:
+        f=nc.Dataset(filename,'w',format=format)
+        
+    write_interfaces=False
     
-    outv=[]
-    n=0
+    if file_exists == True:
+        outv=[]
+        for field in fields:
+            if field not in vars:
+                print " Attempting to append %(fld)s to existing file %(fn)s "%{'fld':field,'fn':filename}
+                return
 
-    if write_interfaces:
-      dim_nam='interfaces'
-      dims.append(dim_nam)
-      xdim=f.createDimension(dim_nam,len(ziax))
-      xv=f.createVariable(dim_nam,'f8',(dim_nam,))
-      xv[:]=ziax
+            dim_nam=str(self.var_dict[field]['T'])
+            if string.lower(dim_nam).count('none') == 0:
+                tdat_=self.var_dict[field]['tax_data']
+                if np.isscalar(tdat_):
+                    tdat=[]
+                    tdat.append(tdat_)
+                else:
+                    tdat=tdat_
+
+                tv  = f.variables[self.var_dict[field]['T']]
+                tunits_out = tv.units
+                tunits=self.var_dict[field]['tunits']
+
+            tdat_=[]
+            if tunits != tunits_out:
+               dates_in = self.var_dict[field]['dates']
+               t_delta=num2date(0,tunits,'standard')-num2date(0.,tunits_out,'standard')
+#               print """ Time units are not identical in write_nc.append """
+#               print 't_delta (days) tunits - tunits_out = ',t_delta.days
+#               print 'original timestamp = ',tdat
+               for t in tdat:
+                   if tunits_out[0:3]=='min':
+                       tdat_.append(t + t_delta.days * 1440.)
+                   if tunits_out[0:3]=='sec':
+                       tdat_.append(t + t_delta.days * 86400.)
+                   if tunits_out[0:3]=='day':
+                       tdat_.append(t + t_delta.days)
+                   if tunits_out[0:3]=='hou':
+                       tdat_.append(t + t_delta.days * 24.)                                                                     
+                   
+               tdat=tdat_
+
+#               print "adjusted time stamps = ",tdat
+            outv.append(f.variables[field])
+            
+        nt=len(tdat)
+        tstart=len(tv[:])
+    else:    
+        for field in fields:
+            dim_nam=str(self.var_dict[field]['T'])
+            if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
+                dims.append(dim_nam)
+                tdat_=self.var_dict[field]['tax_data']
+                if np.isscalar(tdat_):
+                    tdat=[]
+                    tdat.append(tdat_)
+                else:
+                    tdat=tdat_
+                tdim=f.createDimension(dim_nam,None)
+                tv=f.createVariable(dim_nam,'f8',(dim_nam,))
+                if self.var_dict[field].has_key('tunits'):
+                    tv.units= self.var_dict[field]['tunits']
+                if self.var_dict[field].has_key('calendar'):              
+                    tv.calendar= self.var_dict[field]['calendar']
+                nt=len(tdat)
+                tstart = 0
+                tv.cartesian_axis = 'T'          
+            dim_nam=str(self.var_dict[field]['Z'])
+            if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
+                dims.append(dim_nam)
+                xdat=self.var_dict[field]['zax_data'][:]
+                xdim=f.createDimension(dim_nam,len(xdat))
+                xv=f.createVariable(dim_nam,'f8',(dim_nam,))
+                xv[:]=xdat
+                xv.units =   self.var_dict[field]['zunits']
+                xv.direction = self.var_dict[field]['Zdir']
+                xv.cartesian_axis = 'Z'
+                if self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal'] and write_interfaces is False:
+                    if 'z_interfaces'  in self.var_dict[field]:
+                        if self.var_dict[field]['z_interfaces'] is not None:
+                            write_interfaces = True
+                            ifield=field
+                            zi=self.var_dict[field]['z_interfaces'][:]
+                            ziax=self.var_dict[field]['zbax_data'][:]
+            dim_nam=str(self.var_dict[field]['Y'])
+            if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
+                dims.append(dim_nam)
+                xdat=self.var_dict[field]['yax_data'][:]
+                xdim=f.createDimension(dim_nam,len(xdat))
+                xv=f.createVariable(dim_nam,'f8',(dim_nam,))
+                xv.units =   self.var_dict[field]['yunits']
+                xv[:]=xdat
+                xv.cartesian_axis='Y'
+            dim_nam=str(self.var_dict[field]['X'])
+            if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
+                dims.append(dim_nam)
+                xdat=self.var_dict[field]['xax_data'][:]
+                xdim=f.createDimension(dim_nam,len(xdat))
+                xv=f.createVariable(dim_nam,'f8',(dim_nam,))
+                xv.units =   self.var_dict[field]['xunits']
+                xv[:]=xdat
+                xv.cartesian_axis='X'
+                vars.append(field)
+    
+        outv=[]
+        n=0
+
+        if write_interfaces:
+            dim_nam='interfaces'
+            dims.append(dim_nam)
+            xdim=f.createDimension(dim_nam,len(ziax))
+            xv=f.createVariable(dim_nam,'f8',(dim_nam,))
+            xv[:]=ziax
 
       
-    for field in fields:
-      dims=[]
-      if self.var_dict[field]['T'] is not None:
-        dims.append(str(self.var_dict[field]['T']))
-      if self.var_dict[field]['Z'] is not None:
-        dims.append(str(self.var_dict[field]['Z']))
-      if self.var_dict[field]['Y'] is not None:
-        dims.append(str(self.var_dict[field]['Y']))
-      if self.var_dict[field]['X'] is not None:
-        dims.append(str(self.var_dict[field]['X']))
+        for field in fields:
+            dims=[]
+            if self.var_dict[field]['T'] is not None:
+                dims.append(str(self.var_dict[field]['T']))
+            if self.var_dict[field]['Z'] is not None:
+                dims.append(str(self.var_dict[field]['Z']))
+            if self.var_dict[field]['Y'] is not None:
+                dims.append(str(self.var_dict[field]['Y']))
+            if self.var_dict[field]['X'] is not None:
+                dims.append(str(self.var_dict[field]['X']))
 
-      if DEBUG == 1:
-          print 'field=',field,'dims= ',dims
+            if DEBUG == 1:
+                print 'field=',field,'dims= ',dims
 
-      if self.var_dict[field]['_FillValue'] is not None:
-          FillValue = self.var_dict[field]['_FillValue']          
-          var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
-      else:
-          var=f.createVariable(field,'f4',dimensions=dims)      
-      if self.var_dict[field]['missing_value'] is not None:
-          var.missing_value = self.var_dict[field]['missing_value']
+            if self.var_dict[field]['_FillValue'] is not None:
+                FillValue = self.var_dict[field]['_FillValue']          
+                var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
+            else:
+                var=f.createVariable(field,'f4',dimensions=dims)      
+            if self.var_dict[field]['missing_value'] is not None:
+                var.missing_value = self.var_dict[field]['missing_value']
 
-      if self.var_dict[field].has_key('units'):
-          var.units = self.var_dict[field]['units']
+            if 'longname' in self.var_dict[field].keys():
+                var.longname = self.var_dict[field]['longname']
           
-      outv.append(var)
+            if 'units' in self.var_dict[field].keys():
+                var.units = self.var_dict[field]['units']
+          
+            outv.append(var)
 
 
-    if write_interfaces:
-      dims=[]
-      if self.var_dict[ifield]['T'] is not None:
-        dims.append(str(self.var_dict[ifield]['T']))
-      if self.var_dict[ifield]['Z'] is not None:
-        dims.append('interfaces')        
-      if self.var_dict[ifield]['Y'] is not None:
-        dims.append(str(self.var_dict[ifield]['Y']))
-      if self.var_dict[ifield]['X'] is not None:
-        dims.append(str(self.var_dict[ifield]['X']))
+        if write_interfaces:
+            dims=[]
+            if self.var_dict[ifield]['T'] is not None:
+                dims.append(str(self.var_dict[ifield]['T']))
+            if self.var_dict[ifield]['Z'] is not None:
+                dims.append('interfaces')        
+            if self.var_dict[ifield]['Y'] is not None:
+                dims.append(str(self.var_dict[ifield]['Y']))
+            if self.var_dict[ifield]['X'] is not None:
+                dims.append(str(self.var_dict[ifield]['X']))
 
-      var=f.createVariable('eta','f4',dims)
-      outv.append(var)
+            var=f.createVariable('eta','f4',dims)
+            outv.append(var)
       
 
-    m=0
-    for field in fields:
-      if self.var_dict[field]['T'] is  None:
-          outv[m][:]=sq(self.__dict__[field][:])
-      m=m+1
+        m=0
+        for field in fields:
+            if self.var_dict[field]['T'] is  None:
+                outv[m][:]=sq(self.__dict__[field][:])
+            m=m+1
 
     m=0;p=0
     for field in fields:
         if self.var_dict[field]['T'] is not None:
-            for n in np.arange(0,nt):
+            for n in np.arange(tstart,nt+tstart):
                 if self.var_dict[field]['X'] is None and self.var_dict[field]['Y'] is None and self.var_dict[field]['Z'] is None:
-                    outv[m][n]=self.__dict__[field][n]
+                    outv[m][n]=self.__dict__[field][n-tstart]
                 else:
-                    outv[m][n,:]=sq(self.__dict__[field][n,:])
+                    outv[m][n,:]=sq(self.__dict__[field][n-tstart,:])
 
                 if write_interfaces and m == 0:
-                    outv[-1][n,:]=zi[n,:]
+                    outv[-1][n,:]=zi[n-tstart,:]
         
 
-                tv[n]=tdat[n]
+                tv[n]=tdat[n-tstart]
                 
             m=m+1
         
     
     f.sync()
     f.close()
-    
+
+
+  def calculate_bias(self,path=None,varin=None,varout=None,monthly_clim=False,ann_clim=False):
+      """
+
+      Read a field from path/varin and calculate bias statistics
+      with respect to varout
+
+      """
+
+      if path is None or varin is None or varout is None:
+          print """ path, varin and varout need to be specified """
+          return
+
+      grid_obs = generic_rectgrid(path,var=varin)
+      O=state(path,grid=grid_obs,fields=[varin],default_calendar='noleap')
+
+      
+      if ~O.var_dict[varin].has_key('Ztype'):
+          O.var_dict[varin]['Ztype'] = 'Fixed'
+
+      if monthly_clim:
+          O.monthly_avg(varin,vol_weight=True)
+          var = varin+'_monthly'
+          O.del_field(varin)
+          O.rename_field(var,varin)
+          Obs=O.horiz_interp(varin,target=self.grid,src_modulo=True)
+      elif ann_clim:
+          O.time_avg(varin,vol_weight=True)
+          var = varin+'_tav'
+          O.del_field(varin)
+          O.rename_field(var,varin)          
+          Obs=O.horiz_interp(varin,target=self.grid,src_modulo=True)          
+      else:
+          Obs=O.horiz_interp(varin,target=self.grid,src_modulo=True)
+          
+      self.obs = {}
+      self.obs[varin]=Obs
+
+
+
+      return
+
+
+  
+  # def tracer_lateral_diffusion(self,tr,coeff):
+
+  #     return 
+  
   def add_figure(self,name,commands):
     """
     
