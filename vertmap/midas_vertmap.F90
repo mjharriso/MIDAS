@@ -45,6 +45,179 @@ module midas_vertmap
   
 contains
 
+ function fill_miss_2d(a,good,fill,prev,cyclic_x,tripolar_n,smooth) result(aout)
+!
+!# Use ICE-9 algorithm to populate points (fill=1) with 
+!# valid data (good=1). If no information is available,
+!# Then use a previous guess (prev). Optionally (smooth) 
+!# blend the filled points to achieve a more desirable result.
+!
+!  (in)        a   : input 2-d array with missing values 
+!  (in)     good   : valid data mask for incoming array (1==good data; 0==missing data)
+!  (in)     fill   : same shape array of points which need filling (1==please fill;0==leave it alone)   
+!  (in)     prev   : first guess where isolated holes exist,
+!  (in) cyclic_x   : use cyclic boundary conditions in x direction
+!  (in) tripolar_n : use tripolar boundary condition in y direction   
+!
+#ifdef PY_SOLO
+   real(kind=8), dimension(:,:), intent(in) :: a
+   real(kind=8), dimension(size(a,1),size(a,2)), intent(in) :: good,fill
+   real(kind=8), dimension(size(a,1),size(a,2)), optional, intent(in) :: prev
+   logical, intent(in), optional :: cyclic_x, tripolar_n
+   logical, intent(in), optional :: smooth
+   
+   real(kind=8), dimension(size(a,1),size(a,2)) :: aout
+   real(kind=8), dimension(size(a,1),size(a,2)) :: b,r
+   integer, dimension(size(a,1),size(a,2)) :: fill_pts,good_,good_new
+#endif
+
+#ifndef PY_SOLO
+   real, dimension(:,:), intent(in) :: a
+   real, dimension(size(a,1),size(a,2)), intent(in) :: good,fill
+   real, dimension(size(a,1),size(a,2)), optional, intent(in) :: prev
+   logical, intent(in), optional :: cyclic_x, tripolar_n
+   logical, intent(in), optional :: smooth
+   
+   real, dimension(size(a,1),size(a,2)) :: aout,b,r
+   integer, dimension(size(a,1),size(a,2)) :: fill_pts,good_,good_new   
+#endif   
+   integer :: nfill, i,j,ngood,nfill_prev,nx,ny,ip,jp,im,jm,ijp
+   real    :: east,west,north,south,sor
+   integer :: g,ge,gw,gn,gs,k
+   logical :: xcyclic,tripolar_north,do_smooth
+
+   integer, parameter :: num_pass = 10
+   real, parameter :: relc = 0.2, crit = 1.e-5
+   
+   xcyclic=.false.
+   if (PRESENT(cyclic_x)) xcyclic=cyclic_x
+
+   tripolar_north=.false.
+   if (PRESENT(tripolar_n)) tripolar_north=tripolar_n
+
+   do_smooth=.false.
+   if (PRESENT(smooth)) do_smooth=smooth
+   
+   nx=size(a,1);ny=size(a,2)
+   
+   aout(:,:)=a(:,:)
+   
+   fill_pts(:,:)=fill(:,:)
+   nfill = sum(fill)
+   nfill_prev = nfill
+   good_(:,:)=good(:,:)
+   r(:,:)=0.0
+   b(:,:)=aout(:,:)
+   good_new(:,:)=good_(:,:)
+
+
+   do while (nfill > 0)
+      do j=1,ny
+         i_loop: do i=1,nx
+            g = good_(i,j)
+            if (good_(i,j)>0 .or. fill(i,j) .eq. 0) cycle i_loop
+            ip=i+1;im=i-1            
+            jp=j+1;jm=j-1
+            ijp=i
+            if (xcyclic) then
+                if (ip.eq.nx+1) ip=1
+                if (im.eq.0) im=nx
+            else
+                if (ip.eq.nx+1) ip=nx
+                if (im.eq.0) im=1
+            endif
+            if (jm .eq. 0) jm=1
+            if (tripolar_north) then
+                if (jp.eq.ny+1) then
+                    jp=ny;ijp=nx-i+1
+                endif
+            else
+                if (jp.eq.ny+1) then
+                    jp=ny;ijp=i
+                endif
+            endif
+            ge=good_(ip,j);gw=good_(im,j)
+            gn=good_(ijp,jp);gs=good_(i,jm)
+            east=0.0;west=0.0;north=0.0;south=0.0
+            if (ge.eq.1) east=aout(ip,j)*ge
+            if (gw.eq.1) west=aout(im,j)*gw
+            if (gn.eq.1) north=aout(ijp,jp)*gn
+            if (gs.eq.1) south=aout(i,jm)*gs                        
+            ngood = ge+gw+gn+gs
+            if (ngood > 0) then
+                b(i,j)=(east+west+north+south)/ngood
+                fill_pts(i,j)=0
+                good_new(i,j)=1
+            endif
+         enddo i_loop
+      enddo
+
+      
+      aout(:,:)=b(:,:)
+      good_(:,:)=good_new(:,:)
+      nfill_prev=nfill
+      nfill = sum(fill_pts)
+
+      if (nfill == nfill_prev .and. PRESENT(prev)) then
+          do j=1,ny
+             do i=1,nx
+               if (fill_pts(i,j).eq.1) then
+                    aout(i,j)=prev(i,j)
+                    fill_pts(i,j)=0
+                endif
+             enddo
+          enddo
+      else if (nfill .eq. nfill_prev) then
+          print *,'&
+               &Unable to fill missing points using either data at the same vertical level from a connected basin&
+               &or using a point from a previous vertical level.  Make sure that the original data has some valid&
+               &data in all basins.'
+          print *,'nfill=',nfill
+      endif
+
+      nfill = sum(fill_pts)
+      
+   end do
+
+   if (do_smooth) then
+       do k=1,num_pass
+          do j=1,ny
+             do i=1,nx
+                sor=0.0
+                if (fill(i,j) .eq. 1 .and. good(i,j) .eq. 0) sor=relc            
+                ip=i+1;im=i-1
+                jp=j+1;jm=j-1
+                ijp=i
+                if (xcyclic) then
+                    if (ip.eq.nx+1) ip=1
+                    if (im.eq.0) im=nx
+                else
+                    if (ip.eq.nx+1) ip=nx
+                    if (im.eq.0) im=1
+                endif
+                if (jm .eq. 0) jm=1
+                if (tripolar_north) then
+                    if (jp.eq.ny+1) jp=ny;ijp=nx-i+1
+                else
+                    if (jp.eq.ny+1) jp=ny;ijp=i
+                endif
+                east=min(fill(i,j),fill(ip,j));west=min(fill(i,j),fill(im,j))
+                north=min(fill(i,j),fill(ijp,jp));south=min(fill(i,j),fill(i,jm))
+            
+                r(i,j) = sor*(south*aout(i,jm)+north*aout(ijp,jp)+west*aout(im,j)+east*aout(ip,j) - (south+north+west+east)*aout(i,j))
+             enddo
+          enddo
+      
+          aout(:,:)=r(:,:)+aout(:,:)
+      
+          if (maxval(abs(r)) <= crit) then
+              exit
+          endif
+       enddo
+   endif
+
+ end function fill_miss_2d
+
 #ifdef PY_SOLO
 
   function wright_eos_2d(T,S,p) result(rho)
@@ -225,11 +398,10 @@ contains
     real, dimension(size(tr_in,3)) :: tr_1d
     real, dimension(size(tr_in,3)+1) :: z_edges_
     real, dimension(nlay+1) :: e_1d
-    real, dimension(nlay) :: tr_
     integer, dimension(size(tr_in,1),size(tr_in,2)) :: nlevs_
     
-    integer :: n,i,j,k,l,nx,ny,nz,nt,kz
-    integer :: k_top,k_bot,k_bot_prev,kk
+    integer :: i,j,k,nx,ny,nz,kz
+    integer :: k_top,k_bot,k_bot_prev
     real    :: sl_tr
     real, dimension(size(tr_in,3)+1) :: wt,z1,z2
     logical :: debug_msg = .false.,debug_=.false.
@@ -239,7 +411,7 @@ contains
     nlevs_ = size(tr_in,3)
 
     if (PRESENT(nlevs)) then
-        nlevs_  = nlevs
+        nlevs_  = int(nlevs)
     endif
 
     if (PRESENT(debug)) then
@@ -343,7 +515,7 @@ contains
     integer, dimension(size(a,1)), intent(in), optional  :: lo,hi
     integer, dimension(size(a,1),size(x,1))  :: bi_r
 
-    integer :: mid,num_x,num_a,i
+    integer :: mid,num_x,i
     integer, dimension(size(a,1))  :: lo_,hi_,lo0,hi0
     integer :: nprofs,j
     
@@ -405,7 +577,7 @@ contains
    real(kind=8), dimension(size(temp,1),size(temp,3)) :: drho_dT,drho_dS
    real(kind=8), dimension(size(temp,1)) :: press
    
-   integer :: nx,ny,nz,nt,i,j,k,n,itt
+   integer :: nx,ny,nz,i,j,k,itt
    real, parameter :: T_max = 35.0, T_min = -2.0
    real, parameter :: S_min = 0.5, S_max=65.0
    real, parameter :: tol=1.e-4, max_t_adj=1.0, max_s_adj = 0.5
@@ -530,180 +702,6 @@ contains
    return
 
  end subroutine determine_temperature
-
- 
- function fill_miss_2d(a,good,fill,prev,cyclic_x,tripolar_n,smooth) result(aout)
-!
-!# Use ICE-9 algorithm to populate points (fill=1) with 
-!# valid data (good=1). If no information is available,
-!# Then use a previous guess (prev). Optionally (smooth) 
-!# blend the filled points to achieve a more desirable result.
-!
-!  (in)        a   : input 2-d array with missing values 
-!  (in)     good   : valid data mask for incoming array (1==good data; 0==missing data)
-!  (in)     fill   : same shape array of points which need filling (1==please fill;0==leave it alone)   
-!  (in)     prev   : first guess where isolated holes exist,
-!  (in) cyclic_x   : use cyclic boundary conditions in x direction
-!  (in) tripolar_n : use tripolar boundary condition in y direction   
-!
-#ifdef PY_SOLO
-   real(kind=8), dimension(:,:), intent(in) :: a
-   integer, dimension(size(a,1),size(a,2)), intent(in) :: good,fill
-   real(kind=8), dimension(size(a,1),size(a,2)), optional, intent(in) :: prev
-   logical, intent(in), optional :: cyclic_x, tripolar_n
-   logical, intent(in), optional :: smooth
-   
-   real, dimension(size(a,1),size(a,2)) :: aout,b,r
-   integer, dimension(size(a,1),size(a,2)) :: fill_pts,good_,good_new
-#endif
-
-#ifndef PY_SOLO
-   real, dimension(:,:), intent(in) :: a
-   integer, dimension(size(a,1),size(a,2)), intent(in) :: good,fill
-   real, dimension(size(a,1),size(a,2)), optional, intent(in) :: prev
-   logical, intent(in), optional :: cyclic_x, tripolar_n
-   logical, intent(in), optional :: smooth
-   
-   real, dimension(size(a,1),size(a,2)) :: aout,b,r
-   integer, dimension(size(a,1),size(a,2)) :: fill_pts,good_,good_new   
-#endif   
-   integer :: nfill, i,j,ngood,nfill_prev,nx,ny,ip,jp,im,jm,ijp
-   real    :: east,west,north,south,sor
-   integer :: g,ge,gw,gn,gs,k
-   logical :: xcyclic,tripolar_north,do_smooth
-
-   integer, parameter :: num_pass = 10
-   real, parameter :: relc = 0.2, crit = 1.e-5
-   
-   xcyclic=.false.
-   if (PRESENT(cyclic_x)) xcyclic=cyclic_x
-
-   tripolar_north=.false.
-   if (PRESENT(tripolar_n)) tripolar_north=tripolar_n
-
-   do_smooth=.false.
-   if (PRESENT(smooth)) do_smooth=smooth
-   
-   nx=size(a,1);ny=size(a,2)
-   
-   aout(:,:)=a(:,:)
-   
-   fill_pts(:,:)=fill(:,:)
-   nfill = sum(fill)
-   nfill_prev = nfill
-   good_(:,:)=good(:,:)
-   r(:,:)=0.0
-   b(:,:)=aout(:,:)
-   good_new(:,:)=good_(:,:)
-
-
-   do while (nfill > 0)
-      do j=1,ny
-         i_loop: do i=1,nx
-            g = good_(i,j)
-            if (good_(i,j)>0 .or. fill(i,j) .eq. 0) cycle i_loop
-            ip=i+1;im=i-1            
-            jp=j+1;jm=j-1
-            ijp=i
-            if (xcyclic) then
-                if (ip.eq.nx+1) ip=1
-                if (im.eq.0) im=nx
-            else
-                if (ip.eq.nx+1) ip=nx
-                if (im.eq.0) im=1
-            endif
-            if (jm .eq. 0) jm=1
-            if (tripolar_north) then
-                if (jp.eq.ny+1) then
-                    jp=ny;ijp=nx-i+1
-                endif
-            else
-                if (jp.eq.ny+1) then
-                    jp=ny;ijp=i
-                endif
-            endif
-            ge=good_(ip,j);gw=good_(im,j)
-            gn=good_(ijp,jp);gs=good_(i,jm)
-            east=0.0;west=0.0;north=0.0;south=0.0
-            if (ge.eq.1) east=aout(ip,j)*ge
-            if (gw.eq.1) west=aout(im,j)*gw
-            if (gn.eq.1) north=aout(ijp,jp)*gn
-            if (gs.eq.1) south=aout(i,jm)*gs                        
-            ngood = ge+gw+gn+gs
-            if (ngood > 0) then
-                b(i,j)=(east+west+north+south)/ngood
-                fill_pts(i,j)=0
-                good_new(i,j)=1
-            endif
-         enddo i_loop
-      enddo
-
-      
-      aout(:,:)=b(:,:)
-      good_(:,:)=good_new(:,:)
-      nfill_prev=nfill
-      nfill = sum(fill_pts)
-
-      if (nfill == nfill_prev .and. PRESENT(prev)) then
-          do j=1,ny
-             do i=1,nx
-               if (fill_pts(i,j).eq.1) then
-                    aout(i,j)=prev(i,j)
-                    fill_pts(i,j)=0
-                endif
-             enddo
-          enddo
-      else if (nfill .eq. nfill_prev) then
-          print *,'&
-               Unable to fill missing points using either data at the same vertical level from a connected basin&
-               or using a point from a previous vertical level.  Make sure that the original data has some valid&
-               data in all basins.'
-          print *,'nfill=',nfill
-      endif
-
-      nfill = sum(fill_pts)
-      
-   end do
-
-   if (do_smooth) then
-       do k=1,num_pass
-          do j=1,ny
-             do i=1,nx
-                sor=0.0
-                if (fill(i,j) .eq. 1 .and. good(i,j) .eq. 0) sor=relc            
-                ip=i+1;im=i-1
-                jp=j+1;jm=j-1
-                ijp=i
-                if (xcyclic) then
-                    if (ip.eq.nx+1) ip=1
-                    if (im.eq.0) im=nx
-                else
-                    if (ip.eq.nx+1) ip=nx
-                    if (im.eq.0) im=1
-                endif
-                if (jm .eq. 0) jm=1
-                if (tripolar_north) then
-                    if (jp.eq.ny+1) jp=ny;ijp=nx-i+1
-                else
-                    if (jp.eq.ny+1) jp=ny;ijp=i
-                endif
-                east=min(fill(i,j),fill(ip,j));west=min(fill(i,j),fill(im,j))
-                north=min(fill(i,j),fill(ijp,jp));south=min(fill(i,j),fill(i,jm))
-            
-                r(i,j) = sor*(south*aout(i,jm)+north*aout(ijp,jp)+west*aout(im,j)+east*aout(ip,j) - (south+north+west+east)*aout(i,j))
-             enddo
-          enddo
-      
-          aout(:,:)=r(:,:)+aout(:,:)
-      
-          if (maxval(abs(r)) <= crit) then
-              exit
-          endif
-       enddo
-   endif
-
- end function fill_miss_2d
-
 
 
  subroutine find_overlap(e, Z_top, Z_bot, k_max, k_start, k_top, k_bot, wt, z1, z2)
@@ -844,9 +842,9 @@ contains
     real, dimension(size(rho,1),size(Rb,1)) :: zi_
     integer, dimension(size(rho,1),size(rho,2)) :: nlevs_
     integer, dimension(size(rho,1)) :: lo,hi        
-    real :: slope,rsm,drhodz,hml_
-    integer :: n,i,j,k,l,nx,ny,nz,nt
-    integer :: nlay,kk,nkml_,nkbl_
+    real :: slope,drhodz,hml_
+    integer :: i,j,k,l,nx,ny,nz
+    integer :: nlay,nkml_,nkbl_
     logical :: debug_ = .false.
     
     real, parameter :: zoff=0.999
@@ -868,7 +866,7 @@ contains
     if (PRESENT(hml)) hml_=hml    
     
     if (PRESENT(nlevs)) then
-        nlevs_(:,:) = nlevs(:,:)
+        nlevs_(:,:) = int(nlevs(:,:))
     endif
 
     do j=1,ny
@@ -993,10 +991,10 @@ contains
     integer, intent(in) :: niter
     logical, intent(in) :: cyclic_x, tripolar_n
 
-    integer :: i,j,k,n
+    integer :: i,j
     integer :: ni,nj
 
-    real, dimension(size(zi,1),size(zi,2)) :: res, m
+    real, dimension(size(zi,1),size(zi,2)) :: res
     integer, dimension(size(zi,1),size(zi,2),4) :: B
     real, dimension(0:size(zi,1)+1,0:size(zi,2)+1) :: mp
     integer, dimension(0:size(zi,1)+1,0:size(zi,2)+1) :: nm
@@ -1008,7 +1006,7 @@ contains
     
     mp=fill_boundaries(zi,cyclic_x,tripolar_n)
 
-    B(:,:,:)=0.0
+    B(:,:,:)=0
     nm=fill_boundaries(bad,cyclic_x,tripolar_n)
 
     do j=1,nj
@@ -1075,7 +1073,7 @@ contains
     logical, intent(in) :: cyclic_x, tripolar_n
     real, dimension(0:size(m,1)+1,0:size(m,2)+1) :: mp
 
-    integer :: ni,nj,i,j
+    integer :: ni,nj,i
 
     ni=size(m,1); nj=size(m,2)
 

@@ -1,30 +1,14 @@
 # Build and Release Folders
-bin-debug/
-bin-release/
+build/
 
-# Project property files
-.actionScriptProperties
-.flexProperties
-.settings/
-.project
 
 # Additional
+.*
+Makefile
+*.a
+*.o
+*.mod
 *.so
-ALE
 *.pyc
-ferret.jnl*
-.figs
-fms
-fms_siena
 *.pyf
-ipython_log.py
-.nc
-streamplot.py
-data
-esgf
-esmf
-seawater-2.0.1
-*.png
-*.log
-*.out
-*nml
+

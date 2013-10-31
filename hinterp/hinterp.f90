@@ -18,7 +18,9 @@ contains
 !
 ! method  0=conservative; 1=bilinear; 2=bicubic
   
-  subroutine hinterp( lon_in,lat_in,mask_in,data_in,lon_out,lat_out,mask_out,data_out,src_modulo,method,missing)
+  subroutine hinterp( lon_in,lat_in,mask_in,data_in,lon_out,lat_out,mask_out,&
+                        data_out,src_modulo,method,missing)
+    
     real(kind=8), intent(in),  dimension(:,:)      :: lon_in
     real(kind=8), intent(in),  dimension(:,:) :: lat_in
     real(kind=8), intent(in),  dimension(:,:,:,:) :: mask_in
