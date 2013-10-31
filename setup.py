@@ -7,12 +7,14 @@ hinterp = Extension(name = 'midas.hinterp',
                 include_dirs = ['fms_build'],
                 library_dirs = ['fms_build'],
                 libraries = ['fms','netcdf','netcdff'],
-                sources = ['hinterp/hinterp.f90'],
-                extra_f90_compile_args=['-fcray-pointer -fdefault-real-8 -ffixed-line-length-132 -ffree-line-length-0 '])
+                sources = ['hinterp/hinterp.f90'])
+
+
 
 vertmap = Extension(name = 'midas.vertmap',
-                sources = ['vertmap/midas_vertmap.F90'],
-                extra_f90_compile_args=['-fcray-pointer -fdefault-real-8 -ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO'])
+                sources = ['vertmap/midas_vertmap.F90']
+                )
+
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
