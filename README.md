@@ -19,6 +19,7 @@ INSTALL
 
 	#  sudo python setup.py install # for root users
 	python setup.py install --home=/home/foo/local 
+	setenv PYTHONPATH=/home/foo/local/lib
 
 USAGE
 =====
