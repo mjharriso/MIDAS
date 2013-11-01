@@ -1,5 +1,9 @@
 INSTALL
 =======
+
+        git clone https://github.com/mjharriso/MIDAS.git
+        
+        
 	cd /home/foo/install_dir
 	(cd fms;tar xvf fms_siena_201308.tar)
 
