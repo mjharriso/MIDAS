@@ -22,7 +22,9 @@
  Suite 900, Mountain View, California, 94041, USA.
 
 ===============================
+"""
 
+doclines = __doc__.split("\n")
 
 
 from numpy.distutils.core import Extension
@@ -47,8 +49,8 @@ if __name__ == '__main__':
     from numpy.distutils.core import setup
     setup(name = "midas",
           version = '1.0',
-          description = "ModularIsosurfaceDataAnalysisSoftware",
-          long_description = "specializes in handling gridded datasets for geophysical applications",
+          description = doclines[0],
+          long_description = "\n".join(doclines[2:]),
           author = "Matthew Harrison",
           author_email = "matthew.harrison@noaa.gov",
           url = "none",
