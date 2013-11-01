@@ -18,6 +18,7 @@ set LISTPATHS    = $root/fms/bin/list_paths
 
 if ($platform == 'gfdl_hpcs') then
   module load netcdf/4.2
+  module load intel_compilers
 endif
 
 cd $root
