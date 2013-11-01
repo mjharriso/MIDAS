@@ -1,10 +1,12 @@
 INSTALL
 =======
 
-        git clone https://github.com/mjharriso/MIDAS.git
         
-        
+
 	cd /home/foo/install_dir
+	git clone https://github.com/mjharriso/MIDAS.git
+	cd MIDAS
+	
 	(cd fms;tar xvf fms_siena_201308.tar)
 
 	# On GFDL HPCS
