@@ -2113,10 +2113,10 @@ class state(object):
     >>> S.a=np.ma.masked_where(S.a==-1.e20,S.a)
     >>> S.var_dict['a']['masked']=True
     >>> print np.ma.sum(S.a)
-    -10.0755883254
+    -20.1663931523
     >>> S.fill_interior('a')
     >>> print np.ma.sum(S.a)
-
+    -18.8982071632
     """
 
     from midas import vertmap
@@ -2653,17 +2653,25 @@ class state(object):
 
     shape=sout.shape
     w_masked = w_masked*np.tile(np.reshape(dt,(shape[0],1,1,1)),(1,shape[1],shape[2],shape[3]))
+    mask_in = np.zeros((w_masked.shape[0],1,w_masked.shape[2],w_masked.shape[3]))
+    tmp = w_masked[:,0,:]
+    tmp = tmp[:,np.newaxis,:]
+    mask_in[tmp.mask==False]=1.0
     result = np.ma.zeros((np.hstack((nt,sout.shape[1:]))))
     result[:]=missing
-    nz=shape[1]+1
+    result = np.ma.zeros((np.hstack((nt,sout.shape[1:]))))
+    ntimes = np.ma.zeros((np.hstack((1,1,sout.shape[2:]))))
+    ntimes[:]=missing
+    nzp=shape[1]+1
 
     if var_dict['Z'] is not 'Fixed':
-        result2 = np.ma.zeros((np.hstack((nt,nz,shape[2:]))))
+        interfaces= np.ma.zeros((np.hstack((nt,nzp,shape[2:]))))
     else:
-        result2 = np.ma.zeros((np.hstack((nz,shape[2:]))))
+        interfaces = np.ma.zeros((np.hstack((nzp,shape[2:]))))
 
-    result2[:]=missing
+    interfaces[:]=missing
     avg_time = 0.
+
 
     for j in np.arange(0,nt):
 
@@ -2676,37 +2684,39 @@ class state(object):
                   result[j,:,:,:]=np.ma.sum(sout[ts:te,:,:,:]*w_masked[ts:te,:,:,:],axis=0)/np.ma.sum(w_masked[ts:te,:,:,:],axis=0)
               else:
                   result[j,:,:,:]=np.sum(sout[ts:te,:,:,:]*w_masked[ts:te,:,:,:],axis=0)/np.sum(w_masked[ts:te,:,:,:],axis=0)
-                  
+
               if var_dict['z_interfaces'] is not None:
                   if var_dict['Ztype'] is not 'Fixed':
                       if self.var_dict[field]['masked']:
-                          result2[j,:,:,:]=np.ma.sum(var_dict['z_interfaces'][ts:te,:,:,:]*dt[ts:te],axis=0)/np.ma.sum(dt[ts:te])                          
+                          interfaces[j,:,:,:]=np.ma.sum(var_dict['z_interfaces'][ts:te,:,:,:]*dt[ts:te],axis=0)/np.ma.sum(dt[ts:te])                          
                       else:
-                          result2[j,:,:,:]=np.sum(var_dict['z_interfaces'][ts:te,:,:,:]*dt[ts:te],axis=0)/np.sum(dt[ts:te])
+                          interfaces[j,:,:,:]=np.sum(var_dict['z_interfaces'][ts:te,:,:,:]*dt[ts:te],axis=0)/np.sum(dt[ts:te])
       else:
           if self.var_dict[field]['masked']:          
               result[j,:,:,:]=np.ma.sum(sout*w_masked,axis=0)/np.ma.sum(w_masked,axis=0)
           else:
               result[j,:,:,:]=np.sum(sout*w_masked,axis=0)/np.sum(w_masked,axis=0)              
           
-    result = np.ma.masked_where(result == missing, result)
-    
-    if var_dict['Ztype'] is 'Fixed':
-        if var_dict['z_interfaces'] is not None:        
-            result2=var_dict['z_interfaces'][:]
-            dz=np.ma.zeros(np.hstack(sout.shape[1:]))
-            for k in np.arange(0,sout.shape[1]):
-                dz[k,:,:]=result2[k,:,:]-result2[k+1,:,:]        
-    else:
-        dz = np.ma.zeros((np.hstack((nt,sout.shape[1:]))))
+          result = np.ma.masked_where(result == missing, result)
 
-        if var_dict['z_interfaces'] is not None:
-            for k in np.arange(0,sout.shape[1]):
-                dz[:,k,:,:]=result2[:,k,:,:]-result2[:,k+1,:,:]
+          if var_dict['Z'] is not None:
+              if var_dict['Ztype'] is 'Fixed':
+                  if var_dict['z_interfaces'] is not None:        
+                      interfaces=var_dict['z_interfaces'][:]
+                      dz=np.ma.zeros(np.hstack(sout.shape[1:]))
+                      for k in np.arange(0,sout.shape[1]):
+                          dz[k,:,:]=interfaces[k,:,:]-interfaces[k+1,:,:]        
+              else:
+                  dz = np.ma.zeros((np.hstack((nt,sout.shape[1:]))))
+
+              if var_dict['z_interfaces'] is not None:
+                  for k in np.arange(0,sout.shape[1]):
+                      dz[:,k,:,:]=interfaces[:,k,:,:]-interfaces[:,k+1,:,:]
+
 
     if var_dict['Z'] is not None:
         if var_dict['Ztype'] is not 'Fixed':        
-            var_dict['z_interfaces']=result2
+            var_dict['z_interfaces']=interfaces
             var_dict['dz']=np.squeeze(dz)
             tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
             var_dict['z'] = tmp[:,0:-1,:,:]
@@ -2714,10 +2724,10 @@ class state(object):
             var_dict['dz'] = np.reshape(var_dict['dz'],(nt,shape[1],shape[2],shape[3]))            
 
         else:
-            var_dict['z_interfaces']=sq(result2)
+            var_dict['z_interfaces']=sq(interfaces)
             dz=np.ma.zeros(np.hstack(sout.shape[1:]))
             for k in np.arange(0,sout.shape[1]):
-                dz[k,:,:]=result2[k,:,:]-result2[k+1,:,:]                    
+                dz[k,:,:]=interfaces[k,:,:]-interfaces[k+1,:,:]                    
             var_dict['dz']=dz
             tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
             var_dict['z'] = tmp[0:-1,:,:]
@@ -2750,8 +2760,19 @@ class state(object):
 
     name = field+'_tav'
     vars(self)[name]=result
-    self.var_dict[name]=var_dict
-    self.variables[name]=name      
+    self.var_dict[name]=var_dict.copy()
+    self.variables[name]=name
+
+    ntimes=np.sum(mask_in,axis=0)
+    ntimes=ntimes[np.newaxis,:]
+
+    var_dict['T']=None
+    var_dict['Z']=None    
+    
+    name = field+'_nsamp'
+    vars(self)[name]=ntimes
+    self.var_dict[name]=var_dict.copy()
+    self.variables[name]=name    
 
   def monthly_avg(self,field=None,vol_weight=True):
     """

@@ -478,9 +478,9 @@ class supergrid(object):
     >>> import hashlib
     >>> sgrid=supergrid(360,30,'spherical','degrees',-90.,30.,0.,360.)
     >>> r,phi = sgrid.displaced_pole(0.25,180.)
-    >>> hash=hashlib.md5(r)
-    >>> print hash.hexdigest()
-    854789fddc11e05e345d6cdeaefe59f8
+    >>> print np.sum(r),np.max(r),np.min(r)
+    -833161.400782 -60.0 -89.4690265487
+
 
     
     """
