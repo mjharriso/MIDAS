@@ -2811,20 +2811,25 @@ class state(object):
                 else:
                     w_masked = w
         else:
-            w = np.ones((sout.shape))      
-            w_masked = w
+            w = np.ones((sout.shape))
+
+            if self.var_dict[field]['masked']:
+                w_masked = np.ma.masked_where(sout.mask,w)
     else:
         w = np.ones((sout.shape))      
         w_masked = w
 
-        
+        if self.var_dict[field]['masked']:
+            w_masked = np.ma.masked_where(sout.mask,w)
+            
     dt=self.var_dict[field]['dt'][:]
 
+
     shape=sout.shape
-    result = np.ma.zeros((np.hstack((12,sout.shape[1:]))))
-    nz=shape[1]+1
-    result2 = np.ma.zeros((np.hstack((12,nz,shape[2:]))))
-    num_samples=np.zeros((12))
+    result = np.zeros((np.hstack((12,sout.shape[1:]))))
+    nzp=shape[1]+1
+    interfaces = np.ma.zeros((np.hstack((12,nzp,shape[2:]))))
+    nsamp=np.zeros((result.shape[0],1,result.shape[2],result.shape[3]))
     months=get_months(self.var_dict[field]['dates'])
 
     weights=np.zeros((12,shape[1],shape[2],shape[3]))
@@ -2833,35 +2838,51 @@ class state(object):
       result[months[i]-1,:,:,:]=sout[i,:,:,:]*w_masked[i,:,:,:] + result[months[i]-1,:,:,:]
       weights[months[i]-1,:]=weights[months[i]-1,:]+w_masked[i,:]
 
-      if var_dict['Ztype'] is not 'Fixed' and var_dict['z_interfaces'] is not None:
-        result2[months[i]-1,:,:,:]=var_dict['z_interfaces'][i,:,:,:] + result2[months[i]-1,:,:,:]
-        
-      num_samples[months[i]-1]=num_samples[months[i]-1]+1
+      if var_dict['Z'] is not None:
+          if var_dict['Ztype'] is not 'Fixed' and var_dict['z_interfaces'] is not None:
+              interfaces[months[i]-1,:,:,:]=var_dict['z_interfaces'][i,:,:,:] + interfaces[months[i]-1,:,:,:]
 
-    for i in np.arange(0,12):
-        result[i,:] = result[i,:]/weights[i,:]
+      tmp = w_masked[i,:]
+      tmp[tmp.mask==False]=1.0
+      tmp=np.ma.filled(tmp,0.)
+      nsamp[months[i]-1,:]=nsamp[months[i]-1,:] + tmp
 
+
+    weights = np.ma.masked_where(weights==0.,weights)
+    result = result / weights
+
+    if self.var_dict[field]['masked']:
+        result = np.ma.masked_where(nsamp==0.,result)
+
+    elif np.min(nsamp == 0.):
+        result = np.ma.masked_where(nsap==0.,result)
+    
+    if var_dict['Z'] is not None:
         if var_dict['Ztype'] is not 'Fixed' and var_dict['z_interfaces'] is not None:
-            result2[i,:] = result2[i,:]/num_samples[i]
+            interfaces = interfaces/nsamp
+            interfaces = np.ma.masked_where(nsamp==0.,interfaces)
       
 
 
 
-    if var_dict['Ztype'] is not 'Fixed' and var_dict['z_interfaces'] is not None:
-        dz = np.ma.zeros((np.hstack((12,sout.shape[1:]))))        
+    if var_dict['Z'] is not None:                
+        if var_dict['Ztype'] is not 'Fixed' and var_dict['z_interfaces'] is not None:
+            dz = np.ma.zeros((np.hstack((12,sout.shape[1:]))))
+            
         for i in np.arange(0,12):
             for k in np.arange(0,sout.shape[1]):
-                dz[i,k,:,:]=result2[i,k,:,:]-result2[i,k+1,:,:]
+                dz[i,k,:,:]=interfaces[i,k,:,:]-interfaces[i,k+1,:,:]
 
-    if var_dict['Ztype'] is not 'Fixed' and var_dict['Z'] is not None:
-      var_dict['z_interfaces']=result2
-      var_dict['dz']=dz
-      if self.var_dict[field]['Ztype'] is 'Fixed':
-          tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
-          var_dict['z'] = tmp[0:-1,:,:]
-      else:
-          tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=1,shift=-1))
-          var_dict['z'] = tmp[:,0:-1,:,:]          
+        if var_dict['Ztype'] is not 'Fixed':
+            var_dict['z_interfaces']=interfaces
+            var_dict['dz']=dz
+            
+        if self.var_dict[field]['Ztype'] is 'Fixed':
+            tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
+            var_dict['z'] = tmp[0:-1,:,:]
+        else:
+            tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=1,shift=-1))
+            var_dict['z'] = tmp[:,0:-1,:,:]          
 
     mod_yr=0001
     dates=make_monthly_axis(mod_yr)
@@ -2880,9 +2901,15 @@ class state(object):
     
     name = field+'_monthly'
     vars(self)[name]=result
-    self.var_dict[name]=var_dict
+    self.var_dict[name]=var_dict.copy()
     self.variables[name]=name      
 
+    name = field+'_monthly_nsamp'
+    vars(self)[name]=nsamp
+    var_dict['Z']=None
+    self.var_dict[name]=var_dict
+    self.variables[name]=name      
+    
 
   def time_interp(self,field=None,target=None,vol_weight=True,name=None):
     """
