@@ -2774,7 +2774,7 @@ class state(object):
     self.var_dict[name]=var_dict.copy()
     self.variables[name]=name    
 
-  def monthly_avg(self,field=None,vol_weight=True):
+  def monthly_avg(self,field=None,vol_weight=True, DEBUG=False):
     """
 
     Calculate a finite-volume-weighted average of (field)
@@ -2791,8 +2791,10 @@ class state(object):
 
     var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent 
 
-
     if vol_weight == True:
+        #
+        # weights are equal to the thickness
+        #
         if self.var_dict[field]['Z'] is not None:
             if self.var_dict[field]['Ztype'] is 'Fixed':
 
@@ -2810,7 +2812,9 @@ class state(object):
                     w_masked = np.ma.masked_where(sout.mask,w)
                 else:
                     w_masked = w
+
         else:
+            # weights are unity
             w = np.ones((sout.shape))
 
             if self.var_dict[field]['masked']:
@@ -2826,7 +2830,7 @@ class state(object):
 
 
     shape=sout.shape
-    result = np.zeros((np.hstack((12,sout.shape[1:]))))
+    result = np.ma.zeros((np.hstack((12,sout.shape[1:]))))
     nzp=shape[1]+1
     interfaces = np.ma.zeros((np.hstack((12,nzp,shape[2:]))))
     nsamp=np.zeros((result.shape[0],1,result.shape[2],result.shape[3]))
@@ -2835,12 +2839,18 @@ class state(object):
     weights=np.zeros((12,shape[1],shape[2],shape[3]))
 
     for i in  np.arange(0,sout.shape[0]):
-      result[months[i]-1,:,:,:]=sout[i,:,:,:]*w_masked[i,:,:,:] + result[months[i]-1,:,:,:]
-      weights[months[i]-1,:]=weights[months[i]-1,:]+w_masked[i,:]
+      tmp=sout[i,:]
+      result_ptr=result[months[i]-1,:]
+      w_ptr=w_masked[i,:]
+      result_ptr[tmp.mask==False]=tmp[tmp.mask==False]*w_ptr[tmp.mask==False] + result_ptr[tmp.mask==False]
+      wgt_ptr=weights[months[i]-1,:]
+      wgt_ptr[tmp.mask==False]=wgt_ptr[tmp.mask==False]+w_ptr[tmp.mask==False]
 
       if var_dict['Z'] is not None:
           if var_dict['Ztype'] is not 'Fixed' and var_dict['z_interfaces'] is not None:
-              interfaces[months[i]-1,:,:,:]=var_dict['z_interfaces'][i,:,:,:] + interfaces[months[i]-1,:,:,:]
+              int_ptr=interfaces[months[i]-1,:]
+              zi=var_dict['z_interfaces'][i,:]
+              int_ptr[tmp.mask==False]=zi[tmp.mask==False]+int_ptr[tmp.mask==False]
 
       tmp = w_masked[i,:]
       tmp[tmp.mask==False]=1.0
@@ -2849,8 +2859,16 @@ class state(object):
 
 
     weights = np.ma.masked_where(weights==0.,weights)
+
+    if DEBUG:
+        print 'weights=',weights
+        print 'result 001=',result
+        
     result = result / weights
 
+    if DEBUG:
+        print 'result 002=',result
+        
     if self.var_dict[field]['masked']:
         result = np.ma.masked_where(nsamp==0.,result)
 
@@ -4679,8 +4697,8 @@ class state(object):
 
 
   def calculate_bias(self,path=None,varin=None,varout=None,monthly_clim=False,ann_clim=False):
+      
       """
-
       Read a field from path/varin and calculate bias statistics
       with respect to varout
 
@@ -4702,7 +4720,7 @@ class state(object):
           var = varin+'_monthly'
           O.del_field(varin)
           O.rename_field(var,varin)
-          Obs=O.horiz_interp(varin,target=self.grid,src_modulo=True)
+          Obs=O.horiz_interp(varin,target=self.grid)
       elif ann_clim:
           O.time_avg(varin,vol_weight=True)
           var = varin+'_tav'
@@ -4721,10 +4739,6 @@ class state(object):
 
 
   
-  # def tracer_lateral_diffusion(self,tr,coeff):
-
-  #     return 
-  
   def add_figure(self,name,commands):
     """
     
@@ -4740,97 +4754,6 @@ class state(object):
       self.fig_dict[name] = commands
       
 
-  # def plot_vsect(self,field,title,x=None,y=None,z=None,t=None):
-
-  #     """
-
-  #     Make a vertical section of (field) along specified
-  #     coordinate axes.
-
-  #     """
-
-  #     xs=0;xe=self.grid.im+1
-  #     ys=0;ye=self.grid.jm+1
-  #     ks=0;ke=len(self.var_dict[field]['zax_data'])+1
-  #     ts=0;te=len(self.var_dict[field]['tax_data'])+1
-      
-  #     if x is not None and y is not None:
-  #         xs,xe,ys,ye=find_geo_bounds(self.grid,x=x,y=y)
-  #     else:
-  #         if x is not None:
-  #             xs,xe=find_axis_bounds(self.grid.lonh,x=x)
-  #         if y is not None:
-  #             ys,ye=find_axis_bounds(self.grid.lath,x=y)
-
-  #     if t is not None:
-  #         ts,te=find_date_bounds(self.var_dict[field]['dates'],t[0],t[1])
-          
-  #     if z is not None:
-  #         ks,ke = find_axis_bounds(self.var_dict[field]['zax_data'],x=z)
-
-          
-  #     sout = vars(self)[field][ts:te,ks:ke,ys:ye,xs:xe]
-  #     xax  = self.grid.lonh[xs:xe]
-  #     yax  = self.grid.lath[ys:ye]
-  #     zax  = self.var_dict[field]['zax_data'][ks:ke]
-
-  #     if len(xax)>1 and len(yax) > 1:
-  #         print """Inconsistent array shape in call to plot_vsect, add section information when calling
-  #               """
-  #         return
-
-  #     if len(xax)==1:
-  #         xout=yax
-  #     else:
-  #         xout=xax
-
-  #     plt.pcolormesh(xout,zax,sq(sout))
-
-  #     plt.show()
-
-
-  # def cfill_hsect(self,field,title,x=None,y=None,z=None,t=None,crange=None,grid=True,axis_labels=True,colormap='jet'):
-
-  #     """
-
-  #     Contourfill a section of along specified
-  #     coordinate axes.
-
-  #     """
-
-  #     xs=0;xe=self.grid.im
-  #     ys=0;ye=self.grid.jm
-  #     ks=0;ke=len(self.var_dict[field]['zax_data'])
-  #     ts=0;te=len(self.var_dict[field]['tax_data'])
-      
-  #     if x is not None and y is not None:
-  #         xs,xe,ys,ye=find_geo_bounds(self.grid,x=x,y=y)
-  #     else:
-  #         if x is not None:
-  #             xs,xe=find_axis_bounds(self.grid.lonh,x=x)
-  #         if y is not None:
-  #             ys,ye=find_axis_bounds(self.grid.lath,x=y)
-              
-  #     if t is not None:
-  #         ts,te=find_date_bounds(self.var_dict[field]['dates'],t[0],t[0])
-  #         te=te+1
-  #     if z is not None:
-  #         ks,ke = find_axis_bounds(self.var_dict[field]['zax_data'],x=z)
-
-
-  #     sout = vars(self)[field][ts:te,ks:ke,ys:ye,xs:xe]
-  #     xax  = self.grid.lonh[xs:xe]
-  #     yax  = self.grid.lath[ys:ye]
-  #     zax  = self.var_dict[field]['zax_data'][ks:ke]
-
-  #     if crange is None:
-  #         crange=np.arange(np.min(sout),np.max(sout),(np.max(sout)-np.min(sout))/20.)
-
-  #     cmap = 'plt.cm.'+colormap
-
-  #     plt.contourf(xax,yax,sq(sout),levels=crange,cmap=cmap)
-
-  #     plt.show()
       
       
   def __getstate__(self):
