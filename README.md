@@ -5,21 +5,38 @@ INSTALL
 
 	cd /home/foo/install_dir
 	git clone git@github.com:mjharriso/MIDAS.git
+	# or if SSH does not work, try HTTPS
+	# git clone https://github.com/mjharriso/MIDAS.git
 	cd MIDAS
 	
 	(cd fms;tar xvf fms_siena_201308.tar)
-
-	# On GFDL HPCS
 	(cd fms_build;./build_fms.csh)
+	
+	# On GFDL HPCS (64-bit workstations of Analysis Cluster)
+	
+	module load python 
+	module load netcdf/4.2
+	module load intel_compilers
+	
 	(python setup.py config_fc --f90flags="-i4 -r8 -DPY_SOLO" --fcompiler=intelem build)
-	# On i686-linux
-	# (cd fms_build;cp build_fms.csh tmp;sed -e 's/#set platform = linux/set platform = linux/' < tmp > tmp2;sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_fms.csh;./build_fms.csh)
-	# python setup.py config_fc --fcompiler=gfortran --f90flags="-fcray-pointer -fdefault-real-8 -ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build
-
 
 	#  sudo python setup.py install # for root users
 	python setup.py install --home=/home/foo/local 
-	setenv PYTHONPATH=/home/foo/local/lib/python
+	setenv PYTHONPATH /home/foo/local/lib/python
+	
+	# On i686-linux platform with NetCDF library compiled using gFortran
+	
+	(cd fms_build;cp build_fms.csh tmp;\
+	sed -e 's/#set platform = linux/set platform = linux/' < tmp > tmp2;\
+	sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_fms.csh;\
+	./build_fms.csh)
+	
+	python setup.py config_fc --fcompiler=gfortran --f90flags="-fcray-pointer -fdefault-real-8 -ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build
+
+	#  sudo python setup.py install # for root users
+	python setup.py install --home=/home/foo/local 
+	setenv PYTHONPATH /home/foo/local/lib/python
+
 
 USAGE
 =====
