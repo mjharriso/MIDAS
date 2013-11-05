@@ -36,6 +36,7 @@ hinterp = Extension(name = 'midas.hinterp',
                 include_dirs = ['fms_build'],
                 library_dirs = ['fms_build'],
                 libraries = ['fms','netcdf','netcdff'],
+                extra_objects = ['fms_build/*.o'],
                 sources = ['hinterp/hinterp.f90'])
 
 
