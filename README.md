@@ -50,7 +50,8 @@ INSTALL
 	sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_fms.csh;\
 	./build_fms.csh)
 	
-	python setup.py config_fc --fcompiler=gfortran --f90flags="-fcray-pointer -fdefault-real-8 -ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build
+	python setup.py config_fc --fcompiler=gfortran --f90flags="-fcray-pointer -fdefault-real-8 \
+	-ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build
 
 	#  sudo python setup.py install # for root users
 	#  otherwise, install midas in your home directory
