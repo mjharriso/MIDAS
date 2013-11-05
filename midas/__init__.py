@@ -2710,9 +2710,12 @@ class state(object):
                   dz = np.ma.zeros((np.hstack((nt,sout.shape[1:]))))
 
               if var_dict['z_interfaces'] is not None:
-                  for k in np.arange(0,sout.shape[1]):
-                      dz[:,k,:,:]=interfaces[:,k,:,:]-interfaces[:,k+1,:,:]
-
+                  if var_dict['Ztype'] is not 'Fixed':        
+                      for k in np.arange(0,sout.shape[1]):
+                          dz[:,k,:,:]=interfaces[:,k,:,:]-interfaces[:,k+1,:,:]
+                  else:
+                      for k in np.arange(0,sout.shape[1]):
+                          dz[k,:,:]=interfaces[k,:,:]-interfaces[k+1,:,:]
 
     if var_dict['Z'] is not None:
         if var_dict['Ztype'] is not 'Fixed':        
