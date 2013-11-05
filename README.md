@@ -59,6 +59,18 @@ INSTALL
 	
 	python setup.py install --home=/home/foo/local 
 	setenv PYTHONPATH /home/foo/local/lib/python
+	
+	
+	### NOTE: OpenDAP currently disabled on Analysis Cluster. Example scripts using OpenDap addresses
+	###       will hang.
+	###
+	###       With the exception of OpenDAP, the midas package is fully functional on both the
+	###       GFDL 64-bit workstations and the Analysis cluster. Not yet tested on the PP cluster.
+	###       The FMS binaries interface on both platforms successfully.
+	###
+	###       Recommend building on the workstations (where OpenDAP is available) in order to 
+	###       have this option on the workstations.
+	
 
 
 
