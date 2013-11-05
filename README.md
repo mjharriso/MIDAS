@@ -97,15 +97,4 @@ USAGE
 	                                       # this module is not called directly in MIDAS,
 	                                       # but via a class method.
 	                                       
-	# See examples directory
-	>>> cd /home/foo/install_dir/MIDAS/examples
-	>>> python contour_example.py # get WOA09 slice and make a contour plot
-	>>> python hinterp_example.py # Regrid to 5 degree grid
-	>>> python hist.py            # Create a volume-weighted histogram of salinity
-	                              # data in the Pacific Ocean
-	>>> python test_grid_overlay.py # Calculate un-weighted cell averages
-					# maximum/minimum and rms deviations
-					# from a best-fit local linear planar surface using
-					# Scipy solver.
-	
-	
+
