@@ -302,6 +302,8 @@ class generic_rectgrid(object):
 
       self.wet = np.ones((self.jm,self.im))
 
+      self.have_metrics = False
+      
   def find_geo_bounds(self,x=None,y=None):
       """
       Returns the bounds of the grid. Currently this is of limited use 
@@ -355,11 +357,11 @@ class generic_rectgrid(object):
      >>> x=np.arange(0.5,360.5,1.0);y=np.arange(-89.5,90.5,1.0)
      >>> X,Y=np.meshgrid(x,y)
      >>> grid=generic_rectgrid(lon=X,lat=Y,cyclic=True)
-     >>> section=grid.geo_region(x=(330.,380.),y=(-10.,10.))
-     >>> print section['lon0'],section['shifted'],section['x_offset']
-     330.0 True 19
+     >>> section=grid.geo_region(x=(-30.,20.),y=(-10.,10.))
+     >>> print section['lon0'],section['shifted'],section['i_offset']
+     -30.0 True 329
      >>> print section['xax_data'][0],section['xax_data'][-1]
-     329.5 380.5
+     -30.5 20.5
      >>> print section['yax_data'][0],section['yax_data'][-1]
      -10.5 10.5
 
@@ -380,54 +382,49 @@ class generic_rectgrid(object):
          section['y']=None
 
      x_T,y_T = np.meshgrid(self.lonh,self.lath)
-    
+
      if x is not None:
          if x[0] >= self.lonh[0] and x[1] <= self.lonh[-1]:
              xs,xe,ys,ye = self.find_geo_bounds(x,y)
              xe=np.minimum(xe+1,self.im)
              section['x']=np.arange(xs,xe+1)
              section['lon0']=x[0]
-             section['x_offset'] = 0
+             section['i_offset'] = 0
+             section['x_offset'] = 0.
              section['shifted']=False
              section['xax_data']= self.lonh[section['x']]
          elif x[0] < self.lonh[0]:
-             result=find_axis_bounds(self.lonh-360.,x=[x[0],x[0]])
-             section['x_offset']=result[0]        
-             x_T_shifted,lon_shifted = shiftgrid(x[0],x_T,self.lonh)
+             lonh=self.lonh-360.
+             result=find_axis_bounds(lonh,x=[x[0],x[0]])
+             section['i_offset']=result[0]        
+             x_T_shifted,lon_shifted = shiftgrid(x[0],x_T,lonh)
              result=find_axis_bounds(lon_shifted,x=x)
              xs=result[0];xe=result[1]
              xe=np.minimum(xe+1,self.im)
              section['lon0']=x[0]
              section['shifted']=True
+             section['x_offset']=-360.
              section['x']=np.arange(xs,xe+1)        
              section['xax_data']= lon_shifted[section['x']][xs:xe+1]
          elif x[1] > self.lonh[-1]:
-             result=find_axis_bounds(self.lonh+360.,x=[x[-1],x[-1]])        
-             section['x_offset']=result[0]        
-             x_T_shifted,lon_shifted = shiftgrid(x[0],x_T,self.lonh)
+             lonh=self.lonh+360.
+             result=find_axis_bounds(lonh,x=[x[-1],x[-1]])
+             section['i_offset']=result[0]        
+             x_T_shifted,lon_shifted = shiftgrid(x[0],x_T,lonh)
              result=find_axis_bounds(lon_shifted,x=x)
              xs=result[0];xe=result[1]
              xe=np.minimum(xe+1,self.im)
              section['lon0']=x[0]
              section['shifted']=True
-             section['x']=np.arange(xs,xe+1)        
-             section['xax_data']= lon_shifted[section['x']][xs:xe+1]
-         else:
-             result=find_axis_bounds(self.lonh,x=[x[0],x[0]])        
-             section['x_offset']=result[0]        
-             x_T_shifted,lon_shifted = shiftgrid(x[0],x_T,self.lonh)
-             result=find_axis_bounds(lon_shifted,x=x)
-             xs=result[0];xe=result[1]
-             xe=np.minimum(xe+1,self.im)
-             section['lon0']=x[0]
-             section['shifted']=True
-             section['x']=np.arange(xs,xe+1)        
+             section['x']=np.arange(xs,xe+1)
+             section['x_offset']=360.             
              section['xax_data']= lon_shifted[section['x']][xs:xe+1]
      else:
          im=self.lonh.shape[0]
          section['x']=np.arange(0,im)
          section['lon0']=self.lonh[0]
-         section['x_offset'] = 0
+         section['i_offset'] = 0
+         section['x_offset'] = 0.         
          section['shifted']=False
          section['xax_data']= self.lonh
 
@@ -448,7 +445,7 @@ class generic_rectgrid(object):
     >>> X,Y=np.meshgrid(x,y)
     >>> grid=generic_rectgrid(lon=X,lat=Y,cyclic=True)
     >>> section=grid.indexed_region(i=(20,20))
-    >>> print section['lon0'],section['shifted'],section['x_offset']
+    >>> print section['lon0'],section['shifted'],section['i_offset']
     20.5 False 0
     >>> print section['xax_data'][0],section['xax_data'][-1]
     20.5 20.5
@@ -471,7 +468,7 @@ class generic_rectgrid(object):
         section['x']=np.arange(xs,xe+1)
         section['xax_data']= self.lonh[section['x']]
         section['lon0']=section['xax_data'][0]
-        section['x_offset'] = 0
+        section['i_offset'] = 0
         section['shifted']=False
     else:
       section['x']=None
@@ -493,12 +490,12 @@ class generic_rectgrid(object):
     >>> x=np.arange(0.5,360.5,1.0);y=np.arange(-89.5,90.5,1.0)
     >>> X,Y=np.meshgrid(x,y)
     >>> grid=generic_rectgrid(lon=X,lat=Y,cyclic=True)
-    >>> section=grid.geo_region(x=(330.,380.),y=(-10.,10.))
+    >>> section=grid.geo_region(x=(-30.,20.),y=(-10.,10.))
     >>> new_grid = grid.extract(section)
     >>> hash=hashlib.md5(new_grid.x_T)
     >>> hash.update(new_grid.y_T)
     >>> print hash.hexdigest()
-    160edb9e02d3b75ea1e748779dcd3c09
+    dd3ff8022f9e0a0cf4a07a3745202501
     """
 
     if geo_region is None:
@@ -529,26 +526,35 @@ class generic_rectgrid(object):
           return grid
       
       if geo_region['shifted']:
-        x_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.x_T,grid.lonh)
+        lonh = grid.lonh+geo_region['x_offset']
+        x_T=grid.x_T+ geo_region['x_offset']
+        x_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],x_T,lonh)
         grid.x_T = np.take(np.take(x_T_shifted,y_section,axis=0),x_section,axis=1)
-        y_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.y_T,grid.lonh)        
-        grid.y_T = np.take(np.take(y_T_shifted,y_section,axis=0),x_section,axis=1)        
-        lonb = grid.x_T_bounds[0,:]
-        x_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],grid.x_T_bounds,lonb)
+        grid.lonh = np.take(lon_shifted,x_section,axis=0)
+        grid.x_T[grid.x_T<=geo_region['lon0']]=grid.x_T[grid.x_T<=geo_region['lon0']]-geo_region['x_offset']
+        grid.x_T[:,0]=grid.x_T[:,0]+geo_region['x_offset']
+        y_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.y_T,lonh)        
+        grid.y_T = np.take(np.take(y_T_shifted,y_section,axis=0),x_section,axis=1)
+        lonb = grid.lonq + geo_region['x_offset']
+        x_T_b=grid.x_T_bounds+ geo_region['x_offset']
+        x_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],x_T_b,lonb)
         grid.x_T_bounds = np.take(np.take(x_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
         grid.lonq = np.take(lon_bounds_shifted,xb_section,axis=0)        
         y_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],grid.y_T_bounds,lonb)        
         grid.y_T_bounds = np.take(np.take(y_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
 
-        dxh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxh,grid.lonh)                
-        grid.dxh = np.take(np.take(dxh_shifted,y_section,axis=0),x_section,axis=1)
-        dyh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyh,grid.lonh)                
-        grid.dyh = np.take(np.take(dyh_shifted,y_section,axis=0),x_section,axis=1)
-        Ah_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.Ah,grid.lonh)
-        grid.Ah = np.take(np.take(Ah_shifted,y_section,axis=0),x_section,axis=1)        
+
+
+        if grid.have_metrics:
+            dxh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxh,lonh)                
+            grid.dxh = np.take(np.take(dxh_shifted,y_section,axis=0),x_section,axis=1)
+            dyh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyh,lonh)                
+            grid.dyh = np.take(np.take(dyh_shifted,y_section,axis=0),x_section,axis=1)
+            Ah_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.Ah,lonh)
+            grid.Ah = np.take(np.take(Ah_shifted,y_section,axis=0),x_section,axis=1)        
 
         try:
-          grid.mask=np.roll(grid.mask,axis=1,shift=-geo_region['x_offset'])
+          grid.mask=np.roll(grid.mask,axis=1,shift=-geo_region['i_offset'])
         except:
           pass
       else:
@@ -631,13 +637,13 @@ class ocean_rectgrid(object):
     """
     >>> from midas import *
     >>> import hashlib
-    >>> x=np.arange(0.,360.5,.5);y=np.arange(-90.,90.5,.5);X,Y=np.meshgrid(x,y)
+    >>> x=np.linspace(0.,360.,361);y=np.linspace(-90.,90.,181);X,Y=np.meshgrid(x,y)
     >>> sgrid=supergrid(xdat=X,ydat=Y)
     >>> grid=ocean_rectgrid(supergrid=sgrid)
     >>> hash=hashlib.md5(grid.x_T)
     >>> hash.update(grid.y_T)
     >>> print hash.hexdigest()
-    15b13122e9f163be3ba0f0cafd20bd66
+    f17b4cf1851a98a4bb42e6d12154e528
     """
 
     if path is not None:
@@ -827,17 +833,17 @@ class ocean_rectgrid(object):
      
 
     >>> from midas import *
-    >>> x=np.arange(0.,360.,.5);y=np.arange(-90.,90.,0.5)
+    >>> x=np.linspace(0.,360.,361);y=np.linspace(-90.,90.,181)
     >>> X,Y=np.meshgrid(x,y)
     >>> sgrid=supergrid(xdat=X,ydat=Y)
     >>> grid=ocean_rectgrid(supergrid=sgrid,cyclic=True)
-    >>> section=grid.geo_region(x=(330.,390.),y=(-10.,10.))
-    >>> print section['lon0'],section['shifted'],section['x_offset']
-    330.0 True 329
+    >>> section=grid.geo_region(x=(-30.,60.),y=(-10.,10.))
+    >>> print section['lon0'],section['shifted'],section['i_offset']
+    -30.0 True 0
     >>> print section['xax_data'][0],section['xax_data'][-1]
-    330.040972222 390.457638889
+    -29.9168975069 60.8310249307
     >>> print section['yax_data'][0],section['yax_data'][-1]
-    -10.7208333333 10.2208333333
+    -11.4364640884 10.4419889503
 
     """
 
@@ -861,39 +867,36 @@ class ocean_rectgrid(object):
         xs,xe,ys,ye = self.find_geo_bounds(x,y)
         section['x']=np.arange(xs,xe+1)
         section['lon0']=x[0]
-        section['x_offset'] = 0
+        section['i_offset'] = 0
+        section['x_offset'] = 0.
         section['shifted']=False
         section['xax_data']= self.lonh[section['x']]
       elif x[0] < self.lonh[0]:
-        result=find_axis_bounds(self.lonh-360.,x=[x[0],x[0]])
-        section['x_offset']=result[0]        
-        x_T_shifted,lon_shifted = shiftgrid(x[0],self.x_T,self.lonh)
-        result=find_axis_bounds(lon_shifted,x=x)
-        xs=result[0];xe=result[1]
-        section['lon0']=x[0]
-        section['shifted']=True
-        section['x']=np.arange(xs,xe+1)        
-        section['xax_data']= lon_shifted[section['x']][xs:xe+1]
-      elif x[1] > self.lonh[-1]:
-        result=find_axis_bounds(self.lonh,x=[x[0],x[0]])        
-        section['x_offset']=result[0]
-        x_T_shifted,lon_shifted = shiftgrid(x[0],self.x_T,self.lonh)
+        lonh = self.lonh-360.
+        result=find_axis_bounds(lonh,x=[x[0],x[0]])
+        section['i_offset']=result[0]
+        x_T_shifted,lon_shifted = shiftgrid(x[0],self.x_T,lonh)
         result=find_axis_bounds(lon_shifted,x=x)
         xs=result[0];xe=result[1]
         xe=np.minimum(xe+1,self.im)
         section['lon0']=x[0]
         section['shifted']=True
+        section['i_offset']=xs
+        section['x_offset']=-360.
         section['x']=np.arange(xs,xe+1)        
         section['xax_data']= lon_shifted[section['x']][xs:xe+1]
-      else:
-        result=find_axis_bounds(self.lonh,x=[x[0],x[0]])        
-        section['x_offset']=result[0]        
+      elif x[1] > self.lonh[-1]:
+        lonh=self.lonh+360.
+        result=find_axis_bounds(lonh,x=[x[0],x[0]])        
+        section['i_offset']=result[0]
         x_T_shifted,lon_shifted = shiftgrid(x[0],self.x_T,self.lonh)
         result=find_axis_bounds(lon_shifted,x=x)
         xs=result[0];xe=result[1]
+        xe=np.minimum(xe+1,self.im)
         section['lon0']=x[0]
+        section['x_offset']=360.
         section['shifted']=True
-        section['x']=np.arange(xs,xe+1)
+        section['x']=np.arange(xs,xe+1)        
         section['xax_data']= lon_shifted[section['x']][xs:xe+1]
     else:
       section['x']=np.arange(0,self.im)
@@ -919,7 +922,7 @@ class ocean_rectgrid(object):
     >>> sgrid=supergrid(xdat=X,ydat=Y)
     >>> grid=ocean_rectgrid(supergrid=sgrid,cyclic=True)
     >>> section=grid.indexed_region(i=(20,20))
-    >>> print section['lon0'],section['shifted'],section['x_offset']
+    >>> print section['lon0'],section['shifted'],section['i_offset']
     20.4715277778 False 0
     >>> print section['xax_data'][0],section['xax_data'][-1]
     20.4715277778 20.4715277778
@@ -942,7 +945,7 @@ class ocean_rectgrid(object):
         section['x']=np.arange(xs,xe+1)
         section['xax_data']= self.lonh[section['x']]
         section['lon0']=section['xax_data'][0]
-        section['x_offset'] = 0
+        section['i_offset'] = 0
         section['shifted']=False
     else:
       section['x']=None
@@ -961,16 +964,16 @@ class ocean_rectgrid(object):
 
     >>> from midas import *
     >>> import hashlib
-    >>> x=np.arange(0.,360.,.5);y=np.arange(-90.,90.,0.5)
+    >>> x=np.linspace(0.,360.,361);y=np.linspace(-90.,90.,181)
     >>> X,Y=np.meshgrid(x,y)
     >>> sgrid=supergrid(xdat=X,ydat=Y)
     >>> grid=ocean_rectgrid(supergrid=sgrid,cyclic=True)
-    >>> section=grid.geo_region(x=(330.,380.),y=(-10.,10.))
+    >>> section=grid.geo_region(x=(-30.,20.),y=(-10.,10.))
     >>> new_grid = grid.extract(section)
     >>> hash=hashlib.md5(new_grid.x_T)
     >>> hash.update(new_grid.y_T)
     >>> print hash.hexdigest()
-    4bd335ca783c9f957b3b2737816fa4b0
+    f45e1be60475da138c17cd5fa9006c8d
     """
 
     if geo_region is None:
@@ -1032,61 +1035,65 @@ class ocean_rectgrid(object):
           pass
         
       else:
-        x_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.x_T,grid.lonh)
-        x_T_shifted[x_T_shifted<geo_region['lon0']]=x_T_shifted[x_T_shifted<geo_region['lon0']]+360.
+        lonh = grid.lonh+geo_region['x_offset']
+        x_T=grid.x_T+ geo_region['x_offset']          
+        x_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],x_T,lonh)
         grid.x_T = np.take(np.take(x_T_shifted,y_section,axis=0),x_section,axis=1)
-        y_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.y_T,grid.lonh)        
-        grid.y_T = np.take(np.take(y_T_shifted,y_section,axis=0),x_section,axis=1)        
-        lonb = grid.x_T_bounds[0,:]
-        
-        x_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],grid.x_T_bounds,lonb)
-
-        x_T_bounds_shifted[x_T_bounds_shifted<geo_region['lon0']]=x_T_bounds_shifted[x_T_bounds_shifted<geo_region['lon0']]+360.        
+        grid.x_T[grid.x_T<=geo_region['lon0']]=grid.x_T[grid.x_T<=geo_region['lon0']]-geo_region['x_offset']
+        grid.x_T[:,0]=grid.x_T[:,0]+geo_region['x_offset']
+        grid.lonh = np.take(lon_shifted,x_section,axis=0)
+        y_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.y_T,lonh)        
+        grid.y_T = np.take(np.take(y_T_shifted,y_section,axis=0),x_section,axis=1)
+        lonb = grid.lonq + geo_region['x_offset']
+        x_T_b=grid.x_T_bounds+ geo_region['x_offset']
+        x_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],x_T_b,lonb)
         grid.x_T_bounds = np.take(np.take(x_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
         grid.lonq = np.take(lon_bounds_shifted,xb_section,axis=0)        
         y_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],grid.y_T_bounds,lonb)        
         grid.y_T_bounds = np.take(np.take(y_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
-        grid.lath = np.take(grid.lath,y_section,axis=0)
+        grid.lath = np.take(self.lath,y_section,axis=0)
         grid.latq = np.take(self.latq,yb_section,axis=0)
+        grid.lonh = np.take(lon_shifted,x_section,axis=0)
+
+        
         try:
             D_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.D,grid.lonh)
             grid.D = np.take(np.take(D_shifted,y_section,axis=0),x_section,axis=1)
         except:
             pass
 
-        if hasattr(grid,'f'):
-            grid.f = np.take(np.take(self.f,y_section,axis=0),x_section,axis=1)
             
         if grid.have_metrics:
-            dxv_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxv,grid.lonh)
+            f_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.f,lonh)
+            grid.f = np.take(np.take(f_shifted,y_section,axis=0),x_section,axis=1)
+            dxv_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxv,lonh)
             grid.dxv = np.take(np.take(dxv_shifted,y_section,axis=0),x_section,axis=1)
-            dyu_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyu,grid.lonh)
+            dyu_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyu,lonh)
             grid.dyu = np.take(np.take(dyu_shifted,y_section,axis=0),x_section,axis=1)
-            dxu_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxu,grid.lonh)
+            dxu_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxu,lonh)
             grid.dxu = np.take(np.take(dxu_shifted,y_section,axis=0),x_section,axis=1)
-            dyv_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyv,grid.lonh)        
+            dyv_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyv,lonh)        
             grid.dyv = np.take(np.take(dyv_shifted,y_section,axis=0),x_section,axis=1)
-            dxh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxh,grid.lonh)                
+            dxh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxh,lonh)                
             grid.dxh = np.take(np.take(dxh_shifted,y_section,axis=0),x_section,axis=1)
-            dyh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyh,grid.lonh)                
+            dyh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyh,lonh)                
             grid.dyh = np.take(np.take(dyh_shifted,y_section,axis=0),x_section,axis=1)
-            Ah_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.Ah,grid.lonh)                
+            Ah_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.Ah,lonh)                
             grid.Ah = np.take(np.take(Ah_shifted,y_section,axis=0),x_section,axis=1)
-            Aq_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.Aq,grid.lonh)                
+            Aq_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.Aq,lonh)                
             grid.Aq= np.take(np.take(Aq_shifted,y_section,axis=0),x_section,axis=1)
 
         try:
-            wet_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.wet,grid.lonh)                
+            wet_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.wet,lonh)                
             grid.wet = np.take(np.take(wet_shifted,y_section,axis=0),x_section,axis=1)
         except:
             pass
         try:
-          mask_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.mask,grid.lonh)                
+          mask_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.mask,lonh)                
           grid.mask = np.take(np.take(mask_shifted,y_section,axis=0),x_section,axis=1)
         except:
           pass
         
-        grid.lonh = np.take(lon_shifted,x_section,axis=0)        
         grid.im = np.shape(grid.lonh)[0]
         grid.jm = np.shape(grid.lath)[0]        
 
@@ -1521,7 +1528,8 @@ class state(object):
 
        if geo_region is not None:
          if geo_region['shifted']:
-           vars(self)[v] = np.roll(data_read,axis=3,shift=-geo_region['x_offset'])[:,:,:,x_indices]
+           print 'data_read.shape=',data_read.shape
+           vars(self)[v] = np.roll(data_read,axis=3,shift=-geo_region['i_offset'])[:,:,:,x_indices]
          else:
            vars(self)[v] = data_read
        else:
@@ -1591,7 +1599,7 @@ class state(object):
            
                  if geo_region is not None:
                      if geo_region['shifted']:
-                         vars(self)[interfaces] = np.roll(data_int_read,axis=3,shift=-geo_region['x_offset'])[:,:,:,x_indices]
+                         vars(self)[interfaces] = np.roll(data_int_read,axis=3,shift=-geo_region['i_offset'])[:,:,:,x_indices]
                      else:
                          vars(self)[interfaces] = data_int_read
                  else:
@@ -1608,7 +1616,7 @@ class state(object):
                  interfaces_name='e'
                  if geo_region is not None:
                      if geo_region['shifted']:
-                         vars(self)[interfaces_name] = np.roll(data_int_read,axis=3,shift=-geo_region['x_offset'])[:,:,:,x_indices]
+                         vars(self)[interfaces_name] = np.roll(data_int_read,axis=3,shift=-geo_region['i_offset'])[:,:,:,x_indices]
                      else:
                          vars(self)[interfaces_name] = data_int_read
 
@@ -1653,12 +1661,17 @@ class state(object):
          time_avg_info = ""
          
        if 'average_DT' in time_avg_info:
-         dt = self.rootgrp.variables['average_DT'][t_indices]
-         units = self.rootgrp.variables['average_DT'].units
-         if units == 'days':
-           dt = dt*86400. # convert to seconds
-         elif units == 'hours':
-           dt = dt*3600. # convert to seconds
+           try:
+               dt = self.rootgrp.variables['average_DT'][t_indices]
+               units = self.rootgrp.variables['average_DT'].units
+           except:
+               dt = np.ones((len(t_indices)))
+               units = None
+
+           if units == 'days':
+               dt = dt*86400. # convert to seconds
+           elif units == 'hours':
+               dt = dt*3600. # convert to seconds
        else:
          if var_dict['T'] is not None:           
            dt = np.ones((len(t_indices)))
@@ -1835,7 +1848,7 @@ class state(object):
     if geo_region is not None:
       if geo_region['shifted']:
         x_indices = geo_region['x_indices'][:]
-        vars(self)[field] = np.roll(data_read,axis=3,shift=-geo_region['x_offset'])[:,:,:,x_indices]
+        vars(self)[field] = np.roll(data_read,axis=3,shift=-geo_region['i_offset'])[:,:,:,x_indices]
       else:
         vars(self)[field] = data_read
     else:
