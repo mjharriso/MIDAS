@@ -1,19 +1,21 @@
-INSTALL
-=======
+INSTALL AT GFDL
+===============
 
-        
+        # Log into a 64-bit workstation (preferred) or Analysis node 
 
 	cd /home/foo/install_dir
-	git clone git@github.com:mjharriso/MIDAS.git
-	# or if SSH does not work, try HTTPS
-	# git clone https://github.com/mjharriso/MIDAS.git
+	
+	git clone https://github.com/mjharriso/MIDAS.git
+	# Alternatively use ssh: git clone git@github.com:mjharriso/MIDAS.git
 	cd MIDAS
 	
 	(cd fms;tar xvf fms_siena_201308.tar)
 	
-	
-	# On GFDL HPCS (64-bit workstations of Analysis Cluster)
-	# Using installed python,netcdf and intel modules
+	#
+	# NOTE:
+	# =====
+	# On GFDL HPCS (64-bit workstations and PPAN)
+	# using installed python,netcdf and intel modules
 	# The NetCDF libraries are compiled with ifort so we 
 	# are obliged to build the fms/shared code and the f2py interfaces
 	# using the Intel compiler. With the current environment, the
@@ -41,7 +43,23 @@ INSTALL
 	python setup.py install --home=/home/foo/local 
 	setenv PYTHONPATH /home/foo/local/lib/python
 	
+	#  NOTE: 
+	#  OpenDAP currently disabled on Analysis Cluster. Example scripts using OpenDap addresses
+	#  will hang.
+	#
+	#  With the exception of OpenDAP, the midas package is fully functional on both the
+	#  GFDL 64-bit workstations and the Analysis cluster. Not yet tested on the PP cluster.
+	#  The FMS binaries interface on both platforms successfully.
+	#
+	#  Recommend building on the workstations (where OpenDAP is available) in order to 
+	#  have this option on the workstations.
 	
+	
+	
+INSTALL OUTSIDE OF GFDL 
+(Linux 3.8.0-30-generic i686 with GFortran)
+===========================================
+
 	# On i686-linux platform with NetCDF library compiled using gFortran
 	# NOTE: 'extra_objects' are not required but currently exist.
 	
@@ -62,16 +80,7 @@ INSTALL
 	setenv PYTHONPATH /home/foo/local/lib/python
 	
 	
-	### NOTE: OpenDAP currently disabled on Analysis Cluster. Example scripts using OpenDap addresses
-	###       will hang.
-	###
-	###       With the exception of OpenDAP, the midas package is fully functional on both the
-	###       GFDL 64-bit workstations and the Analysis cluster. Not yet tested on the PP cluster.
-	###       The FMS binaries interface on both platforms successfully.
-	###
-	###       Recommend building on the workstations (where OpenDAP is available) in order to 
-	###       have this option on the workstations.
-	
+
 
 
 
@@ -109,5 +118,14 @@ USAGE
 	                                       # to fms/shared/horiz_interp
 	                                       # this module is not called directly in MIDAS,
 	                                       # but via a class method.
-	                                       
+	                                      
+	                                      
+UPDATING TO LATEST ON GitHub 
+(If you have updated your code, add a merge step)
+=================================================
 
+	> cd [your install dir]/MIDAS
+	> git status    
+	> git fetch
+	> git pull
+	
