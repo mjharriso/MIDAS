@@ -57,9 +57,11 @@ INSTALL AT GFDL
 	
 	
 INSTALL OUTSIDE OF GFDL 
-(Linux 3.8.0-30-generic i686 with GFortran)
 ===========================================
 
+
+	# (Tested on: Linux 3.8.0-30-generic i686 with GFortran and gcc version 4.7.3)
+	
 	# On i686-linux platform with NetCDF library compiled using gFortran
 	# NOTE: 'extra_objects' are not required but currently exist.
 	
@@ -101,7 +103,7 @@ USAGE
 	# If you are having trouble, submit a help desk ticket
 	# or contact your system administrator.
 	
-	>ipython
+	ipython
 	>>> import midas
 	>>> midas.[Tab]   # complete listing of methods 
 	>>> midas.state?  # Description of state instance
@@ -124,8 +126,10 @@ UPDATING TO LATEST ON GitHub
 (If you have updated your code, add a merge step)
 =================================================
 
-	> cd [your install dir]/MIDAS
-	> git status    
-	> git fetch
-	> git pull
+	cd /home/foo/install_dir/MIDAS
+	git status    
+	git fetch
+	git pull
+	[python setup.py build from above]
+	[python setup.py install from above]
 	
