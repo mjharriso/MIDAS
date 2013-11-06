@@ -1004,7 +1004,9 @@ class ocean_rectgrid(object):
         grid.lath = np.take(self.lath,y_section,axis=0)
         grid.lonq = np.take(self.lonq,xb_section,axis=0)
         grid.latq = np.take(self.latq,yb_section,axis=0)
-        grid.D = np.take(np.take(self.D,y_section,axis=0),x_section,axis=1)
+
+        if hasattr(grid,'D'):
+            grid.D = np.take(np.take(self.D,y_section,axis=0),x_section,axis=1)
 
         if hasattr(grid,'f'):
             grid.f = np.take(np.take(self.f,y_section,axis=0),x_section,axis=1)
