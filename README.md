@@ -123,12 +123,12 @@ USAGE
 	                                      
 	                                      
 UPDATING TO LATEST ON GitHub 
-(If you have updated your code, add a merge step)
-=================================================
+============================
 
 	cd /home/foo/install_dir/MIDAS
 	git status    
 	git fetch
+	# If you have updated your code, substitute a merge)
 	git pull
 	[python setup.py build from above]
 	[python setup.py install from above]
