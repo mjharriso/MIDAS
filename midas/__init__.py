@@ -86,42 +86,47 @@ Omega=7.295e-5
 
 DEBUG = 0
    
-class generic_rectgrid(object):
+class rectgrid(object):
 
-  """A generic_rectgrid object is for the horizontal lattice of points lying on
-  a sphere or plane. A generic_rectgrid class is constructed by reading the
-  lat-lon vectors of points associated with (var) from file (path) [A
-  grid can also be created using a supergrid class object which is a FMS
-  -compliant object ]
+  """A rectgrid object describes a horizontal lattice0 on
+  a sphere or plane. When instantiating from a file, a rectgrid 
+  class is constructed by reading the lat-lon list associated 
+  with (var) from file (path) which are placed
+  at the centers of the cells at positions x_T and y_T
+  Additionally, a grid can be constructed using a supergrid 
+  object (see midas_grid_gen.py).
 
-  Additional lattice points are required in order to define the primary
-  cell perimeters. The primary lattice defines the (T) cell centers, 
+  Additional lattice points are needed to define the 
+  cell perimeters. The primary lattice of (T) cell centers, 
   and the perimeter lattice of (Q) points are located at coordinates 
   (y_T,x_T) and (y_T_bounds,x_T_bounds) respectively.  
 
   There are (jm,im) H cell points and (jm+1,im+1) perimeter
   locations. 
-
+                X_T_bounds
+                   V    
            +-------+-------+-------+
            :       :       :       :
            :       :       :       :
            :       :       :       :           
-           +-------+-------Q-------:< Y_T_bounds
+           +-------+-------Q-------:
            :       :       :       :
-           :       :   T   :       :
+           :       :   T   :       :< Y_T
            :       :       :       :           
            +-------Q-------+-------+< Y_T_bounds
-                   ^       ^
-                  X_T_bounds
+                       ^   ^
+                      X_T
 
+  Cell metrics defining the cell widths and areas are defined by
+  dxh,dyh and Ah respectively. Cell orientation is defined by angle_dx.
 
   """
   
-  def __init__(self,path=None,cyclic=False,tripolar_n=False,var=None,simple_grid=False,supergrid=None,lon=None,lat=None,is_latlon=True,is_cartesian=False):
+  def __init__(self,path=None,cyclic=False,tripolar_n=False,var=None,simple_grid=False,supergrid=None,lon=None,lat=None,is_latlon=True,is_cartesian=False,grid_type='generic',):
 
     # """
     
-    # >>> grid=generic_rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an',cyclic=True)
+    # >>> grid=rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an',cyclic=True)
     # >>> print grid.lonh[0],grid.lonh[-1]
     # 0.5 359.5
     # >>> print grid.lath[0],grid.lath[-1]
@@ -129,9 +134,14 @@ class generic_rectgrid(object):
     # """
 
     self.is_latlon=is_latlon
-
     self.is_cartesian=is_cartesian
-      
+    self.have_metrics = False
+    self.simple_grid=simple_grid
+
+    if np.logical_and(is_cartesian,is_latlon):
+        print 'Select either is_latlon or is_cartesian, not both'
+        return None
+
     self.yDir=1
     
     if supergrid is not None:
@@ -144,10 +154,126 @@ class generic_rectgrid(object):
         self.latq=grid_y[0::2]
         self.x_T=x[1::2,1::2]
         self.y_T=y[1::2,1::2]
-        self.x_T_bounds,self.y_T_bounds = np.meshgrid(self.lonq,self.latq)
+        self.x_T_bounds=x[0::2,0::2]
+        self.y_T_bounds=y[0::2,0::2]
+
+        self.jm = self.x_T.shape[0]
+        self.im = self.x_T.shape[1]        
+
+        self.wet = np.ones((self.jm,self.im))
+        self.cyclic_x=supergrid.dict['cyclic_x']
+
+        if supergrid.have_metrics:
+            dx=supergrid.dx
+            dy=supergrid.dy
+            dxh = dx[:,::2]+dx[:,1::2]
+            self.dxh=0.5*(dxh[:-1:2,:]+dxh[2::2,:])
+            dyh = dy[::2,:]+dy[1::2,:]
+            self.dyh=0.5*(dyh[:,:-1:2]+dyh[:,2::2])
+            self.Ah = self.dxh*self.dyh
+            self.angle_dx=supergrid.angle_dx[1::2,1::2]
+            self.have_metrics=True
+        else:
+            self.have_metrics=False
+
+
         return
 
-    
+    if path is not None:
+        f=nc.Dataset(path)
+
+    if grid_type == 'gold_geometry':
+        self.x_T = f.variables['geolon'][:]
+        self.x_T_bounds = f.variables['geolonb'][:]
+        xtb0=2.0*self.x_T_bounds[:,0]-self.x_T_bounds[:,1]
+        xtb0=xtb0[:,np.newaxis]
+        self.x_T_bounds = np.hstack((xtb0,self.x_T_bounds))
+        xtb0=self.x_T_bounds[0,:]
+        self.x_T_bounds = np.vstack((xtb0,self.x_T_bounds))    
+        self.y_T = f.variables['geolat'][:]
+        self.y_T_bounds = f.variables['geolatb'][:]
+        ytb0=2.0*self.y_T_bounds[0,:]-self.y_T_bounds[1,:]
+        self.y_T_bounds = np.vstack((ytb0,self.y_T_bounds))
+        ytb0=self.y_T_bounds[:,0]
+        ytb0=ytb0[:,np.newaxis]
+        self.y_T_bounds = np.hstack((ytb0,self.y_T_bounds))
+        self.lonh = f.variables['lonh'][:] 
+        self.lath = f.variables['lath'][:]
+        self.lonq = f.variables['lonq'][:]
+        self.lonq = np.hstack((self.lonq[0]-(self.lonq[1]-self.lonq[0]),self.lonq))
+        self.latq = f.variables['latq'][:]
+        self.latq = np.hstack((self.latq[0]-(self.latq[1]-self.latq[0]),self.latq))
+        self.D    = f.variables['D'][:]
+        self.f    = f.variables['f'][:]
+
+        try:
+            self.dxh    = f.variables['dxh'][:]
+        except:
+            self.dxh    = f.variables['dxT'][:]
+
+        try:
+            self.dyh    = f.variables['dyh'][:]
+        except:
+            self.dyh    = f.variables['dyT'][:]
+
+            
+        self.Ah    = f.variables['Ah'][:]
+
+        self.wet    = f.variables['wet'][:]
+
+        self.cyclic_x = cyclic
+        self.tripolar_n = tripolar_n
+
+        self.im = np.shape(self.lonh)[0]
+        self.jm = np.shape(self.lath)[0]
+
+        self.have_metrics=True
+
+        return
+
+    if grid_type == 'mom4_gridspec':
+        self.x_T = f.variables['geolon_t'][:]
+        self.x_T_bounds = f.variables['geolon_e'][:]
+        xtb0=2.0*self.x_T_bounds[:,0]-self.x_T_bounds[:,1]
+        xtb0=xtb0[:,np.newaxis]
+        self.x_T_bounds = np.hstack((xtb0,self.x_T_bounds))
+        xtb0=self.x_T_bounds[0,:]
+        self.x_T_bounds = np.vstack((xtb0,self.x_T_bounds))    
+        self.y_T = f.variables['geolat_t'][:]
+        self.y_T_bounds = f.variables['geolat_n'][:]
+        ytb0=2.0*self.y_T_bounds[0,:]-self.y_T_bounds[1,:]
+        self.y_T_bounds = np.vstack((ytb0,self.y_T_bounds))
+        ytb0=self.y_T_bounds[:,0]
+        ytb0=ytb0[:,np.newaxis]
+        self.y_T_bounds = np.hstack((ytb0,self.y_T_bounds))
+        self.lonh = f.variables['gridlon_t'][:] 
+        self.lath = f.variables['gridlat_t'][:]
+        self.lonq = f.variables['gridlon_c'][:]
+        self.lonq = np.hstack((self.lonq[0]-(self.lonq[1]-self.lonq[0]),self.lonq))
+        self.latq = f.variables['gridlat_c'][:]
+        self.latq = np.hstack((self.latq[0]-(self.latq[1]-self.latq[0]),self.latq))
+
+        self.D    = f.variables['ht'][:]
+        self.f    = 2.0*Omega*np.sin(self.y_T*np.pi/180.)
+
+        self.dxh    = f.variables['dxt'][:]
+        self.dyh    = f.variables['dyt'][:]
+
+        self.Ah    = self.dxh*self.dyh
+
+        self.wet    = f.variables['wet'][:]
+
+        self.cyclic_x = cyclic
+        self.tripolar_n = tripolar_n
+
+        self.im = np.shape(self.lonh)[0]
+        self.jm = np.shape(self.lath)[0]
+
+        self.have_metrics=True
+
+        return
+
+    f = None
     if lon is not None and lat is not None:
         self.lonh=sq(lon[0,:])
         self.lath=sq(lat[:,0])
@@ -155,8 +281,7 @@ class generic_rectgrid(object):
         self.y_T=lat.copy()
     if lon is None and lat is None:
         f=nc.Dataset(path)
-    else:
-        f=None
+  
     
     if var is None and f is not None:
       print """ Need to specify a variable from which to create a
@@ -252,8 +377,6 @@ class generic_rectgrid(object):
           self.simple_grid = True
           self.cyclic_x = cyclic          
           return
-      else:
-          self.simple_grid = False
 
 
       if np.logical_and(self.im > 1, self.jm > 1):
@@ -287,10 +410,9 @@ class generic_rectgrid(object):
           dy = (self.y_T_bounds - np.roll(self.y_T_bounds,axis=0,shift=1))
           dy = dy[1:,1:]
           dy = dy*np.pi/180.
-          
           self.dyh = dy*R_earth
-
           self.Ah=self.dxh*self.dyh
+          self.have_metrics=True
       else:
           self.x_T=self.lonh; self.y_T=self.lath
           
@@ -302,7 +424,7 @@ class generic_rectgrid(object):
 
       self.wet = np.ones((self.jm,self.im))
 
-      self.have_metrics = False
+
       
   def find_geo_bounds(self,x=None,y=None):
       """
@@ -313,30 +435,23 @@ class generic_rectgrid(object):
       >>> from midas import *
       >>> x=np.arange(0.5,360.5,1.0);y=np.arange(-89.5,90.5,1.0)
       >>> X,Y=np.meshgrid(x,y)
-      >>> grid=generic_rectgrid(lon=X,lat=Y,cyclic=True)
+      >>> grid=rectgrid(lon=X,lat=Y,cyclic=True)
       >>> xs,xe,ys,ye=grid.find_geo_bounds(x=(20.,50.),y=(-10.,10.))
       >>> print xs,xe,grid.lonh[xs],grid.lonh[xe]
-      19 50 19.5 50.5
+      20 50 20.5 50.5
       >>> print ys,ye,grid.lath[ys],grid.lath[ye]
-      79 100 -10.5 10.5
+      79 99 -10.5 9.5
       """
 
-      [min_dx,min_dy] = min_resolution(self)
-      [max_dx,max_dy] = max_resolution(self)
 
-      xs=None;xe=None
+      xs=0; xe=self.im
+      ys=0; ye=self.jm
+
       if x is not None:
-          xmin=x[0];xmax=x[1]
-          xs = np.nonzero(np.abs(self.lonh - xmin) <= max_dx)[0][0]
-          xe = np.nonzero(np.abs(self.lonh - xmax) <= max_dx)[0][0]  
-          xe = np.minimum(xe+1,self.im)
+          [xs,xe]=find_axis_bounds(self.lonq,x=x,modulo_360=self.cyclic_x)
 
-      ys=None;ye=None
       if y is not None:
-          ymin=y[0];ymax=y[1]
-          ys = np.nonzero(np.abs(self.lath - ymin) <= max_dy)[0][0]
-          ye = np.nonzero(np.abs(self.lath - ymax) <= max_dy)[0][0] 
-          ye = np.minimum(ye+1,self.jm)
+          [ys,ye]=find_axis_bounds(self.latq,x=y)
 
       return xs,xe,ys,ye
           
@@ -346,87 +461,57 @@ class generic_rectgrid(object):
      Returns a \"section\" dictionary for sampling a contiguous region
      based on geographical boundaries. For a lat-lon region returned, 
      the mesh of grid cells is bounded by the first grid tracer point 
-     reached at the domain boundary. 
+     reached to the right of the left domain boundary and the last grid cell
+     to the left of the right boundary.
      
      Currently this is of limited use for generalized horizontal 
      coordinates (based on lonh/lath). [ Instead I typically use 
-     the \"indexed_region\" method to slice general grids]. 
+     the indexed_region method to slice general grids]. 
       
 
      >>> from midas import *
      >>> x=np.arange(0.5,360.5,1.0);y=np.arange(-89.5,90.5,1.0)
      >>> X,Y=np.meshgrid(x,y)
-     >>> grid=generic_rectgrid(lon=X,lat=Y,cyclic=True)
+     >>> grid=rectgrid(lon=X,lat=Y,cyclic=True)
      >>> section=grid.geo_region(x=(-30.,20.),y=(-10.,10.))
-     >>> print section['lon0'],section['shifted'],section['i_offset']
-     -30.0 True 329
      >>> print section['xax_data'][0],section['xax_data'][-1]
-     -30.5 20.5
+     330.5 379.5
      >>> print section['yax_data'][0],section['yax_data'][-1]
-     -10.5 10.5
+     -10.5 8.5
 
      """
 
-     [min_dx,min_dy] = min_resolution(self)
-     [max_dx,max_dy] = max_resolution(self)  
   
      section={}
 
-     if y is not None:
-         ys = np.nonzero(np.abs(self.lath - y[0]) <= max_dy)[0][0]
-         ye = np.nonzero(np.abs(self.lath - y[1]) <= max_dy)[0][0]  
-         ye = np.minimum(ye+1,self.jm)
-         section['y']=np.arange(ys,ye+1)
-         section['yax_data']= self.lath[section['y']]
-     else:
-         section['y']=None
+     xs,xe,ys,ye = self.find_geo_bounds(x=x,y=y)
 
-     x_T,y_T = np.meshgrid(self.lonh,self.lath)
 
-     if x is not None:
-         if x[0] >= self.lonh[0] and x[1] <= self.lonh[-1]:
-             xs,xe,ys,ye = self.find_geo_bounds(x,y)
-             xe=np.minimum(xe+1,self.im)
-             section['x']=np.arange(xs,xe+1)
-             section['lon0']=x[0]
-             section['i_offset'] = 0
-             section['x_offset'] = 0.
-             section['shifted']=False
-             section['xax_data']= self.lonh[section['x']]
-         elif x[0] < self.lonh[0]:
-             lonh=self.lonh-360.
-             result=find_axis_bounds(lonh,x=[x[0],x[0]])
-             section['i_offset']=result[0]        
-             x_T_shifted,lon_shifted = shiftgrid(x[0],x_T,lonh)
-             result=find_axis_bounds(lon_shifted,x=x)
-             xs=result[0];xe=result[1]
-             xe=np.minimum(xe+1,self.im)
-             section['lon0']=x[0]
-             section['shifted']=True
-             section['x_offset']=-360.
-             section['x']=np.arange(xs,xe+1)        
-             section['xax_data']= lon_shifted[section['x']][xs:xe+1]
-         elif x[1] > self.lonh[-1]:
-             lonh=self.lonh+360.
-             result=find_axis_bounds(lonh,x=[x[-1],x[-1]])
-             section['i_offset']=result[0]        
-             x_T_shifted,lon_shifted = shiftgrid(x[0],x_T,lonh)
-             result=find_axis_bounds(lon_shifted,x=x)
-             xs=result[0];xe=result[1]
-             xe=np.minimum(xe+1,self.im)
-             section['lon0']=x[0]
-             section['shifted']=True
-             section['x']=np.arange(xs,xe+1)
-             section['x_offset']=360.             
-             section['xax_data']= lon_shifted[section['x']][xs:xe+1]
+     section['y']=np.arange(ys,ye)
+     section['yax_data']= self.lath[section['y']]
+
+
+     if xe>=xs:
+         section['x']=np.arange(xs,xe)
+         section['x_read']=section['x']
+         section['xax_data']=self.lonh[section['x']]
      else:
-         im=self.lonh.shape[0]
-         section['x']=np.arange(0,im)
-         section['lon0']=self.lonh[0]
-         section['i_offset'] = 0
-         section['x_offset'] = 0.         
-         section['shifted']=False
-         section['xax_data']= self.lonh
+         section['x_read']=[np.arange(xs,self.im)]
+         section['x_read'].append(np.arange(0,xe))
+         xind = np.hstack((section['x_read'][0],section['x_read'][1]))
+         section['x'] = xind
+         section['xax_data']=self.lonh[xind]
+
+     lonh=section['xax_data'].copy()
+     lon0=lonh[0]
+
+     if self.cyclic_x:
+         lonh[lonh<lon0]=lonh[lonh<lon0]+360.
+
+     section['xax_data']=lonh
+
+     section['lon0']=lon0
+
 
      section['name'] = name
      section['parent_grid'] = self
@@ -443,10 +528,8 @@ class generic_rectgrid(object):
     >>> from midas import *
     >>> x=np.arange(0.5,360.5,1.0);y=np.arange(-89.5,90.5,1.0)
     >>> X,Y=np.meshgrid(x,y)
-    >>> grid=generic_rectgrid(lon=X,lat=Y,cyclic=True)
+    >>> grid=rectgrid(lon=X,lat=Y,cyclic=True)
     >>> section=grid.indexed_region(i=(20,20))
-    >>> print section['lon0'],section['shifted'],section['i_offset']
-    20.5 False 0
     >>> print section['xax_data'][0],section['xax_data'][-1]
     20.5 20.5
     >>> print section['yax_data'][0],section['yax_data'][-1]
@@ -465,11 +548,11 @@ class generic_rectgrid(object):
       
     if i is not None:
         xs=i[0];xe=i[1]
-        section['x']=np.arange(xs,xe+1)
+        if xe>=xs:
+            section['x']=np.arange(xs,xe+1)
+        else:
+            section['x']=np.hstack((np.arange(xs,self.im),np.arange(0,xe)))
         section['xax_data']= self.lonh[section['x']]
-        section['lon0']=section['xax_data'][0]
-        section['i_offset'] = 0
-        section['shifted']=False
     else:
       section['x']=None
 
@@ -489,13 +572,13 @@ class generic_rectgrid(object):
     >>> import hashlib
     >>> x=np.arange(0.5,360.5,1.0);y=np.arange(-89.5,90.5,1.0)
     >>> X,Y=np.meshgrid(x,y)
-    >>> grid=generic_rectgrid(lon=X,lat=Y,cyclic=True)
+    >>> grid=rectgrid(lon=X,lat=Y,cyclic=True)
     >>> section=grid.geo_region(x=(-30.,20.),y=(-10.,10.))
     >>> new_grid = grid.extract(section)
     >>> hash=hashlib.md5(new_grid.x_T)
     >>> hash.update(new_grid.y_T)
     >>> print hash.hexdigest()
-    dd3ff8022f9e0a0cf4a07a3745202501
+    465f6aa54e3a672bb4a1d8cc02b7e96c
     """
 
     if geo_region is None:
@@ -504,7 +587,9 @@ class generic_rectgrid(object):
     else:
       grid = copy.copy(self)
 
-      x_section = geo_region['x'];y_section = geo_region['y']      
+      x_section = geo_region['x']
+      y_section = geo_region['y']      
+
       if x_section is not None:
           xb_section = np.hstack((x_section,x_section[-1]+1))
       if y_section is not None:
@@ -513,72 +598,44 @@ class generic_rectgrid(object):
       grid.lath = np.take(self.lath,y_section,axis=0)
       grid.latq = np.take(self.latq,yb_section,axis=0)
 
-      if self.simple_grid:
-          x,y=np.meshgrid(self.lonh,self.lath)
-          if geo_region['shifted']:
-              x_shifted,lon_shifted = shiftgrid(geo_region['lon0'],x,self.lonh)
-              grid.lonh=np.take(lon_shifted,x_section,axis=0)
-              x_shifted,lonq_shifted = shiftgrid(geo_region['lon0'],x,self.lonq)
-              grid.lonq=np.take(lonq_shifted,xb_section,axis=0)              
-          else:
-              grid.lonh=np.take(grid.lonh,x_section,axis=0)
-              grid.lonq=np.take(grid.lonq,xb_section,axis=0)
-          return grid
-      
-      if geo_region['shifted']:
-        lonh = grid.lonh+geo_region['x_offset']
-        x_T=grid.x_T+ geo_region['x_offset']
-        x_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],x_T,lonh)
-        grid.x_T = np.take(np.take(x_T_shifted,y_section,axis=0),x_section,axis=1)
-        grid.lonh = np.take(lon_shifted,x_section,axis=0)
-        grid.x_T[grid.x_T<=geo_region['lon0']]=grid.x_T[grid.x_T<=geo_region['lon0']]-geo_region['x_offset']
-        grid.x_T[:,0]=grid.x_T[:,0]+geo_region['x_offset']
-        y_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.y_T,lonh)        
-        grid.y_T = np.take(np.take(y_T_shifted,y_section,axis=0),x_section,axis=1)
-        lonb = grid.lonq + geo_region['x_offset']
-        x_T_b=grid.x_T_bounds+ geo_region['x_offset']
-        x_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],x_T_b,lonb)
-        grid.x_T_bounds = np.take(np.take(x_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
-        grid.lonq = np.take(lon_bounds_shifted,xb_section,axis=0)        
-        y_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],grid.y_T_bounds,lonb)        
-        grid.y_T_bounds = np.take(np.take(y_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
+      grid.lonh=np.take(self.lonh,x_section,axis=0)
+      grid.lonq=np.take(self.lonq,xb_section,axis=0)
 
+      lon0=grid.lonq[0]
 
+      grid.lonh[grid.lonh<lon0]=grid.lonh[grid.lonh<lon0]+360.
+      grid.lonq[grid.lonq<lon0]=grid.lonq[grid.lonq<lon0]+360.
 
-        if grid.have_metrics:
-            dxh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxh,lonh)                
-            grid.dxh = np.take(np.take(dxh_shifted,y_section,axis=0),x_section,axis=1)
-            dyh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyh,lonh)                
-            grid.dyh = np.take(np.take(dyh_shifted,y_section,axis=0),x_section,axis=1)
-            Ah_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.Ah,lonh)
-            grid.Ah = np.take(np.take(Ah_shifted,y_section,axis=0),x_section,axis=1)        
+      grid.x_T = np.take(np.take(self.x_T,y_section,axis=0),x_section,axis=1)
+      grid.x_T[grid.x_T<lon0]=grid.x_T[grid.x_T<lon0]+360.
+      grid.x_T_bounds = np.take(np.take(self.x_T_bounds,yb_section,axis=0),xb_section,axis=1)
+      grid.x_T_bounds[grid.x_T_bounds<lon0]=grid.x_T_bounds[grid.x_T_bounds<lon0]+360.
 
-        try:
-          grid.mask=np.roll(grid.mask,axis=1,shift=-geo_region['i_offset'])
-        except:
-          pass
-      else:
-        grid.x_T = np.take(np.take(self.x_T,y_section,axis=0),x_section,axis=1)
-        grid.y_T = np.take(np.take(self.y_T,y_section,axis=0),x_section,axis=1)
-        grid.x_T_bounds = np.take(np.take(self.x_T_bounds,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
-        grid.y_T_bounds = np.take(np.take(self.y_T_bounds,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1) 
-        grid.lonh = np.take(self.lonh,x_section,axis=0)
-        grid.lath = np.take(self.lath,y_section,axis=0)
-        grid.lonq = np.take(self.lonq,xb_section,axis=0)
-        grid.latq = np.take(self.latq,yb_section,axis=0)
-        grid.dxh = np.take(np.take(self.dxh,y_section,axis=0),x_section,axis=1)
-        grid.dyh = np.take(np.take(self.dyh,y_section,axis=0),x_section,axis=1)
-        grid.Ah = np.take(np.take(self.Ah,y_section,axis=0),x_section,axis=1)        
+      grid.y_T = np.take(np.take(self.y_T,y_section,axis=0),x_section,axis=1)
+      grid.y_T_bounds = np.take(np.take(self.y_T_bounds,yb_section,axis=0),xb_section,axis=1)
+
+      if hasattr(grid,'D'):
+          grid.D = np.take(np.take(self.D,y_section,axis=0),x_section,axis=1)
+
+      if hasattr(grid,'f'):
+          grid.f = np.take(np.take(self.f,y_section,axis=0),x_section,axis=1)
+
+      if hasattr(grid,'wet'):
+          grid.f = np.take(np.take(self.wet,y_section,axis=0),x_section,axis=1)
+
           
+      if grid.have_metrics:
+          grid.dxh = np.take(np.take(self.dxh,y_section,axis=0),x_section,axis=1)
+          grid.dyh = np.take(np.take(self.dyh,y_section,axis=0),x_section,axis=1)
+          grid.Ah = np.take(np.take(self.Ah,y_section,axis=0),x_section,axis=1)
+
+          
+      if hasattr(grid,'mask'):
+          grid.mask = np.take(np.take(self.mask,y_section,axis=0),x_section,axis=1)
+
       grid.im = np.shape(grid.lonh)[0]
       grid.jm = np.shape(grid.lath)[0]
 
-      try:
-        grid.mask=np.take(np.take(grid.mask,geo_region['y'],axis=0),geo_region['x'],axis=1)
-      except:
-        pass
-                
-      
       return grid
 
   def add_mask(self,field,path=None):
@@ -602,523 +659,6 @@ class generic_rectgrid(object):
 
     return None
 
-class ocean_rectgrid(object):
-
-  
-  """
-  A ocean_rectgrid object is for the horizontal lattice of points lying
-  on a sphere or a plane. A grid class is constructed by reading the
-  contents of an \"ocean_geometry\" file produced by the GFDL
-  General Ocean Layered Dynamics (GOLD) model or MOM6 which is based on the
-  GOLD code. Alternatively, the cell positions can be constructed from a MOM4 grid_spec file.
-
-  The cell perimeter locations, face lengths and areas are
-  read from the geometry file. 
-
-           +-------+-------+-------+
-           :       :       :       :
-           :       :       :       :
-           :       :       :       :           
-           +-------+-------Q-------:< Y_T_bounds
-           :       :       :       :
-           :       :   T   :       :
-           :       :       :       :           
-           +-------Q-------+-------+< Y_T_bounds
-                   ^       ^
-                  X_T_bounds
-
-  """
-
-
-  
-  
-  def __init__(self,path=None,cyclic=False,tripolar_n=False,grid_type='gold_geometry',is_latlon=False,is_cartesian=False,supergrid=None):
-
-    """
-    >>> from midas import *
-    >>> import hashlib
-    >>> x=np.linspace(0.,360.,361);y=np.linspace(-90.,90.,181);X,Y=np.meshgrid(x,y)
-    >>> sgrid=supergrid(xdat=X,ydat=Y)
-    >>> grid=ocean_rectgrid(supergrid=sgrid)
-    >>> hash=hashlib.md5(grid.x_T)
-    >>> hash.update(grid.y_T)
-    >>> print hash.hexdigest()
-    f17b4cf1851a98a4bb42e6d12154e528
-    """
-
-    if path is not None:
-        f=nc.Dataset(path)
-
-    self.is_latlon = is_latlon
-    self.is_cartesian=is_cartesian
-
-    self.yDir=1
-    
-    if supergrid is not None:
-        var_dict = {}
-        x=supergrid.x; y=supergrid.y
-        grid_x=supergrid.grid_x; grid_y=supergrid.grid_y
-        self.lonh=grid_x[1::2]
-        self.lath=grid_y[1::2]
-        self.lonq=grid_x[0::2]
-        self.latq=grid_y[0::2]
-        self.x_T=x[1::2,1::2]
-        self.y_T=y[1::2,1::2]
-        self.x_T_bounds=x[0::2,0::2]
-        self.y_T_bounds=y[0::2,0::2]
-        self.jm = self.x_T.shape[0]
-        self.im = self.x_T.shape[1]        
-        self.wet = np.ones((self.jm,self.im))
-        self.cyclic_x=supergrid.dict['cyclic_x']
-
-        if supergrid.have_metrics:
-            dx=supergrid.dx
-            dy=supergrid.dy
-            dxh = dx[:,::2]+dx[:,1::2]
-            self.dxh=0.5*(dxh[:-1:2,:]+dxh[2::2,:])
-            dyh = dy[::2,:]+dy[1::2,:]
-            self.dyh=0.5*(dyh[:,:-1:2]+dyh[:,2::2])
-            self.Ah = self.dxh*self.dyh
-            self.angle_dx=supergrid.angle_dx[1::2,1::2]
-        else:
-            self.have_metrics=False
-            
-        return
-    
-    
-    self.have_metrics=True
-
-    if grid_type == 'gold_geometry':
-        self.x_T = f.variables['geolon'][:]
-        self.x_T_bounds = f.variables['geolonb'][:]
-        xtb0=2.0*self.x_T_bounds[:,0]-self.x_T_bounds[:,1]
-        xtb0=xtb0[:,np.newaxis]
-        self.x_T_bounds = np.hstack((xtb0,self.x_T_bounds))
-        xtb0=self.x_T_bounds[0,:]
-        self.x_T_bounds = np.vstack((xtb0,self.x_T_bounds))    
-        self.y_T = f.variables['geolat'][:]
-        self.y_T_bounds = f.variables['geolatb'][:]
-        ytb0=2.0*self.y_T_bounds[0,:]-self.y_T_bounds[1,:]
-        self.y_T_bounds = np.vstack((ytb0,self.y_T_bounds))
-        ytb0=self.y_T_bounds[:,0]
-        ytb0=ytb0[:,np.newaxis]
-        self.y_T_bounds = np.hstack((ytb0,self.y_T_bounds))
-        self.lonh = f.variables['lonh'][:] 
-        self.lath = f.variables['lath'][:]
-        self.lonq = f.variables['lonq'][:]
-        self.lonq = np.hstack((self.lonq[0]-(self.lonq[1]-self.lonq[0]),self.lonq))
-        self.latq = f.variables['latq'][:]
-        self.latq = np.hstack((self.latq[0]-(self.latq[1]-self.latq[0]),self.latq))
-        self.D    = f.variables['D'][:]
-        self.f    = f.variables['f'][:]
-        try:
-            self.dxv    = f.variables['dxv'][:]
-        except:
-            self.dxv    = f.variables['dxCv'][:]
-
-        try:
-            self.dyu    = f.variables['dyu'][:]
-        except:
-            self.dyu    = f.variables['dyCu'][:]
-
-        try:    
-            self.dxu    = f.variables['dxu'][:]
-        except:
-            self.dxu    = f.variables['dxCu'][:]
-
-        try:
-            self.dyv    = f.variables['dyv'][:]
-        except:
-            self.dyv    = f.variables['dyCv'][:]
-
-        try:
-            self.dxh    = f.variables['dxh'][:]
-        except:
-            self.dxh    = f.variables['dxT'][:]
-
-        try:
-            self.dyh    = f.variables['dyh'][:]
-        except:
-            self.dyh    = f.variables['dyT'][:]
-
-            
-        self.Ah    = f.variables['Ah'][:]
-        self.Aq    = f.variables['Aq'][:]
-        self.wet    = f.variables['wet'][:]
-        self.cyclic_x = cyclic
-        self.tripolar_n = tripolar_n
-        self.im = np.shape(self.lonh)[0]
-        self.jm = np.shape(self.lath)[0]
-    if grid_type == 'mom4_gridspec':
-        self.x_T = f.variables['geolon_t'][:]
-        self.x_T_bounds = f.variables['geolon_e'][:]
-        xtb0=2.0*self.x_T_bounds[:,0]-self.x_T_bounds[:,1]
-        xtb0=xtb0[:,np.newaxis]
-        self.x_T_bounds = np.hstack((xtb0,self.x_T_bounds))
-        xtb0=self.x_T_bounds[0,:]
-        self.x_T_bounds = np.vstack((xtb0,self.x_T_bounds))    
-        self.y_T = f.variables['geolat_t'][:]
-        self.y_T_bounds = f.variables['geolat_n'][:]
-        ytb0=2.0*self.y_T_bounds[0,:]-self.y_T_bounds[1,:]
-        self.y_T_bounds = np.vstack((ytb0,self.y_T_bounds))
-        ytb0=self.y_T_bounds[:,0]
-        ytb0=ytb0[:,np.newaxis]
-        self.y_T_bounds = np.hstack((ytb0,self.y_T_bounds))
-        self.lonh = f.variables['gridlon_t'][:] 
-        self.lath = f.variables['gridlat_t'][:]
-        self.lonq = f.variables['gridlon_c'][:]
-        self.lonq = np.hstack((self.lonq[0]-(self.lonq[1]-self.lonq[0]),self.lonq))
-        self.latq = f.variables['gridlat_c'][:]
-        self.latq = np.hstack((self.latq[0]-(self.latq[1]-self.latq[0]),self.latq))
-        self.D    = f.variables['ht'][:]
-        self.f    = 2.0*Omega*np.sin(self.y_T*np.pi/180.)
-        self.dxh    = f.variables['dxt'][:]
-        self.dyh    = f.variables['dyt'][:]
-        self.dxu    = f.variables['dxu'][:]
-        self.dyu    = f.variables['dyu'][:]
-        self.dxv    = self.dxu  # MOM4 is on a B-grid
-        self.dyv    = self.dyu
-        self.Ah    = self.dxh*self.dyh
-        self.Aq    = self.dxu*self.dyu
-        self.wet    = f.variables['wet'][:]
-        self.cyclic_x = cyclic
-        self.tripolar_n = tripolar_n
-        self.im = np.shape(self.lonh)[0]
-        self.jm = np.shape(self.lath)[0]
-        
-  def find_geo_bounds(self,x=None,y=None):
-      """
-      Returns the bounds of the grid. Currently this is of limited use 
-      for generalized horizontal coordinates (based on lonh/lath).
-      
-
-      >>> from midas import *
-      >>> x=np.arange(0.,360.5,.5);y=np.arange(-90.,90.5,0.5)
-      >>> X,Y=np.meshgrid(x,y)
-      >>> sgrid=supergrid(xdat=X,ydat=Y)
-      >>> grid=ocean_rectgrid(supergrid=sgrid,cyclic=True)
-      >>> xs,xe,ys,ye=grid.find_geo_bounds(x=(20.,50.),y=(-10.,10.))
-      >>> print xs,xe,grid.lonh[xs],grid.lonh[xe]
-      19 50 19.4729542302 50.4299583911
-      >>> print ys,ye,grid.lath[ys],grid.lath[ye]
-      79 100 -10.7202216066 10.2216066482
-      """
-
-      [min_dx,min_dy] = min_resolution(self)
-      [max_dx,max_dy] = max_resolution(self)
-
-      xs=None;xe=None
-      if x is not None:
-          xmin=x[0];xmax=x[1]
-          xs = np.nonzero(np.abs(self.lonh - xmin) <= max_dx)[0][0]
-          xe = np.nonzero(np.abs(self.lonh - xmax) <= max_dx)[0][0]
-          xe = np.minimum(xe+1,self.im)
-
-      ys=None;ye=None
-      if y is not None:
-          ymin=y[0];ymax=y[1]
-          ys = np.nonzero(np.abs(self.lath - ymin) <= max_dy)[0][0]
-          ye = np.nonzero(np.abs(self.lath - ymax) <= max_dy)[0][0]
-          ye = np.minimum(ye+1,self.jm)
-
-      return xs,xe,ys,ye
-
-  def geo_region(self,y=None,x=None,name=None):
-    """
-    Returns a \"section\" dictionary for sampling a contiguous region
-    based on geographical boundaries
-    Currently this is of limited use for generalized horizontal 
-    coordinates (based on lonh/lath). [ Instead I typically use 
-    the \"indexed_region\" method to slice general grids]. 
-     
-
-    >>> from midas import *
-    >>> x=np.linspace(0.,360.,361);y=np.linspace(-90.,90.,181)
-    >>> X,Y=np.meshgrid(x,y)
-    >>> sgrid=supergrid(xdat=X,ydat=Y)
-    >>> grid=ocean_rectgrid(supergrid=sgrid,cyclic=True)
-    >>> section=grid.geo_region(x=(-30.,60.),y=(-10.,10.))
-    >>> print section['lon0'],section['shifted'],section['i_offset']
-    -30.0 True 0
-    >>> print section['xax_data'][0],section['xax_data'][-1]
-    -29.9168975069 60.8310249307
-    >>> print section['yax_data'][0],section['yax_data'][-1]
-    -11.4364640884 10.4419889503
-
-    """
-
-    [min_dx,min_dy] = min_resolution(self)
-    [max_dx,max_dy] = max_resolution(self)  
-  
-    section={}
-
-    if y is not None:
-      ys = np.nonzero(np.abs(self.lath - y[0]) <= max_dy)[0][0]
-      ye = np.nonzero(np.abs(self.lath - y[1]) <= max_dy)[0][0]  
-      ye = np.minimum(ye+1,self.jm)
-      section['y']=np.arange(ys,ye+1)
-      section['yax_data']= self.lath[section['y']]
-    else:
-      section['y']=np.arange(0,self.jm)
-      section['yax_data']= self.lath.copy()
-      
-    if x is not None:
-      if x[0] >= self.lonh[0] and x[1] <= self.lonh[-1]:
-        xs,xe,ys,ye = self.find_geo_bounds(x,y)
-        section['x']=np.arange(xs,xe+1)
-        section['lon0']=x[0]
-        section['i_offset'] = 0
-        section['x_offset'] = 0.
-        section['shifted']=False
-        section['xax_data']= self.lonh[section['x']]
-      elif x[0] < self.lonh[0]:
-        lonh = self.lonh-360.
-        result=find_axis_bounds(lonh,x=[x[0],x[0]])
-        section['i_offset']=result[0]
-        x_T_shifted,lon_shifted = shiftgrid(x[0],self.x_T,lonh)
-        result=find_axis_bounds(lon_shifted,x=x)
-        xs=result[0];xe=result[1]
-        xe=np.minimum(xe+1,self.im)
-        section['lon0']=x[0]
-        section['shifted']=True
-        section['i_offset']=xs
-        section['x_offset']=-360.
-        section['x']=np.arange(xs,xe+1)        
-        section['xax_data']= lon_shifted[section['x']][xs:xe+1]
-      elif x[1] > self.lonh[-1]:
-        lonh=self.lonh+360.
-        result=find_axis_bounds(lonh,x=[x[0],x[0]])        
-        section['i_offset']=result[0]
-        x_T_shifted,lon_shifted = shiftgrid(x[0],self.x_T,self.lonh)
-        result=find_axis_bounds(lon_shifted,x=x)
-        xs=result[0];xe=result[1]
-        xe=np.minimum(xe+1,self.im)
-        section['lon0']=x[0]
-        section['x_offset']=360.
-        section['shifted']=True
-        section['x']=np.arange(xs,xe+1)        
-        section['xax_data']= lon_shifted[section['x']][xs:xe+1]
-    else:
-      section['x']=np.arange(0,self.im)
-      section['shifted']=False
-      section['lon0']=self.lonh[0]
-      section['xax_data']=self.lonh
-      
-    section['name'] = name
-    section['parent_grid'] = self
-
-    return section
-      
-  def indexed_region(self,i=None,j=None,name=None):
-  
-    """
-    Returns a \"section\" dictionary for sampling a contiguous region. 
-    based on index coordinates.
-      
-
-    >>> from midas import *
-    >>> x=np.arange(0.,360.,.5);y=np.arange(-90.,90.,0.5)
-    >>> X,Y=np.meshgrid(x,y)
-    >>> sgrid=supergrid(xdat=X,ydat=Y)
-    >>> grid=ocean_rectgrid(supergrid=sgrid,cyclic=True)
-    >>> section=grid.indexed_region(i=(20,20))
-    >>> print section['lon0'],section['shifted'],section['i_offset']
-    20.4715277778 False 0
-    >>> print section['xax_data'][0],section['xax_data'][-1]
-    20.4715277778 20.4715277778
-    >>> print section['yax_data'][0],section['yax_data'][-1]
-    -89.5013888889 89.0013888889
-    """
-
-    section={}
-
-    if j is not None:
-      ys=j[0];ye=j[1]
-      section['y']=np.arange(ys,ye+1)
-      section['yax_data']= self.lath[section['y']]
-    else:
-      section['y']=None
-      section['yax_data']= self.lath
-      
-    if i is not None:
-        xs=i[0];xe=i[1]
-        section['x']=np.arange(xs,xe+1)
-        section['xax_data']= self.lonh[section['x']]
-        section['lon0']=section['xax_data'][0]
-        section['i_offset'] = 0
-        section['shifted']=False
-    else:
-      section['x']=None
-
-    section['name'] = name
-    section['parent_grid'] = self
-
-    return section
-      
-  def extract(self,geo_region=None):
-    """
-    Returns new grid object using a \"section\" dictionary 
-    created using the \"geo_region\" or \"indexed_region\"
-    method.
-      
-
-    >>> from midas import *
-    >>> import hashlib
-    >>> x=np.linspace(0.,360.,361);y=np.linspace(-90.,90.,181)
-    >>> X,Y=np.meshgrid(x,y)
-    >>> sgrid=supergrid(xdat=X,ydat=Y)
-    >>> grid=ocean_rectgrid(supergrid=sgrid,cyclic=True)
-    >>> section=grid.geo_region(x=(-30.,20.),y=(-10.,10.))
-    >>> new_grid = grid.extract(section)
-    >>> hash=hashlib.md5(new_grid.x_T)
-    >>> hash.update(new_grid.y_T)
-    >>> print hash.hexdigest()
-    f45e1be60475da138c17cd5fa9006c8d
-    """
-
-    if geo_region is None:
-        grid=copy.copy(self)
-        return grid
-    else:
-      grid = copy.copy(self)
-
-      x_section = geo_region['x'];y_section = geo_region['y']
-      if x_section is not None:
-        xb_section = np.hstack((x_section,x_section[-1]+1))
-      else:
-        x_section = np.arange(0,grid.im)
-        xb_section = np.arange(0,grid.im+1)
-        
-      if y_section is not None:
-        yb_section = np.hstack((y_section,y_section[-1]+1))
-      else:
-        y_section = np.arange(0,grid.jm)
-        yb_section = np.arange(0,grid.jm+1)
-
-      if not geo_region['shifted']:
-        grid.x_T = np.take(np.take(self.x_T,y_section,axis=0),x_section,axis=1)
-        grid.y_T = np.take(np.take(self.y_T,y_section,axis=0),x_section,axis=1)
-        grid.x_T_bounds = np.take(np.take(self.x_T_bounds,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
-        grid.y_T_bounds = np.take(np.take(self.y_T_bounds,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1) 
-        grid.lonh = np.take(self.lonh,x_section,axis=0)
-        grid.lath = np.take(self.lath,y_section,axis=0)
-        grid.lonq = np.take(self.lonq,xb_section,axis=0)
-        grid.latq = np.take(self.latq,yb_section,axis=0)
-
-        if hasattr(grid,'D'):
-            grid.D = np.take(np.take(self.D,y_section,axis=0),x_section,axis=1)
-
-        if hasattr(grid,'f'):
-            grid.f = np.take(np.take(self.f,y_section,axis=0),x_section,axis=1)
-
-        if hasattr(grid,'dxv'):
-            grid.dxv = np.take(np.take(self.dxv,y_section,axis=0),x_section,axis=1)
-            grid.dyu = np.take(np.take(self.dyu,y_section,axis=0),x_section,axis=1)
-            grid.dxu = np.take(np.take(self.dxu,y_section,axis=0),x_section,axis=1)
-            grid.dyv = np.take(np.take(self.dyv,y_section,axis=0),x_section,axis=1)
-
-        if hasattr(grid,'dxh'):            
-            grid.dxh = np.take(np.take(self.dxh,y_section,axis=0),x_section,axis=1)
-            grid.dyh = np.take(np.take(self.dyh,y_section,axis=0),x_section,axis=1)
-
-        if hasattr(grid,'Ah'):
-            grid.Ah = np.take(np.take(self.Ah,y_section,axis=0),x_section,axis=1)
-
-        if hasattr(grid,'Aq'):            
-            grid.Aq= np.take(np.take(self.Aq,y_section,axis=0),x_section,axis=1)
-            
-        grid.wet = np.take(np.take(self.wet,y_section,axis=0),x_section,axis=1)
-        grid.im = np.shape(grid.lonh)[0]
-        grid.jm = np.shape(grid.lath)[0]
-
-        try:
-          grid.mask=np.take(np.take(grid.mask,y_section,axis=0),x_section,axis=1)
-        except:
-          pass
-        
-      else:
-        lonh = grid.lonh+geo_region['x_offset']
-        x_T=grid.x_T+ geo_region['x_offset']          
-        x_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],x_T,lonh)
-        grid.x_T = np.take(np.take(x_T_shifted,y_section,axis=0),x_section,axis=1)
-        grid.x_T[grid.x_T<=geo_region['lon0']]=grid.x_T[grid.x_T<=geo_region['lon0']]-geo_region['x_offset']
-        grid.x_T[:,0]=grid.x_T[:,0]+geo_region['x_offset']
-        grid.lonh = np.take(lon_shifted,x_section,axis=0)
-        y_T_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.y_T,lonh)        
-        grid.y_T = np.take(np.take(y_T_shifted,y_section,axis=0),x_section,axis=1)
-        lonb = grid.lonq + geo_region['x_offset']
-        x_T_b=grid.x_T_bounds+ geo_region['x_offset']
-        x_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],x_T_b,lonb)
-        grid.x_T_bounds = np.take(np.take(x_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
-        grid.lonq = np.take(lon_bounds_shifted,xb_section,axis=0)        
-        y_T_bounds_shifted,lon_bounds_shifted = shiftgrid(geo_region['lon0'],grid.y_T_bounds,lonb)        
-        grid.y_T_bounds = np.take(np.take(y_T_bounds_shifted,np.hstack((y_section,y_section[-1]+1)),axis=0),np.hstack((x_section,x_section[-1]+1)),axis=1)
-        grid.lath = np.take(self.lath,y_section,axis=0)
-        grid.latq = np.take(self.latq,yb_section,axis=0)
-        grid.lonh = np.take(lon_shifted,x_section,axis=0)
-
-        
-        try:
-            D_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.D,grid.lonh)
-            grid.D = np.take(np.take(D_shifted,y_section,axis=0),x_section,axis=1)
-        except:
-            pass
-
-            
-        if grid.have_metrics:
-            f_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.f,lonh)
-            grid.f = np.take(np.take(f_shifted,y_section,axis=0),x_section,axis=1)
-            dxv_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxv,lonh)
-            grid.dxv = np.take(np.take(dxv_shifted,y_section,axis=0),x_section,axis=1)
-            dyu_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyu,lonh)
-            grid.dyu = np.take(np.take(dyu_shifted,y_section,axis=0),x_section,axis=1)
-            dxu_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxu,lonh)
-            grid.dxu = np.take(np.take(dxu_shifted,y_section,axis=0),x_section,axis=1)
-            dyv_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyv,lonh)        
-            grid.dyv = np.take(np.take(dyv_shifted,y_section,axis=0),x_section,axis=1)
-            dxh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dxh,lonh)                
-            grid.dxh = np.take(np.take(dxh_shifted,y_section,axis=0),x_section,axis=1)
-            dyh_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.dyh,lonh)                
-            grid.dyh = np.take(np.take(dyh_shifted,y_section,axis=0),x_section,axis=1)
-            Ah_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.Ah,lonh)                
-            grid.Ah = np.take(np.take(Ah_shifted,y_section,axis=0),x_section,axis=1)
-            Aq_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.Aq,lonh)                
-            grid.Aq= np.take(np.take(Aq_shifted,y_section,axis=0),x_section,axis=1)
-
-        try:
-            wet_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.wet,lonh)                
-            grid.wet = np.take(np.take(wet_shifted,y_section,axis=0),x_section,axis=1)
-        except:
-            pass
-        try:
-          mask_shifted,lon_shifted = shiftgrid(geo_region['lon0'],grid.mask,lonh)                
-          grid.mask = np.take(np.take(mask_shifted,y_section,axis=0),x_section,axis=1)
-        except:
-          pass
-        
-        grid.im = np.shape(grid.lonh)[0]
-        grid.jm = np.shape(grid.lath)[0]        
-
-
-          
-      return grid
-
-  def add_mask(self,field,path=None):
-    """Add a 2-D mask to the grid. The mask can have arbitrary values, e.g.
-       a different value for separate ocean basins. This can be used to mask
-       fields using the (state.mask_where) method.
-         """
-    if path is not None:
-      f=nc.Dataset(path)
-      
-    if field in f.variables:
-      self.mask = f.variables[field][:]
-    else:
-      print ' Field ',field,' is not present in file ',path
-      return None
-    
-
-    return None
 
 class state(object):
   """Returns a model state of (fields). The default is 
@@ -1147,7 +687,7 @@ class state(object):
     """
 #    >>> from midas import *
 #    >>> import hashlib
-#    >>> grid=generic_rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an',cyclic=True)
+#    >>> grid=rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an',cyclic=True)
 #    >>> IO = grid.geo_region(x=(30,120.),y=(-30.,25.))
 #    >>> S=state('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',grid=grid,geo_region=IO,fields=['t_an'])
 #    >>> hash=hashlib.md5(S.t_an)
@@ -1197,9 +737,9 @@ class state(object):
 
     if grid is None:
         if path is not None:
-            grid = generic_rectgrid(path,var=fields[0])
+            grid = rectgrid(path,var=fields[0])
         else:
-            grid = generic_rectgrid(MFpath[0],var=fields[0])
+            grid = rectgrid(MFpath[0],var=fields[0])
         self.grid = grid
     else:
         new_grid = grid.extract(geo_region)
@@ -1360,6 +900,7 @@ class state(object):
          t_indices = None
          
 
+
        if var_dict['Z'] is not None:
            try:
                var_dict['zunits'] =   self.rootgrp.variables[var_dict['Z']].units
@@ -1373,6 +914,8 @@ class state(object):
            else:
                nz = len(self.rootgrp.variables[var_dict['Z']][:])
                z_indices=np.arange(0,nz)
+               if len(z_indices) == 0:
+                   z_indices = 0
                z_interfaces = np.arange(0,nz+1)
 
            var_dict['zax_data']= self.rootgrp.variables[var_dict['Z']][z_indices]
@@ -1416,6 +959,9 @@ class state(object):
        var_dict['z_indices']=z_indices
        var_dict['zb_indices']=z_interfaces
 
+       x_indices = np.arange(0,self.grid.im)
+       x_indices_read = np.arange(0,self.grid.im)
+       y_indices = np.arange(0,self.grid.jm)
        
        if var_dict['Y'] is not None and var_dict['X'] is not None:
            try:
@@ -1428,87 +974,74 @@ class state(object):
                var_dict['yunits'] =  'none'
            if geo_region is not None:
                var_dict['yax_data'] = geo_region['yax_data'][:]
-               y_indices=geo_region['y']
-               if geo_region['shifted']:
-                   nx = len(geo_region['x'][:])
-                   nx_g = len(self.rootgrp.variables[var_dict['X']][:])
-                   x_indices_read = np.arange(0,nx_g)
-                   x_indices = np.arange(0,nx)             
-                   var_dict['xax_data'] = geo_region['xax_data'][:]
-               else:
-                   var_dict['xax_data'] = geo_region['xax_data'][:]
-                   nx = len(geo_region['x'][:])
-                   x_indices = np.arange(0,nx)
-                   x_indices_read = geo_region['x'][:]
+               y_indices=geo_region['y'][:]
+               x_indices=geo_region['x'][:]
+               x_indices_read = geo_region['x_read'][:]
+               var_dict['xax_data'] = geo_region['xax_data'][:]
+               var_dict['yax_data'] = geo_region['yax_data'][:]
+               if grid.yDir == -1:
+                   var_dict['yax_data']=var_dict['yax_data'][::-1]
            else:
-               ny = len(self.rootgrp.variables[var_dict['Y']][:])
-               y_indices = np.arange(0,ny)
-               var_dict['yax_data'] = self.rootgrp.variables[var_dict['Y']][y_indices]
-               if grid is not None:
-                   if grid.yDir == -1:
-                       var_dict['yax_data']=var_dict['yax_data'][::-1]
-               nx = len(self.rootgrp.variables[var_dict['X']][:])
-               x_indices = np.arange(0,nx)
-               var_dict['xax_data'] = self.rootgrp.variables[var_dict['X']][x_indices]
-               x_indices_read = x_indices
-           
+               var_dict['yax_data'] = grid.lath
+               var_dict['xax_data'] = grid.lonh
+               if grid.yDir == -1:
+                   var_dict['yax_data']=var_dict['yax_data'][::-1]
+
        if var_dict['X'] is None:
          x_indices = None
-         x_indices_read = None         
+
 
        if var_dict['Y'] is None:
          y_indices = None         
-         y_indices_read = None
+
 
        slice_read = [];shape_read = []; shape_out=[]; slice_out = []
+
+
        for s in [t_indices,z_indices,y_indices]:
-         if s is not None:
-           slice_read.append(s)
-           slice_out.append(np.arange(0,s.shape[0]))             
-           shape_read.append(s.shape[0])
-           shape_out.append(s.shape[0])           
-         else:
+           if s is not None:
+               if len(s) == 1:  # This seems necessary due to a NC4 bug
+                   slice_read.append(s[0])
+               else:
+                   slice_read.append(s)
+               slice_out.append(np.arange(0,s.shape[0]))             
+               shape_read.append(s.shape[0])
+               shape_out.append(s.shape[0])           
+           else:
+               slice_out.append([0])
+               shape_out.append(1)
+               shape_read.append(1)
+
+       if geo_region is not None or x_indices is not None:
+           slice_read.append(x_indices)
+           slice_out.append(np.arange(0,x_indices.shape[0]))
+           shape_read.append(x_indices.shape[0])
+           shape_out.append(x_indices.shape[0])
+       else:
            slice_out.append([0])
            shape_out.append(1)
            shape_read.append(1)
 
-       if geo_region is not None and x_indices is not None:
-         slice_read.append(x_indices_read)
-         slice_out.append(x_indices)
-         shape_read.append(x_indices_read.shape[0])
-         shape_out.append(x_indices.shape[0])
-       elif x_indices is not None:
-         slice_read.append(x_indices_read)
-         slice_out.append(x_indices)         
-         shape_read.append(x_indices_read.shape[0])
-         shape_out.append(x_indices.shape[0])
-       else:
-         slice_out.append([0])
-         shape_out.append(1)
-         shape_read.append(1)
-
        slice_int_read = [];shape_int_read = []; shape_int_out=[]; slice_int_out = []
        for s in [t_indices,z_interfaces,y_indices]:
          if s is not None:
-           slice_int_read.append(s)
-           slice_int_out.append(np.arange(0,s.shape[0]))                      
-           shape_int_read.append(s.shape[0])
-           shape_int_out.append(s.shape[0])           
+             if len(s) == 1:  # This seems necessary due to a NC4 bug
+                 slice_int_read.append(s[0])
+             else:
+                 slice_int_read.append(s)
+             slice_int_out.append(np.arange(0,s.shape[0]))                      
+             shape_int_read.append(s.shape[0])
+             shape_int_out.append(s.shape[0])           
          else:
-           slice_int_out.append([0])
-           shape_int_out.append(1)
-           shape_int_read.append(1)
+             slice_int_out.append([0])
+             shape_int_out.append(1)
+             shape_int_read.append(1)
 
-       if geo_region is not None and x_indices is not None:
-         slice_int_read.append(x_indices_read)
-         slice_int_out.append(x_indices)
-         shape_int_read.append(x_indices_read.shape[0])
-         shape_int_out.append(x_indices.shape[0])         
-       elif x_indices is not None:
-         slice_int_read.append(x_indices_read)
-         slice_int_out.append(x_indices)             
-         shape_int_read.append(x_indices_read.shape[0])
-         shape_int_out.append(x_indices.shape[0])
+       if geo_region is not None or x_indices is not None:
+           slice_int_read.append(x_indices)
+           slice_int_out.append(np.arange(0,x_indices.shape[0]))
+           shape_int_read.append(x_indices.shape[0])
+           shape_int_out.append(x_indices.shape[0])
        else:
          slice_int_out.append([0])
          shape_int_out.append(1)
@@ -1526,16 +1059,10 @@ class state(object):
          self.shape_int_out = shape_int_out       
 
 
-       data_read = np.reshape(np.array(self.rootgrp.variables[v][slice_read]),(shape_read))
+       data_read = np.array(self.rootgrp.variables[v][slice_read])
+       data_read = np.reshape(data_read,(shape_read))
 
-       if geo_region is not None:
-         if geo_region['shifted']:
-           print 'data_read.shape=',data_read.shape
-           vars(self)[v] = np.roll(data_read,axis=3,shift=-geo_region['i_offset'])[:,:,:,x_indices]
-         else:
-           vars(self)[v] = data_read
-       else:
-         vars(self)[v] = data_read
+       vars(self)[v] = data_read
 
        if grid is not None:
            if self.grid.yDir == -1:
@@ -1599,13 +1126,7 @@ class state(object):
                      data_int_read = np.reshape(np.array(self.rootgrp.variables[interfaces][slice_int_read]),(shape_int_read))
                      path_interfaces = self.path
            
-                 if geo_region is not None:
-                     if geo_region['shifted']:
-                         vars(self)[interfaces] = np.roll(data_int_read,axis=3,shift=-geo_region['i_offset'])[:,:,:,x_indices]
-                     else:
-                         vars(self)[interfaces] = data_int_read
-                 else:
-                     vars(self)[interfaces] = data_int_read
+                 vars(self)[interfaces] = data_int_read
 
                  if DEBUG == 1 or verbose == True:
                      print " Successfully extracted interface data named %(nam)s from %(fil)s "%{'nam':interfaces,'fil':path_interfaces}
@@ -1616,11 +1137,7 @@ class state(object):
                  data_int_read = np.reshape(zint,(shape_int_read))
 
                  interfaces_name='e'
-                 if geo_region is not None:
-                     if geo_region['shifted']:
-                         vars(self)[interfaces_name] = np.roll(data_int_read,axis=3,shift=-geo_region['i_offset'])[:,:,:,x_indices]
-                     else:
-                         vars(self)[interfaces_name] = data_int_read
+                 vars(self)[interfaces_name] = data_int_read
 
              self.interfaces=interfaces
            
@@ -1690,12 +1207,6 @@ class state(object):
        self.geo_region = geo_region
 
        del t_indices,y_indices,x_indices
-       z_indices = z_indices_in
-
-    
-
-
-
            
 
     f.close()
@@ -1847,14 +1358,7 @@ class state(object):
     else:
       data_read = np.reshape(np.array(f.variables[field][self.slice_read]),(self.shape_read))
 
-    if geo_region is not None:
-      if geo_region['shifted']:
-        x_indices = geo_region['x_indices'][:]
-        vars(self)[field] = np.roll(data_read,axis=3,shift=-geo_region['i_offset'])[:,:,:,x_indices]
-      else:
-        vars(self)[field] = data_read
-    else:
-      vars(self)[field] = data_read
+    vars(self)[field] = data_read
     
     if var_dict['Y'] is not None and var_dict['X'] is not None:
       var_dict['xunits'] =   var_dict['rootgrp'].variables[var_dict['X']].units
@@ -2116,7 +1620,7 @@ class state(object):
     >>> x=np.linspace(0.,np.pi,100)
     >>> X,Y=np.meshgrid(x,x)
     >>> sgrid=supergrid(xdat=X,ydat=Y,config='cartesian')
-    >>> grid=ocean_rectgrid(supergrid=sgrid,cyclic=True)
+    >>> grid=rectgrid(supergrid=sgrid,cyclic=True)
     >>> X=grid.x_T;Y=grid.y_T
     >>> grid.wet=np.ones(X.shape)
     >>> grid.D=np.ones(X.shape)
@@ -4726,7 +4230,7 @@ class state(object):
           print """ path, varin and varout need to be specified """
           return
 
-      grid_obs = generic_rectgrid(path,var=varin)
+      grid_obs = rectgrid(path,var=varin)
       O=state(path,grid=grid_obs,fields=[varin],default_calendar='noleap')
 
       
