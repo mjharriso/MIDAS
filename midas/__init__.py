@@ -180,7 +180,10 @@ class rectgrid(object):
         return
 
     if path is not None:
-        f=nc.Dataset(path)
+        if type(path) == 'netCDF4.Dataset':
+            f=path
+        else:
+            f=nc.Dataset(path)
 
     if grid_type == 'gold_geometry':
         self.x_T = f.variables['geolon'][:]
@@ -739,7 +742,8 @@ class state(object):
         if path is not None:
             grid = rectgrid(path,var=fields[0])
         else:
-            grid = rectgrid(MFpath[0],var=fields[0])
+            grid = rectgrid(self.rootgrp,var=fields[0])
+
         self.grid = grid
     else:
         new_grid = grid.extract(geo_region)
