@@ -51,7 +51,7 @@ import matplotlib.pyplot as plt
 from midas_utils import *
 from midas_grid_gen import *
 from wright_eos import *
-
+from midas_profiles import *
 
 # Optional packages
 
