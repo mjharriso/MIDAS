@@ -4,7 +4,7 @@ import copy
 import matplotlib.pyplot as plt
 import scipy as sp
 import netCDF4 as nc
-
+from dateutil import parser
 
 try:
   import gsw
@@ -13,7 +13,7 @@ except:
 
 class profile_index(object):
 
-  def __init__(self,index_file=None,lon_bounds=None,lat_bounds=None,index_file_format='nodc'):
+  def __init__(self,index_file=None,lon_bounds=None,lat_bounds=None,months=None,index_file_format='nodc'):
 
     import os
 
@@ -45,6 +45,7 @@ class profile_index(object):
           dict['path']=line[2]
           dict['date_string']=line[4]
           dict['time_string']=line[5]
+          dict['ncDateTime']=parser.parse(dict['date_string'])
           dict['lat']=np.float(line[7])
           dict['lon']=np.float(line[8])
           dict['data_mode']=line[11]
@@ -68,7 +69,13 @@ class profile_index(object):
               else:
                 failed=failed+1
 
-
+          if months is not None:
+            m=dict['ncDateTime'].month - 1
+            if m in months:
+              passed=passed+1
+            else:
+              failed=failed+1
+            
           if np.logical_and(passed>=0,failed==0):              
             self.dict.append(dict)
         else:
@@ -114,6 +121,7 @@ class profile_list(object):
           flist=[];prof_dict={}
           for file in path:
             f=nc.Dataset(file['path'])
+            date_string = file['date_string']
             i=0
             if format == 'nodc':
               pr.data={}
@@ -122,6 +130,7 @@ class profile_list(object):
               pr.data['time']=f.variables['time'][:][0]
               reft = pr.data['ref_dateTime']
               reft = 'days since '+reft[0:4]+'-'+reft[4:6]+'-'+reft[6:9]
+              pr.data['ncDateTime_indx']=parser.parse(date_string)
               pr.data['ncDateTime']=num2date(pr.data['time'],reft)
               pr.data['wmoid']=f.variables['platform_number'][:].tostring()
               pr.data['cycle_number']=f.variables['cycle_number'][:][0]
