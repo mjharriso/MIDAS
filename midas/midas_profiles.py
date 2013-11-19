@@ -120,7 +120,11 @@ class profile_list(object):
 
           flist=[];prof_dict={}
           for file in path:
-            f=nc.Dataset(file['path'])
+            try:
+              f=nc.Dataset(file['path'])
+            except:
+              continue
+
             date_string = file['date_string']
             i=0
             if format == 'nodc':
@@ -141,16 +145,36 @@ class profile_list(object):
 
               pr.data['pressure']=sq(f.variables['pressure'][:] )
               pr.data['temp']=sq(f.variables['temperature'][:])
-              pr.data['salt']=sq(f.variables['salinity'][:])
-              pr.data['positioning_system']=string.join(f.variables['positioning_system'][:])
-              pr.data['position_qc']=string.join(f.variables['position_qc'][:])
-              pr.data['inst_reference']=string.join(f.variables['inst_reference'][:])
+              try:
+                pr.data['salt']=sq(f.variables['salinity'][:])
+              except:
+                pr.data['salt']=None
+
+              try:
+                pr.data['positioning_system']=string.join(f.variables['positioning_system'][:])
+              except:
+                pr.data['positioning_system']=None
+
+              try:
+                pr.data['position_qc']=string.join(f.variables['position_qc'][:])
+              except:
+                pr.data['position_qc']=None
+
+              try:
+                pr.data['inst_reference']=string.join(f.variables['inst_reference'][:])
+              except:
+                pr.data['inst_reference']=None
 
                 # Avoid confusion with direction attribute
               dp = np.roll(pr.data['pressure'],shift=-1)-pr.data['pressure']
-              dp = dp[:-2]
 
-              if len(dp) > 1:
+              if np.isscalar(dp):
+                dp=[dp]
+
+              if len(dp) > 4:
+                dp = dp[:-2]
+                
+              if len(dp) > 4:
                 if np.all(dp>0):
                   pr.data['direction']='A'
                   pr.data['min_dp']=np.min(dp)
@@ -178,9 +202,23 @@ class profile_list(object):
         print 'unable to find ',var
         raise
 
+      try:
+        nsamp=len(data)
+        ndepths=len(z)
+      except:
+        pr.data['d'+var+'_dZ']=None
+        continue
+    
+      if nsamp != ndepths or nsamp < 4:
+        pr.data['d'+var+'_dZ']=None
+        continue
+
       if pr.data['direction'] == 'A':
         dVar = np.roll(data,shift=-1)-data
-        Idz  = 1.0/(np.roll(z,shift=-1)-z)
+        denom=np.roll(z,shift=-1)-z
+        denom[denom==0.]=1.e-12
+          
+        Idz  = 1.0/denom
         dVar_dz = dVar*Idz 
         if bc == 'interior':
           dVar_dz[-1]=dVar_dz[-2]
@@ -206,7 +244,11 @@ class profile_list(object):
 
     for pr in self.pr:
       cmd = string.join(['pr.data[\'',name,'\']=',expr],sep='')
-      exec(cmd)
+
+      try:
+        exec(cmd)
+      except:
+        pr.data[name]=None
                    
   def sort_by_time(self):
     
@@ -235,7 +277,7 @@ class profile_list(object):
 
     # Use positive up convention. Pressure is the vertical
     # coordinate (positive down). 
-    
+
     self.first_deriv(var='temp',bc='interior',positive='up')
     self.first_deriv(var='salt',bc='interior',positive='up')
     
