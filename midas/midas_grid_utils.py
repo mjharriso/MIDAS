@@ -62,7 +62,7 @@ def max_resolution(grid=None,x=None,y=None):
     
   
 
-def find_axis_bounds(axis,x=None,modulo_360=False):
+def find_axis_bounds(axis,x=None):
   """
   Returns the bounding indices for axis in the
   range x.
@@ -80,11 +80,6 @@ def find_axis_bounds(axis,x=None,modulo_360=False):
   xs=None;xe=None
   if x is not None:
     xmin=x[0];xmax=x[1]
-    if modulo_360:
-      if x[0]<axis[0]:
-        xmin=xmin+360.
-      if x[1]>axis[-1]:
-        xmax=xmax-360.
     res = np.nonzero(np.abs(axis - xmin) < max_dx)
     xs = res[0][0]
     res = np.nonzero(np.abs(axis - xmax) < max_dx)
@@ -194,8 +189,7 @@ def shiftgrid(lon0,datain,lonsin,start=True,cyclic=360.0):
         # If cyclic, remove the duplicate point
         start_idx = 1
     if lon0 < lonsin[0] or lon0 > lonsin[-1]:
-        msg = 'lon0 outside of range of lonsin %(l0)4.1f %(st)4.1f %(ed)4.1f'%{'l0':lon0,'st':lonsin[0],'ed':lonsin[-1]}
-        raise ValueError(msg)
+        raise ValueError('lon0 outside of range of lonsin')
     i0 = np.argmin(np.fabs(lonsin-lon0))
     i0_shift = len(lonsin)-i0
     if ma.isMA(datain):
