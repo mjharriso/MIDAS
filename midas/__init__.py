@@ -744,7 +744,11 @@ class state(object):
         else:
             grid = rectgrid(self.rootgrp,var=fields[0])
 
-        self.grid = grid
+        if geo_region is not None:
+            new_grid=grid.extract(geo_region)
+            self.grid = new_grid
+        else:
+            self.grid = grid
     else:
         new_grid = grid.extract(geo_region)
         self.grid = new_grid
@@ -3063,15 +3067,17 @@ class state(object):
         return
 
     if is_vector:
-        if self.var_dict[field_x]['Ztype'] is not 'Fixed':
-            print """horiz_interp currently only configured for geopotential
+        if self.var_dict[field_x]['Z'] is not None:
+            if self.var_dict[field_x]['Ztype'] is not 'Fixed':
+                print """horiz_interp currently only configured for geopotential
               coordinate data """
-            return None
+                return None
     else:
-        if self.var_dict[field]['Ztype'] is not 'Fixed':
-            print """horiz_interp currently only configured for geopotential
+        if self.var_dict[field]['Z'] is not None:
+            if self.var_dict[field]['Ztype'] is not 'Fixed':
+                print """horiz_interp currently only configured for geopotential
               coordinate data """
-            return None
+                return None
 
 
     
