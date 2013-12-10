@@ -86,8 +86,8 @@ contains
    integer :: g,ge,gw,gn,gs,k
    logical :: xcyclic,tripolar_north,do_smooth
 
-   integer, parameter :: num_pass = 10
-   real, parameter :: relc = 0.2, crit = 1.e-5
+   integer, parameter :: num_pass = 100
+   real, parameter :: relc = 0.25, crit = 1.e-5
    
    xcyclic=.false.
    if (PRESENT(cyclic_x)) xcyclic=cyclic_x

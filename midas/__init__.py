@@ -143,6 +143,9 @@ class rectgrid(object):
         return None
 
     self.yDir=1
+
+    self.cyclic_x = cyclic
+    self.tripolar_n = tripolar_n
     
     if supergrid is not None:
         var_dict = {}
@@ -185,6 +188,8 @@ class rectgrid(object):
         else:
             f=nc.Dataset(path)
 
+
+            
     if grid_type == 'gold_geometry':
         self.x_T = f.variables['geolon'][:]
         self.x_T_bounds = f.variables['geolonb'][:]
@@ -223,9 +228,6 @@ class rectgrid(object):
         self.Ah    = f.variables['Ah'][:]
 
         self.wet    = f.variables['wet'][:]
-
-        self.cyclic_x = cyclic
-        self.tripolar_n = tripolar_n
 
         self.im = np.shape(self.lonh)[0]
         self.jm = np.shape(self.lath)[0]
@@ -266,8 +268,6 @@ class rectgrid(object):
 
         self.wet    = f.variables['wet'][:]
 
-        self.cyclic_x = cyclic
-        self.tripolar_n = tripolar_n
 
         self.im = np.shape(self.lonh)[0]
         self.jm = np.shape(self.lath)[0]
@@ -489,6 +489,12 @@ class rectgrid(object):
 
      xs,xe,ys,ye = self.find_geo_bounds(x=x,y=y)
 
+     if xe == xs:
+         xe=xe+2
+
+
+     if ye == ys:
+         ye=ye+2
 
      section['y']=np.arange(ys,ye)
      section['yax_data']= self.lath[section['y']]
@@ -506,7 +512,11 @@ class rectgrid(object):
          section['xax_data']=self.lonh[xind]
 
      lonh=section['xax_data'].copy()
-     lon0=lonh[0]
+
+     if not np.isscalar(lonh):
+         lon0=lonh[0]
+     else:
+         lon0=lonh
 
      if self.cyclic_x:
          lonh[lonh<lon0]=lonh[lonh<lon0]+360.
@@ -610,9 +620,9 @@ class rectgrid(object):
       grid.lonq[grid.lonq<lon0]=grid.lonq[grid.lonq<lon0]+360.
 
       grid.x_T = np.take(np.take(self.x_T,y_section,axis=0),x_section,axis=1)
-      grid.x_T[grid.x_T<lon0]=grid.x_T[grid.x_T<lon0]+360.
+#      grid.x_T[grid.x_T<lon0]=grid.x_T[grid.x_T<lon0]+360.
       grid.x_T_bounds = np.take(np.take(self.x_T_bounds,yb_section,axis=0),xb_section,axis=1)
-      grid.x_T_bounds[grid.x_T_bounds<lon0]=grid.x_T_bounds[grid.x_T_bounds<lon0]+360.
+#      grid.x_T_bounds[grid.x_T_bounds<lon0]=grid.x_T_bounds[grid.x_T_bounds<lon0]+360.
 
       grid.y_T = np.take(np.take(self.y_T,y_section,axis=0),x_section,axis=1)
       grid.y_T_bounds = np.take(np.take(self.y_T_bounds,yb_section,axis=0),xb_section,axis=1)
@@ -624,7 +634,7 @@ class rectgrid(object):
           grid.f = np.take(np.take(self.f,y_section,axis=0),x_section,axis=1)
 
       if hasattr(grid,'wet'):
-          grid.f = np.take(np.take(self.wet,y_section,axis=0),x_section,axis=1)
+          grid.wet = np.take(np.take(self.wet,y_section,axis=0),x_section,axis=1)
 
           
       if grid.have_metrics:
@@ -1605,18 +1615,18 @@ class state(object):
     if field is None:
       return None
 
-    if self.var_dict[field]['Ztype'] is not 'Fixed':
-        e=self.var_dict[field]['z_interfaces']
-        eb = 0.5*(e+np.roll(e,shift=-1,axis=3))
-        self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=3),eb),axis=3)
-        eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
-        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=2),eb),axis=2)
-    else:
-        e=self.var_dict[field]['z_interfaces']
-        eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
-        self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=2),eb),axis=2)
-        eb = 0.5*(e+np.roll(e,shift=-1,axis=1))
-        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=1),eb),axis=1)            
+#    if self.var_dict[field]['Ztype'] is not 'Fixed':
+    e=self.var_dict[field]['z_interfaces']
+    eb = 0.5*(e+np.roll(e,shift=-1,axis=3))
+    self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=3),eb),axis=3)
+    eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
+    self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=2),eb),axis=2)
+#    else:
+#        e=self.var_dict[field]['z_interfaces']
+#        eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
+#        self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=2),eb),axis=2)
+#        eb = 0.5*(e+np.roll(e,shift=-1,axis=1))
+#        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=1),eb),axis=1)            
     
   def fill_interior(self,field=None,smooth=False):
     """
@@ -1679,7 +1689,7 @@ class state(object):
         good = np.zeros([tmp.shape[0],tmp.shape[1]])
         good[~mask_in]=1
         v_filled = np.zeros([tmp.shape[1],tmp.shape[0]])
-        v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=True,tripolar_n=True,smooth=smooth)
+        v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth)
         v_filled=v_filled.T
         v_filled[mask_out==1]=FVal_
         v_filled=np.ma.masked_where(mask_out==1,v_filled)
@@ -1708,9 +1718,9 @@ class state(object):
 
             if j>0:
                 # initialize with nearest fill or value at previous level
-                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,val_prev.T,cyclic_x=True,tripolar_n=True,smooth=smooth)
+                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,val_prev.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth)
             else:
-                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=True,tripolar_n=True,smooth=smooth)
+                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth)
 
         
             v_filled=v_filled.T
@@ -1863,12 +1873,14 @@ class state(object):
 
 
       if var_dict['Z'] is not None:
-        var_dict['dz'] = np.sum(dz_masked*dy_masked*dx_masked,axis=2)/np.sum(dy_masked*dx_masked,axis=2)      
+        var_dict['dz'] = np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=2)/np.sum(dz_masked*dy_masked*dx_masked,axis=2)      
         var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],sout.shape[1],1,sout.shape[3]))      
-
-        z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
+        if var_dict['Ztype'] is 'Fixed':
+            z0 = np.take(var_dict['z_interfaces'],[0],axis=0)
+        else:
+            z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
         dy0 = np.take(dy_masked,[0],axis=1)
-        dx0 = np.take(dx_masked,[0],axis=1)      
+        dx0 = np.take(dx_masked,[0],axis=1)
         result = np.sum(z0*dy0*dx0,axis=2)/np.sum(dy0*dx0,axis=2)
         result = np.reshape(result,(sout.shape[0],1,1,sout.shape[3]))
         var_dict['z_interfaces']=-np.cumsum(var_dict['dz'],axis=1)
@@ -1911,7 +1923,7 @@ class state(object):
 
       if var_dict['Z'] is not None:
         
-        var_dict['dz'] = np.sum(dz_masked*dy_masked*dx_masked,axis=3)/np.sum(dy_masked*dx_masked,axis=3)      
+        var_dict['dz'] = np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=3)/np.sum(dz_masked*dy_masked*dx_masked,axis=3)      
         var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],sout.shape[1],sout.shape[2],1))
         if var_dict['Ztype'] is 'Fixed':
             z0 = np.take(var_dict['z_interfaces'],[0],axis=0)
@@ -1960,10 +1972,10 @@ class state(object):
       vars(self)[name]=result
 
       if var_dict['Z'] is not None:      
-        var_dict['dz'] = np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=2)/np.sum(np.sum(dy_masked*dx_masked,axis=3),axis=2)
+        var_dict['dz'] = np.sum(np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=3),axis=2)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=2)
         var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],sout.shape[1],1,1))
         if not is_interface_var :
-            result = np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=2)/np.sum(np.sum(dy_masked*dx_masked,axis=3),axis=2)
+            result = np.sum(np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=3),axis=2)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=2)
             result = np.reshape(result,(sout.shape[0],sout.shape[1],1,1))
             var_dict['dz']=result.copy()
             zi = -np.cumsum(result,axis=1)
@@ -2018,7 +2030,7 @@ class state(object):
           
       vars(self)[name]=result
       
-      var_dict['dz'] = np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=1)/np.sum(np.sum(dy_masked*dx_masked,axis=3),axis=1)
+      var_dict['dz'] = np.sum(np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=3),axis=1)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=1)
       var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],1,sout.shape[2],1))            
 
       z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
@@ -2064,7 +2076,7 @@ class state(object):
           
       vars(self)[name]=result
       
-      var_dict['dz'] = np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=2),axis=1)/np.sum(np.sum(dy_masked*dx_masked,axis=2),axis=1)
+      var_dict['dz'] = np.sum(np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=2),axis=1)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=2),axis=1)
       var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],1,1,sout.shape[3]))                  
 
       z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
@@ -3106,6 +3118,17 @@ class state(object):
         else:
             print """ Unable to read grid cell boundaries on input grid"""
             return None
+
+
+        if hasattr(target,'x_T'):
+            nj=target.x_T.shape[0];ni=target.x_T.shape[1]
+            lon_out = target.x_T_bounds
+            lat_out = target.y_T_bounds
+        elif hasattr(target,'x'):
+            print """Conservative interpolation not available for
+                  supergrids"""
+            return None
+        
     else:
         if hasattr(self.grid,'x_T'):
             lon_in=self.grid.x_T
@@ -3118,20 +3141,14 @@ class state(object):
             print """ Unable to read grid cell boundaries on input grid"""
             return None
             
-    if hasattr(target,'x_T'):
-        nj=target.x_T.shape[0];ni=target.x_T.shape[1]
-        lon_out = target.x_T
-        lat_out = target.y_T
-    elif hasattr(target,'x'):
-        nj=target.x.shape[0];ni=target.x.shape[1]
-        lon_out = target.x
-        lat_out = target.y
-
-
-        if method==0:
-            print """Conservative interpolation not available for
-                  supergrids"""
-            return None
+        if hasattr(target,'x_T'):
+            nj=target.x_T.shape[0];ni=target.x_T.shape[1]
+            lon_out = target.x_T
+            lat_out = target.y_T
+        elif hasattr(target,'x'):
+            nj=target.x.shape[0];ni=target.x.shape[1]
+            lon_out = target.x
+            lat_out = target.y
 
       
     max_lat_in = np.max(lat_in)
@@ -3163,8 +3180,10 @@ class state(object):
     if hasattr(target,'wet'):
         mask_out=target.wet.copy()
     else:
-        mask_out=np.ones((lon_out.shape))
+        mask_out=np.ones((target.x_T.shape))
 
+    missing=-1.e10
+    
     if is_vector:
         varin_x = vars(self)[field_x].copy()
         varin_y = vars(self)[field_y].copy()
@@ -3175,7 +3194,9 @@ class state(object):
         else:
             mask=np.ones((varin_x.shape))
 
-        nk=varin_x.shape[1];nt=varin_x.shape[0]            
+        nk=varin_x.shape[1];nt=varin_x.shape[0]
+        varin_x=np.ma.filled(varin_x,missing)
+        varin_y=np.ma.filled(varin_y,missing)        
     else:
         varin = vars(self)[field].copy()
         if np.ma.is_masked(varin):
@@ -3184,6 +3205,7 @@ class state(object):
             mask[mask_in]=0.0
         else:
             mask=np.ones((varin.shape))
+        varin=np.ma.filled(varin,missing)
 
 
         nk=varin.shape[1];nt=varin.shape[0]
@@ -3252,7 +3274,7 @@ class state(object):
       mask=np.concatenate((pole,mask),axis=2)
       
 
-    missing=-1.e10
+
 
     if src_modulo:
       mask=np.concatenate((mask,np.take(mask,[0],axis=3)),axis=3)
@@ -3284,8 +3306,10 @@ class state(object):
             y=varin_y.copy()
             varin_x = x*np.cos(angle_dx) + y*np.sin(angle_dx)
             varin_y = y*np.cos(angle_dx) - x*np.sin(angle_dx) 
-        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin_x.T,lon_out.T,lat_out.T,mask_out.T,varout_x.T,False,method,missing)
-        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin_y.T,lon_out.T,lat_out.T,mask_out.T,varout_y.T,False,method,missing)
+#        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin_x.T,lon_out.T,lat_out.T,mask_out.T,varout_x.T,False,method,missing)
+#        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin_y.T,lon_out.T,lat_out.T,mask_out.T,varout_y.T,False,method,missing)
+        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_x.T,lon_out.T,lat_out.T,varout_x.T,False,method,missing)
+        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_y.T,lon_out.T,lat_out.T,varout_y.T,False,method,missing)        
         varout_x=np.ma.masked_where(varout_x==missing,varout_x)
         varout_y=np.ma.masked_where(varout_y==missing,varout_y)
         angle_dx = target.angle_dx[np.newaxis,np.newaxis,:]
@@ -3293,9 +3317,17 @@ class state(object):
         x_rot = varout_x*np.cos(angle_dx) - varout_y*np.sin(angle_dx)
         y_rot = varout_y*np.cos(angle_dx) + varout_x*np.sin(angle_dx)        
     else:
-        varin=np.ma.filled(varin,missing)
         varout=np.zeros((nt,nk,nj,ni))
-        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin.T,lon_out.T,lat_out.T,mask_out.T,varout.T,False,method,missing)        
+        print 'lon_in.shape=',lon_in.shape
+        print 'lat_in.shape=',lat_in.shape
+        print 'varin.shape=',varin.shape
+        print 'lon_out.shape=',lon_out.shape
+        print 'lat_out.shape=',lat_out.shape
+        print 'mask.shape=',mask.shape                        
+        print 'maskout.shape=',mask_out.shape                
+        print 'varout.shape=',varout.shape        
+#        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin.T,lon_out.T,lat_out.T,mask_out.T,varout.T,False,method,missing)
+        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin.T,lon_out.T,lat_out.T,varout.T,False,method,missing)        
         varout=np.ma.masked_where(varout==missing,varout)
 
 
@@ -3373,7 +3405,7 @@ class state(object):
             var_dict['z_interfaces']=zi
 
         if var_dict['Z'] is not None:        
-            if var_dict['Z'].ndim == 4:
+            if var_dict['z'].ndim == 4:
                 z=var_dict['Z'][0,:,0,0]
                 dz=var_dict['dz'][0,:,0,0]                
             elif var_dict['z'].ndim == 3:
@@ -4216,7 +4248,7 @@ class state(object):
                     outv[m][n,:]=sq(self.__dict__[field][n-tstart,:])
 
                 if write_interfaces and m == 0:
-                    outv[-1][n,:]=zi[n-tstart,:]
+                    outv[-1][n,:]=sq(zi[n-tstart,:])
         
 
                 tv[n]=tdat[n-tstart]

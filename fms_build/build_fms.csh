@@ -12,7 +12,7 @@ set includedir   = $sharedir/{include,mosaic}
 set mppincludedir   = $sharedir/mpp/include
 set MKMF         = $root/fms/bin/mkmf
 #set cppDefs      = ("-Duse_netCDF -Duse_netCDF3 -Duse_libMPI" )
-set cppDefs      = ("-Duse_netCDF -Duse_netCDF3" )
+set cppDefs      = ("-Duse_netCDF -Duse_netCDF3 -DMAXXGRID=2.e7" )
 set LISTPATHS    = $root/fms/bin/list_paths
 
 
