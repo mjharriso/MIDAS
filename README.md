@@ -112,7 +112,7 @@ USAGE
 	                                   # in 'X','Y','Z','XY','XZ',...
 	                                   
 	
-	>>> midas.generic_rectgrid? # a generic rectangular grid description
+	>>> midas.rectgrid? # a generic rectangular grid description
 				    # Can be read from a file or provided as
 				    # 2-d lat/lon position arrays.
 	>>> import midas.hinterp
