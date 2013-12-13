@@ -22,7 +22,7 @@ contains
 !       data_out,src_modulo,method,missing)
 
   subroutine hinterp( lon_in,lat_in,data_in,lon_out,lat_out,&
-                        data_out,src_modulo,method,missing)    
+                        data_out,src_modulo,method,missing,verbose)    
     
     real(kind=8), intent(in),  dimension(:,:)      :: lon_in
     real(kind=8), intent(in),  dimension(:,:) :: lat_in
@@ -35,11 +35,13 @@ contains
     real(kind=8), intent(in)                        :: missing
     
     logical, intent(in) :: src_modulo
+    integer, intent(in), optional :: verbose
+    
     integer(kind=4), intent(in) :: method
 
 !    real,  dimension(size(data_in,1),size(data_in,2)) :: mask_in_
-    real,  dimension(size(data_in,1),size(data_in,2)) :: data_in_
-    real,  dimension(size(data_out,1),size(data_out,2)) :: data_out_
+    real(kind=8),  dimension(size(data_in,1),size(data_in,2)) :: data_in_
+    real(kind=8),  dimension(size(data_out,1),size(data_out,2)) :: data_out_
 
     real, dimension(size(lon_in,1)) :: xax_in
     real, dimension(size(lon_in,2)) :: yax_in    
@@ -47,17 +49,19 @@ contains
     integer :: ierr,nk,nt,k,m,ni,nj,i,j
 
 
-    integer :: verbose, num_nbrs
+    integer :: iverbose, num_nbrs
     real    :: max_dist
 
 
-    verbose=0;num_nbrs=0;max_dist=0.0
+    iverbose=0;num_nbrs=0;max_dist=0.0
+
+    if (PRESENT(verbose)) iverbose = verbose
     
     nk=size(data_out,3);nt=size(data_out,4);ni=size(lon_out,1);nj=size(lon_out,2)
     
     ierr=-1
 
-
+    
     call fms_init()
     call fms_io_init()
     call horiz_interp_init()
@@ -67,8 +71,7 @@ contains
     allocate(Interp(nk))
     
 
-!    print *,'Interp%nlon_dst,nlat_dst= ',Interp%nlon_dst,Interp%nlat_dst
-!    print *,'data_out size= ',size(data_out)
+
     do m=1,nt
        do k=1,nk
 
@@ -90,11 +93,11 @@ contains
           
           data_in_(:,:)=data_in(:,:,k,m)
 !          mask_in_(:,:)=mask_in(:,:,k,m)
-          call horiz_interp(Interp(k),data_in_, data_out_,verbose,missing_value=missing)
+          call horiz_interp(Interp(k),data_in_, data_out_,verbose,missing_value=missing,new_missing_handle=.true.)
 
           do j=1,nj
              do i=1,ni
-                if (abs(data_out(i,j,k,m)-missing) .lt. 1.e-10) then
+                if (abs(data_out(i,j,k,m)-missing) .lt. abs(missing)*1.e-3) then
                     data_out(i,j,k,m)=missing
                 else
                     data_out(i,j,k,m)=data_out_(i,j)

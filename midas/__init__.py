@@ -1628,7 +1628,7 @@ class state(object):
 #        eb = 0.5*(e+np.roll(e,shift=-1,axis=1))
 #        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=1),eb),axis=1)            
     
-  def fill_interior(self,field=None,smooth=False):
+  def fill_interior(self,field=None,smooth=False,num_pass=10):
     """
     Fill interior above the topography .
 
@@ -1658,23 +1658,38 @@ class state(object):
 
     from midas import vertmap
 
-    FVal_=-1.e10
+    FVal_=-1.e34
 
   
     if field is None:
       print """
-       Please specify (all) : field, numpass,crit and relc
+       Please specify a field name
       """
       return None
 
     if self.var_dict[field]['masked'] is False:
       print """
-       Input field needs to be masked for sor_fill
+       Input field needs to be masked in  order to use fill
       """
       return None
+
     
-    val = vars(self)[field]
-    val_prev = np.zeros([val.shape[2],val.shape[3]])    
+    if self.var_dict[field]['_FillValue'] is not None:
+        FillValue = self.var_dict[field]['_FillValue']          
+    elif self.var_dict[field]['missing_value'] is not None:
+        FillValue = self.var_dict[field]['missing_value']
+    else:
+        
+        FillValue = FVal_
+        self.var_dict[field]['_FillValue'] = FVal_
+        self.var_dict[field]['missing_value'] = FVal_                
+
+
+    val = vars(self)[field].copy()
+    val.set_fill_value(FillValue)
+
+    val_prev = np.zeros([val.shape[2],val.shape[3]])
+    
     wet = self.grid.wet
 
 
@@ -1685,20 +1700,19 @@ class state(object):
         fill = np.zeros([tmp.shape[0],tmp.shape[1]])
         fill[np.logical_and(wet == 1.0,mask_in) ]=1.0        
         mask_out=np.zeros([tmp.shape[0],tmp.shape[1]])
-        mask_out[wet == 0.0]=1.0
+        mask_out[wet == 0.0]=1
         good = np.zeros([tmp.shape[0],tmp.shape[1]])
         good[~mask_in]=1
         v_filled = np.zeros([tmp.shape[1],tmp.shape[0]])
-        v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth)
+        v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass)
         v_filled=v_filled.T
-        v_filled[mask_out==1]=FVal_
-        v_filled=np.ma.masked_where(mask_out==1,v_filled)
+        v_filled[mask_out==1]=FillValue
         val[i,0,:]=v_filled[:]
       else:
         for j in np.arange(0,val.shape[1]):
             zbot = self.var_dict[field]['z_interfaces'][j+1,:]
             ztop = self.var_dict[field]['z_interfaces'][j,:]        
-            tmp = np.squeeze(np.take(np.take(val,[i],axis=0),[j],axis=1))
+            tmp = np.squeeze(np.ma.take(np.ma.take(val,[i],axis=0),[j],axis=1))
             mask_in = np.ma.getmask(tmp)
 
             # fill has a value of one over points
@@ -1706,7 +1720,7 @@ class state(object):
             # and zero otherwise
         
             fill = np.zeros([tmp.shape[0],tmp.shape[1]])
-            fill[np.logical_and(np.logical_and(wet == 1.0,-ztop < self.grid.D),mask_in) ]=1.0
+            fill[np.logical_and(np.logical_and(wet == 1.0,-ztop < self.grid.D),mask_in) ]=1
 
             mask_out=np.logical_or(wet == 0.0,-ztop > self.grid.D)
             
@@ -1718,23 +1732,24 @@ class state(object):
 
             if j>0:
                 # initialize with nearest fill or value at previous level
-                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,val_prev.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth)
+                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,val_prev.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass)
             else:
-                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth)
+                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass)
 
         
             v_filled=v_filled.T
-                
-            v_filled[mask_out==1]=FVal_
-            v_filled=np.ma.masked_where(mask_out==1,v_filled)
-
             val_prev = v_filled.copy()
-        
-
-            val[i,j,:]=v_filled[:]
 
 
-        
+            v_filled[mask_out==1]=FillValue                
+
+
+            val[i,j,:]=v_filled.copy()
+
+
+    val=np.ma.masked_where(np.abs(val-FillValue)<1.e-4*np.abs(FillValue),val)
+
+    vars(self)[field]=val
 
     return None
 
@@ -3057,7 +3072,7 @@ class state(object):
             self.var_dict[field]['z']=z
             self.var_dict[field]['z_interfaces']=zb                        
         
-  def horiz_interp(self,field=None,target=None,src_modulo=False,method=1,PrevState=None,field_x=None,field_y=None):
+  def horiz_interp(self,field=None,target=None,src_modulo=False,method=1,PrevState=None,field_x=None,field_y=None,verbose=0):
     """
       Interpolate from a spherical grid to a general logically
       rectangular grid using a non-conservative \"bilinear\" interpolation
@@ -3182,31 +3197,45 @@ class state(object):
     else:
         mask_out=np.ones((target.x_T.shape))
 
-    missing=-1.e10
+    
     
     if is_vector:
-        varin_x = vars(self)[field_x].copy()
-        varin_y = vars(self)[field_y].copy()
+        if self.var_dict[field_x]['missing_value'] is not None:
+            missing = np.float64(self.var_dict[field_x]['missing_value'])
+        elif self.var_dict[field_x]['_FillValue'] is not None:
+            missing = np.float64(self.var_dict[field_x]['_FillValue'])
+        else:
+            missing = np.float64(-1.e10)
+            
+        varin_x = vars(self)[field_x].astype('float64')
+        varin_y = vars(self)[field_y].astype('float64')
         if np.ma.is_masked(varin_x):
             mask_in = np.ma.getmask(varin_x)
             mask=np.ones((mask_in.shape))
-            mask[mask_in]=0.0
+            mask[mask_in]=0
         else:
             mask=np.ones((varin_x.shape))
 
         nk=varin_x.shape[1];nt=varin_x.shape[0]
-        varin_x=np.ma.filled(varin_x,missing)
-        varin_y=np.ma.filled(varin_y,missing)        
+        varin_x[np.abs(varin_x-missing)<1.e-3*np.abs(varin_x)]=missing
+        varin_y[np.abs(varin_y-missing)<1.e-3*np.abs(varin_y)]=missing        
     else:
-        varin = vars(self)[field].copy()
+        if self.var_dict[field]['missing_value'] is not None:
+            missing = np.float64(self.var_dict[field]['missing_value'])
+        elif self.var_dict[field]['_FillValue'] is not None:
+            missing = np.float64(self.var_dict[field]['_FillValue'])
+        else:
+            missing = np.float64(-1.e10)
+            
+        varin = vars(self)[field].astype('float64')
         if np.ma.is_masked(varin):
             mask_in = np.ma.getmask(varin)
             mask=np.ones((mask_in.shape))
-            mask[mask_in]=0.0
+            mask[mask_in]=0
         else:
             mask=np.ones((varin.shape))
-        varin=np.ma.filled(varin,missing)
-
+            
+        varin[np.abs(varin-missing)<1.e-3*np.abs(varin)]=missing            
 
         nk=varin.shape[1];nt=varin.shape[0]
     
@@ -3296,6 +3325,11 @@ class state(object):
       lon_in=np.concatenate((lon_in,np.take(lon_in,[0],axis=1)+2.0*np.pi),axis=1)
       lon_in=np.concatenate((np.take(lon_in,[-2],axis=1)-2.0*np.pi,lon_in),axis=1)            
 
+    lon_in=np.float64(lon_in)
+    lat_in=np.float64(lat_in)
+    lon_out=np.float64(lon_out)
+    lat_out=np.float64(lat_out)
+      
     if is_vector:
         varin_x=np.ma.filled(varin_x,missing)
         varout_x=np.zeros((nt,nk,nj,ni))
@@ -3308,29 +3342,22 @@ class state(object):
             varin_y = y*np.cos(angle_dx) - x*np.sin(angle_dx) 
 #        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin_x.T,lon_out.T,lat_out.T,mask_out.T,varout_x.T,False,method,missing)
 #        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin_y.T,lon_out.T,lat_out.T,mask_out.T,varout_y.T,False,method,missing)
+        varin_x=np.float64(varin_x)
+        varin_y=np.float64(varin_y)                
+        
+        
         hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_x.T,lon_out.T,lat_out.T,varout_x.T,False,method,missing)
         hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_y.T,lon_out.T,lat_out.T,varout_y.T,False,method,missing)        
-        varout_x=np.ma.masked_where(varout_x==missing,varout_x)
-        varout_y=np.ma.masked_where(varout_y==missing,varout_y)
         angle_dx = target.angle_dx[np.newaxis,np.newaxis,:]
         angle_dx = np.tile(angle_dx,(nt,nk,1,1))
         x_rot = varout_x*np.cos(angle_dx) - varout_y*np.sin(angle_dx)
         y_rot = varout_y*np.cos(angle_dx) + varout_x*np.sin(angle_dx)        
     else:
         varout=np.zeros((nt,nk,nj,ni))
-        print 'lon_in.shape=',lon_in.shape
-        print 'lat_in.shape=',lat_in.shape
-        print 'varin.shape=',varin.shape
-        print 'lon_out.shape=',lon_out.shape
-        print 'lat_out.shape=',lat_out.shape
-        print 'mask.shape=',mask.shape                        
-        print 'maskout.shape=',mask_out.shape                
-        print 'varout.shape=',varout.shape        
-#        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin.T,lon_out.T,lat_out.T,mask_out.T,varout.T,False,method,missing)
-        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin.T,lon_out.T,lat_out.T,varout.T,False,method,missing)        
-        varout=np.ma.masked_where(varout==missing,varout)
 
-
+        varin=np.float64(varin)
+        
+        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin.T,lon_out.T,lat_out.T,varout.T,False,method,missing,verbose)        
     
     if PrevState is not None:
       S=PrevState
@@ -3382,9 +3409,12 @@ class state(object):
     
     
         S.var_dict[field_x]=var_dict_x
-        S.var_dict[field_y]=var_dict_y        
-    
-        
+        S.var_dict[field_y]=var_dict_y
+
+        if S.var_dict[field_x]['masked']:
+            vars(S)[field_x] = np.ma.masked_where(np.abs(varout_x - missing) < np.abs(missing)*1.e-3,x_rot)
+            vars(S)[field_y] = np.ma.masked_where(np.abs(varout_y - missing) < np.abs(missing)*1.e-3,y_rot)            
+  
     else:
         vars(S)[field]=varout
         S.variables[field]=field
@@ -3429,7 +3459,11 @@ class state(object):
     
     
         S.var_dict[field]=var_dict
-    
+
+        if S.var_dict[field]['masked']:
+            vars(S)[field] = np.ma.masked_where(np.abs(varout - missing) < np.abs(missing)*1.e-3,varout)
+
+            
 
     return S
 

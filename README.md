@@ -9,7 +9,7 @@ INSTALL AT GFDL
 	# Alternatively use ssh: git clone git@github.com:mjharriso/MIDAS.git
 	cd MIDAS
 	
-	(cd fms;tar xvf fms_siena_201308.tar)
+	(cd fms;tar xvf fms_tikal_201312.tar)
 	
 	#
 	# NOTE:

@@ -45,7 +45,7 @@ module midas_vertmap
   
 contains
 
- function fill_miss_2d(a,good,fill,prev,cyclic_x,tripolar_n,smooth) result(aout)
+ function fill_miss_2d(a,good,fill,prev,cyclic_x,tripolar_n,smooth,num_pass) result(aout)
 !
 !# Use ICE-9 algorithm to populate points (fill=1) with 
 !# valid data (good=1). If no information is available,
@@ -65,6 +65,7 @@ contains
    real(kind=8), dimension(size(a,1),size(a,2)), optional, intent(in) :: prev
    logical, intent(in), optional :: cyclic_x, tripolar_n
    logical, intent(in), optional :: smooth
+   integer, intent(in), optional :: num_pass   
    
    real(kind=8), dimension(size(a,1),size(a,2)) :: aout
    real(kind=8), dimension(size(a,1),size(a,2)) :: b,r
@@ -77,7 +78,7 @@ contains
    real, dimension(size(a,1),size(a,2)), optional, intent(in) :: prev
    logical, intent(in), optional :: cyclic_x, tripolar_n
    logical, intent(in), optional :: smooth
-   
+   integer, intent(in), optional :: num_pass
    real, dimension(size(a,1),size(a,2)) :: aout,b,r
    integer, dimension(size(a,1),size(a,2)) :: fill_pts,good_,good_new   
 #endif   
@@ -86,9 +87,12 @@ contains
    integer :: g,ge,gw,gn,gs,k
    logical :: xcyclic,tripolar_north,do_smooth
 
-   integer, parameter :: num_pass = 100
+   integer, parameter :: num_pass_default = 10
    real, parameter :: relc = 0.25, crit = 1.e-5
-   
+
+   integer :: npass
+
+   npass=num_pass_default
    xcyclic=.false.
    if (PRESENT(cyclic_x)) xcyclic=cyclic_x
 
@@ -179,8 +183,12 @@ contains
       
    end do
 
+   if (PRESENT(num_pass)) then
+       npass=num_pass
+   endif
+   
    if (do_smooth) then
-       do k=1,num_pass
+       do k=1,npass
           do j=1,ny
              do i=1,nx
                 sor=0.0

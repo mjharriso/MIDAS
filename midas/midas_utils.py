@@ -212,7 +212,16 @@ def get_axis_direction(dimension):
 def instance_to_datetime(dates_in):
 
     fmt='%Y-%m-%d %H:%M:%S'
-    dates=[datetime.strptime(str(d),fmt) for d in dates_in]
+    dates=[]
+    for d in dates_in:
+        yr=str(d)[0:4]
+        y='%(y)04i'%{'y':int(yr)}
+        d=str(d)
+        d=y+d[4:]
+        dates.append(datetime.strptime(str(d),fmt))
+
+        
+#    dates=[datetime.strptime(str(d),fmt) for d in dates_in]
 
     return dates
 
