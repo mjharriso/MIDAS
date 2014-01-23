@@ -5,7 +5,7 @@ print """\n
          Produce a volume-weighted histogram
          from WOA09 salinity data in the Indian Ocean\n"""
 
-grid=generic_rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa09/salinity_annual_1deg.nc',var='s_an')
+grid=rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa09/salinity_annual_1deg.nc',var='s_an')
 iop=grid.geo_region(x=(30,160),y=(-30,25))
 S=state('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/salinity_annual_1deg.nc',grid=grid,geo_region=iop,fields=['s_an'],default_calendar='noleap')
 
