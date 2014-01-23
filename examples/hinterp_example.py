@@ -4,7 +4,7 @@ lon=np.arange(2.5,360.,5.)
 lat=np.arange(-77.5,80.,5.)
 
 X,Y=np.meshgrid(lon,lat)
-grid=generic_rectgrid(lon=X,lat=Y,cyclic=False)
+grid=rectgrid(lon=X,lat=Y,cyclic=False)
 
 S=state(path='http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',fields=['t_an'],z_indices=np.arange(10,11))
 S.var_dict['t_an']['Z']=None # Kludge to avoid bug
