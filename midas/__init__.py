@@ -591,7 +591,7 @@ class rectgrid(object):
     >>> hash=hashlib.md5(new_grid.x_T)
     >>> hash.update(new_grid.y_T)
     >>> print hash.hexdigest()
-    465f6aa54e3a672bb4a1d8cc02b7e96c
+    5e946145e26d45ad92075dc875957b60
     """
 
     if geo_region is None:
@@ -1648,12 +1648,13 @@ class state(object):
     >>> S.add_field_from_array(a,'a')
     >>> S.a[0,0,::5,::5]=-1.e20
     >>> S.a=np.ma.masked_where(S.a==-1.e20,S.a)
+    >>> S.var_dict['a']['_FillValue']=-1.e20
     >>> S.var_dict['a']['masked']=True
     >>> print np.ma.sum(S.a)
     -20.1663931523
     >>> S.fill_interior('a')
     >>> print np.ma.sum(S.a)
-    -18.8982071632
+    -15.7427466103
     """
 
     from midas import vertmap

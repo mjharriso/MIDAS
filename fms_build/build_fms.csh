@@ -2,8 +2,8 @@
 
 set workdir = $cwd
 set root = $cwd:h
-#set platform = linux
-set platform = gfdl_hpcs
+set platform = linux
+###set platform = gfdl_hpcs
 set mkmfTemplate = $root/fms/site/$platform/mkmf.template
 set npes = 1
 
@@ -25,7 +25,7 @@ cd $root
 \rm path_names*
 $LISTPATHS $sharedir
 mv -f path_names pt_orig
-egrep -v "atmos_ocean_fluxes|coupler_types|coupler_util|drifters" pt_orig > path_names
+egrep -v "atmos_ocean_fluxes|coupler_types|coupler_util|drifters|oda_tools" pt_orig > path_names
 
 cd $workdir
 \rm *.{o,mod}
