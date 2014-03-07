@@ -87,9 +87,9 @@ class supergrid(object):
           
           jind=np.arange(vdict['nytot']);iind=np.arange(vdict['nxtot'])
           jindp=np.arange(vdict['nytot']+1);iindp=np.arange(vdict['nxtot']+1)                  
-          self.grid_y=vdict['ystart']+jind*vdict['leny']/vdict['nytot']
-          self.grid_x=vdict['xstart']+iind*vdict['lenx']/vdict['nxtot']          
-          self.grid_x=vdict['xstart']+iind*vdict['lenx']/vdict['nxtot']
+          self.grid_y=vdict['ystart']+jindp*vdict['leny']/vdict['nytot']
+          self.grid_x=vdict['xstart']+iindp*vdict['lenx']/vdict['nxtot']          
+
           self.x=xdat
           self.y=ydat
 
