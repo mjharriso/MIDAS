@@ -2,7 +2,7 @@
 
 set workdir = $cwd
 set root = $cwd:h
-###set platform = linux
+#set platform = linux
 set platform = gfdl_hpcs
 set mkmfTemplate = $root/fms/site/$platform/mkmf.template
 set npes = 1
