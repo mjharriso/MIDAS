@@ -378,7 +378,10 @@ class rectgrid(object):
       
       if simple_grid is True:
           self.simple_grid = True
-          self.cyclic_x = cyclic          
+          self.cyclic_x = cyclic
+          self.jm = len(self.lath)
+          self.im = len(self.lonh)
+          
           return
 
 
@@ -496,7 +499,7 @@ class rectgrid(object):
      if ye == ys:
          ye=ye+2
 
-     section['y']=np.arange(ys,ye)
+     section['y']=np.arange(ys,ye+1)
      section['yax_data']= self.lath[section['y']]
 
 
@@ -569,6 +572,7 @@ class rectgrid(object):
     else:
       section['x']=None
 
+    section['x_read']=section['x']      
     section['name'] = name
     section['parent_grid'] = self
 
@@ -591,7 +595,7 @@ class rectgrid(object):
     >>> hash=hashlib.md5(new_grid.x_T)
     >>> hash.update(new_grid.y_T)
     >>> print hash.hexdigest()
-    5e946145e26d45ad92075dc875957b60
+    465f6aa54e3a672bb4a1d8cc02b7e96c
     """
 
     if geo_region is None:
@@ -619,13 +623,14 @@ class rectgrid(object):
       grid.lonh[grid.lonh<lon0]=grid.lonh[grid.lonh<lon0]+360.
       grid.lonq[grid.lonq<lon0]=grid.lonq[grid.lonq<lon0]+360.
 
-      grid.x_T = np.take(np.take(self.x_T,y_section,axis=0),x_section,axis=1)
-#      grid.x_T[grid.x_T<lon0]=grid.x_T[grid.x_T<lon0]+360.
-      grid.x_T_bounds = np.take(np.take(self.x_T_bounds,yb_section,axis=0),xb_section,axis=1)
-#      grid.x_T_bounds[grid.x_T_bounds<lon0]=grid.x_T_bounds[grid.x_T_bounds<lon0]+360.
+      if not grid.simple_grid:
+          grid.x_T = np.take(np.take(self.x_T,y_section,axis=0),x_section,axis=1)
+#         grid.x_T[grid.x_T<lon0]=grid.x_T[grid.x_T<lon0]+360.
+          grid.x_T_bounds = np.take(np.take(self.x_T_bounds,yb_section,axis=0),xb_section,axis=1)
+#         grid.x_T_bounds[grid.x_T_bounds<lon0]=grid.x_T_bounds[grid.x_T_bounds<lon0]+360.
 
-      grid.y_T = np.take(np.take(self.y_T,y_section,axis=0),x_section,axis=1)
-      grid.y_T_bounds = np.take(np.take(self.y_T_bounds,yb_section,axis=0),xb_section,axis=1)
+          grid.y_T = np.take(np.take(self.y_T,y_section,axis=0),x_section,axis=1)
+          grid.y_T_bounds = np.take(np.take(self.y_T_bounds,yb_section,axis=0),xb_section,axis=1)
 
       if hasattr(grid,'D'):
           grid.D = np.take(np.take(self.D,y_section,axis=0),x_section,axis=1)
@@ -1648,13 +1653,12 @@ class state(object):
     >>> S.add_field_from_array(a,'a')
     >>> S.a[0,0,::5,::5]=-1.e20
     >>> S.a=np.ma.masked_where(S.a==-1.e20,S.a)
-    >>> S.var_dict['a']['_FillValue']=-1.e20
     >>> S.var_dict['a']['masked']=True
     >>> print np.ma.sum(S.a)
     -20.1663931523
     >>> S.fill_interior('a')
     >>> print np.ma.sum(S.a)
-    -15.7427466103
+    -18.8982071632
     """
 
     from midas import vertmap
@@ -2920,7 +2924,7 @@ class state(object):
             vdict['dz']=np.zeros((nx2,nj,ni))            
             vdict['z']=np.zeros((nx2,nj,ni))
         else:
-            vdict['z']=np.zeros((nx2,nj,ni))            
+            vdict['z']=np.zeros((nt,nx2,nj,ni))            
             vdict['dz']=np.zeros((nt,nx2,nj,ni))
             
         for n in np.arange(nt):
