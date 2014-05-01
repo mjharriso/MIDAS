@@ -1283,7 +1283,8 @@ class state(object):
 
       if cart == 'T':
         t_indices = self.slice_read[0]
-        nt = len(f.variables[var_dict['T']][t_indices])        
+        nt = len(f.variables[var_dict['T']][t_indices])
+
         var_dict['tax_data'] = f.variables[var_dict['T']][t_indices]
         var_dict['tunits'] = f.variables[var_dict['T']].units
         var_dict['calendar'] = self.calendar
@@ -3568,8 +3569,8 @@ class state(object):
       missing=-1.e20
 
       if field is not None:
-          shape_out=vars(self)[field].shape
-          if np.logical_or(shape_out[0]>1,shape_out[1]>1):
+          shape_in=vars(self)[field].shape
+          if np.logical_or(shape_in[0]>1,shape_in[1]>1):
               print "grid_overlay is currently only written to handle lat-lon arrays without a time or vertical dimension"
               return None
           
@@ -3740,7 +3741,9 @@ class state(object):
 
 
           return S
-      
+
+
+     
   def pickle_it(self,file):
     
     pickle.dump(self,open(file,'wb'))

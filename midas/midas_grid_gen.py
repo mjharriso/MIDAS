@@ -175,7 +175,7 @@ class supergrid(object):
         self.grid_y=np.zeros(nytot+1)
         itt=0
         for j in np.arange(nytot+1):
-          jd = fnRef + (j-jRef)
+          jd = fnRef + (j-jRef+1)
           self.grid_y[j]=self.find_root_y(jd,y0,-0.5*np.pi,0.5*np.pi,itt)
           y0=self.grid_y[j]
         self.grid_x=xstart+iindp*lenx/nxtot
