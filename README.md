@@ -1,12 +1,58 @@
-INSTALL AT GFDL
-===============
+INSTALL 
+=======
 
-        # Log into a 64-bit workstation (preferred) or Analysis node 
+	# (Tested on: Linux 3.8.0-30-generic i686 with GFortran and gcc version 4.7.3)
+	
+	# On i686-linux platform with NetCDF library compiled using gFortran
+	# NOTE: 'extra_objects' are redundant in this environment.
 
-	cd /home/foo/install_dir
+        # From the shell
+        
+	cd /home/$USER/$install_dir
 	
 	git clone https://github.com/mjharriso/MIDAS.git
-	# Alternatively use ssh: git clone git@github.com:mjharriso/MIDAS.git
+	# Alternatively using ssh
+	# git clone git@github.com:mjharriso/MIDAS.git
+	
+	cd MIDAS
+	
+	(cd fms;tar xvf fms_tikal_201312.tar)
+	
+	# This compiles the FMS code using the proper F90/C compilers.
+	
+	(cd fms_build;cp build_fms.csh tmp;\
+	sed -e 's/#set platform = linux/set platform = linux/' < tmp > tmp2;\
+	sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_fms.csh;\
+	./build_fms.csh)
+	
+	python setup.py config_fc --fcompiler=gfortran --f90flags="-fcray-pointer -fdefault-real-8 \
+	-ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build
+
+	#  sudo python setup.py install # for root users
+	#  otherwise, install midas in your home directory
+	#  and add this path to the environment variable PYTHONPATH. 
+	# change --home=<path> to whatever you want.
+	
+	python setup.py install --home=/home/$USER/local 
+	setenv PYTHONPATH /home/$USER/local/lib/python
+	
+	
+	#  sudo python setup.py install # for root users
+	
+
+
+GFDL-HPCS INSTALL
+=================
+
+        # Log into a 64-bit workstation (preferred) or Analysis node 
+        # From the shell
+        
+	cd /home/$USER/$install_dir
+	
+	git clone https://github.com/mjharriso/MIDAS.git
+	# Alternatively using sshL
+	# git clone git@github.com:mjharriso/MIDAS.git
+	
 	cd MIDAS
 	
 	(cd fms;tar xvf fms_tikal_201312.tar)
@@ -21,68 +67,46 @@ INSTALL AT GFDL
 	# using the Intel compiler. With the current environment, the
 	# C object files are not found in the libfms library, although
 	# this does work with gfortran (no need to include the 'extra_objects'
-	# flags.
+	# flags. in setup.py)
+	#
+	# This compiles the FMS code using the proper F90/C compilers.
+	#
+	#  OpenDAP currently disabled on Analysis Cluster. 
+	#  Example scripts using OpenDap addresses
+	#  will hang (unless timeouts are set)
+	#
+	#  With the exception of OpenDAP, the midas package is fully functional on both the
+	#  GFDL 64-bit workstations and the Analysis cluster. 
+	#
+	#  Not yet tested on the PP cluster.
+	#
+	#  Recommend building on the workstations (where OpenDAP is available) if you have 
+	#  enough hardware.
+	#
 	
 	(cd fms_build;./build_fms.csh)
+	
+	# If you have not already done so...
 	
 	module load python 
 	module load netcdf/4.2
 	module load intel_compilers
 	
+	# This builds the python interfaces to the underlying FMS code
+	
 	(python setup.py config_fc --f90flags="-i4 -r8 -DPY_SOLO" --fcompiler=intelem build)
 
-	#  sudo python setup.py install # for root users
-	#  otherwise, install midas in your home directory
-	#  and add this path to the environment variable PYTHONPATH. 
-	#  This is the currently recommended method at GFDL.  
-	#  I recommend that you do NOT load the "analysis_du_jour"
-	#  module which can easily introduce conflicts. The recommendation
-	#  is to load python/netcdf/intel_compilers as shown above prior
-	#  to initiating your batch or interactive session.
-	
-	python setup.py install --home=/home/foo/local 
-	setenv PYTHONPATH /home/foo/local/lib/python
-	
-	#  NOTE: 
-	#  OpenDAP currently disabled on Analysis Cluster. Example scripts using OpenDap addresses
-	#  will hang.
-	#
-	#  With the exception of OpenDAP, the midas package is fully functional on both the
-	#  GFDL 64-bit workstations and the Analysis cluster. Not yet tested on the PP cluster.
-	#  The FMS binaries interface on both platforms successfully.
-	#
-	#  Recommend building on the workstations (where OpenDAP is available) in order to 
-	#  have this option on the workstations.
-	
-	
-	
-INSTALL OUTSIDE OF GFDL 
-===========================================
-
-
-	# (Tested on: Linux 3.8.0-30-generic i686 with GFortran and gcc version 4.7.3)
-	
-	# On i686-linux platform with NetCDF library compiled using gFortran
-	# NOTE: 'extra_objects' are not required but currently exist.
-	
-	(cd fms_build;cp build_fms.csh tmp;\
-	sed -e 's/#set platform = linux/set platform = linux/' < tmp > tmp2;\
-	sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_fms.csh;\
-	./build_fms.csh)
-	
-	python setup.py config_fc --fcompiler=gfortran --f90flags="-fcray-pointer -fdefault-real-8 \
-	-ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build
-
-	#  sudo python setup.py install # for root users
-	#  otherwise, install midas in your home directory
-	#  and add this path to the environment variable PYTHONPATH. 
-	#  This is the currently recommended method at GFDL.  
-	
-	python setup.py install --home=/home/foo/local 
-	setenv PYTHONPATH /home/foo/local/lib/python
-	
+  	# This places the executables and modules where
+  	# Python can find them. The environment variable is set here:
+  	# Recommend installing your custom modules in the same location
+  	
+	python setup.py install --home=/home/$USER/local 
+	setenv PYTHONPATH /home/$USER/local/lib/python
 	
 
+	
+	
+	
 
 
 
