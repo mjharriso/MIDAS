@@ -1,9 +1,13 @@
 # Build and Release Folders
 build/
-
+fms/
+tmp/
 
 # Additional
 .*
+path_names*
+pt_orig*
+
 Makefile
 *.a
 *.o

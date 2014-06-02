@@ -42,9 +42,160 @@ module midas_vertmap
 
   real, parameter :: epsln=1.e-10
   
+  public :: fill_miss_2d, tracer_z_init, find_interfaces
+
   
 contains
 
+  function find_interfaces(rho,zin,Rb,depth,nlevs,nkml,nkbl,hml,debug) result(zi)
+!  (in)      rho : potential density in z-space (kg m-3)
+!  (in)      zin : levels (m)
+!  (in)      Rb  : target interface densities (kg m-3)
+!  (in)     depth: ocean depth (m)
+!  (in)     nlevs: number of valid points in each column
+!  (in)     nkml : number of mixed layer pieces
+!  (in)     nkbl : number of buffer layer pieces
+!  (in)      hml : mixed layer depth
+
+#ifdef PY_SOLO
+    real(kind=8), dimension(:,:,:), intent(in) :: rho
+    real(kind=8), dimension(size(rho,3)), intent(in) :: zin
+    real(kind=8), dimension(:), intent(in) :: Rb
+    real(kind=8), dimension(size(rho,1),size(rho,2)), intent(in) :: depth
+    real(kind=8), dimension(size(rho,1),size(rho,2)), optional, intent(in) ::nlevs
+    logical, optional, intent(in) :: debug
+    real(kind=8), dimension(size(rho,1),size(rho,2),size(Rb,1)) :: zi
+    integer, intent(in), optional :: nkml, nkbl
+    real, intent(in), optional    :: hml
+#endif
+
+#ifndef PY_SOLO
+    real, dimension(:,:,:), intent(in) :: rho
+    real, dimension(size(rho,3)), intent(in) :: zin
+    real, dimension(:), intent(in) :: Rb
+    real, dimension(size(rho,1),size(rho,2)), intent(in) :: depth
+    real, dimension(size(rho,1),size(rho,2)), optional, intent(in) ::nlevs
+    logical, optional, intent(in) :: debug
+    real, dimension(size(rho,1),size(rho,2),size(Rb,1)) :: zi
+    integer, intent(in), optional :: nkml, nkbl
+    real, intent(in), optional    :: hml
+#endif
+    real, dimension(size(rho,1),size(rho,3)) :: rho_
+    real, dimension(size(rho,1)) :: depth_
+    logical :: unstable
+    integer :: dir
+    integer, dimension(size(rho,1),size(Rb,1)) :: ki_
+    real, dimension(size(rho,1),size(Rb,1)) :: zi_
+    integer, dimension(size(rho,1),size(rho,2)) :: nlevs_
+    integer, dimension(size(rho,1)) :: lo,hi        
+    real :: slope,drhodz,hml_
+    integer :: i,j,k,l,nx,ny,nz
+    integer :: nlay,nkml_,nkbl_
+    logical :: debug_ = .false.
+    
+    real, parameter :: zoff=0.999
+    
+    nlay=size(Rb)-1
+    
+    zi=0.0
+
+
+    if (PRESENT(debug)) debug_=debug
+    
+    nx = size(rho,1); ny=size(rho,2); nz = size(rho,3) 
+
+    nlevs_(:,:) = size(rho,3)
+
+    nkml_=0;nkbl_=0;hml_=0.0
+    if (PRESENT(nkml)) nkml_=nkml
+    if (PRESENT(nkbl)) nkbl_=nkbl
+    if (PRESENT(hml)) hml_=hml    
+    
+    if (PRESENT(nlevs)) then
+        nlevs_(:,:) = int(nlevs(:,:))
+    endif
+
+    do j=1,ny
+       rho_(:,:) = rho(:,j,:)
+       i_loop: do i=1,nx
+          if (debug_) then
+              print *,'looking for interfaces, i,j,nlevs= ',i,j,nlevs_(i,j)
+              print *,'initial density profile= ', rho_(i,:)
+          endif
+          unstable=.true.
+          dir=1
+          do while (unstable)
+             unstable=.false.
+             if (dir == 1) then
+                 do k=2,nlevs_(i,j)-1
+                    if (rho_(i,k) - rho_(i,k-1) < 0.0 ) then
+                        if (k.eq.2) then
+                            rho_(i,k-1)=rho_(i,k)-epsln
+                        else
+                            drhodz = (rho_(i,k+1)-rho_(i,k-1))/(zin(k+1)-zin(k-1))
+                            if (drhodz  < 0.0) then
+                                unstable=.true.
+                            endif
+                            rho_(i,k) = rho_(i,k-1)+drhodz*zoff*(zin(k)-zin(k-1)) 
+                        endif
+                    endif
+                 enddo
+                 dir=-1*dir
+             else
+                 do k=nlevs_(i,j)-1,2,-1
+                    if (rho_(i,k+1) - rho_(i,k) < 0.0) then
+                        if (k .eq. nlevs_(i,j)-1) then
+                            rho_(i,k+1)=rho_(i,k-1)+epsln
+                        else
+                            drhodz = (rho_(i,k+1)-rho_(i,k-1))/(zin(k+1)-zin(k-1))
+                            if (drhodz  < 0.0) then
+                                unstable=.true.
+                            endif
+                            rho_(i,k) = rho_(i,k+1)-drhodz*(zin(k+1)-zin(k)) 
+                        endif
+                    endif
+                 enddo
+                 dir=-1*dir
+             endif
+          enddo
+          if (debug_) then
+              print *,'final density profile= ', rho_(i,:)
+          endif          
+       enddo i_loop
+          
+       ki_(:,:) = 0
+       zi_(:,:) = 0.0          
+       depth_(:)=-1.0*depth(:,j)
+       lo(:)=1
+       hi(:)=nlevs_(:,j)
+       ki_ = bisect_fast(rho_,Rb,lo,hi)
+       ki_(:,:) = max(1,ki_(:,:)-1)
+       do i=1,nx
+          do l=2,nlay
+             slope = (zin(ki_(i,l)+1) - zin(ki_(i,l)))/max(rho_(i,ki_(i,l)+1) - rho_(i,ki_(i,l)),epsln)
+             zi_(i,l) = -1.0*(zin(ki_(i,l)) + slope*(Rb(l)-rho_(i,ki_(i,l))))
+             zi_(i,l) = max(zi_(i,l),depth_(i))
+             zi_(i,l) = min(zi_(i,l),-1.0*hml_)
+          enddo
+          zi_(i,nlay+1)=depth_(i)
+          do l=2,nkml_+1
+             zi_(i,l)=max(((1.0-real(l))/real(nkml_))*hml_,depth_(i))
+          enddo
+          do l=nlay,nkml_+2,-1
+             if (zi_(i,l) < zi_(i,l+1)+epsln) then
+                 zi_(i,l)=zi_(i,l+1)+epsln
+             endif
+             if (zi_(i,l)>-1.0*hml_) then
+                 zi_(i,l)=max(-1.0*hml_,depth_(i))
+             endif
+          enddo
+       enddo
+       zi(:,j,:)=zi_(:,:)
+    enddo
+
+
+  end function find_interfaces
+  
  function fill_miss_2d(a,good,fill,prev,cyclic_x,tripolar_n,smooth,num_pass) result(aout)
 !
 !# Use ICE-9 algorithm to populate points (fill=1) with 
@@ -390,6 +541,21 @@ contains
 !               center and normalized by the cell thickness, nondim.
 !               Note that -1/2 <= z1 <= z2 <= 1/2.
 !
+#ifdef PY_SOLO
+    real(kind=8), dimension(:,:,:), intent(in) :: tr_in
+    real(kind=8), dimension(size(tr_in,3)+1), intent(in) :: z_edges
+    integer, intent(in) :: nlay
+    real(kind=8), dimension(size(tr_in,1),size(tr_in,2),nlay+1), intent(in) :: e
+    integer, intent(in) :: nkml,nkbl
+    real, intent(in) :: land_fill
+    real(kind=8), dimension(size(tr_in,1),size(tr_in,2)), intent(in) :: wet
+    real(kind=8), dimension(size(tr_in,1),size(tr_in,2)), optional, intent(in) ::nlevs
+    logical, intent(in), optional :: debug
+
+    real(kind=8), dimension(size(tr_in,1),size(tr_in,2),nlay) :: tr    
+#endif
+
+#ifndef PY_SOLO
     real, dimension(:,:,:), intent(in) :: tr_in
     real, dimension(size(tr_in,3)+1), intent(in) :: z_edges
     integer, intent(in) :: nlay
@@ -399,8 +565,11 @@ contains
     real, dimension(size(tr_in,1),size(tr_in,2)), intent(in) :: wet
     real, dimension(size(tr_in,1),size(tr_in,2)), optional, intent(in) ::nlevs
     logical, intent(in), optional :: debug
+
+    real, dimension(size(tr_in,1),size(tr_in,2),nlay) :: tr    
+#endif
     
-    real, dimension(size(tr_in,1),size(tr_in,2),nlay) :: tr
+
 
 
     real, dimension(size(tr_in,3)) :: tr_1d
@@ -822,141 +991,6 @@ contains
   
 
   
-  function find_interfaces(rho,zin,Rb,depth,nlevs,nkml,nkbl,hml,debug) result(zi)
-!  (in)      rho : potential density in z-space (kg m-3)
-!  (in)      zin : levels (m)
-!  (in)      Rb  : target interface densities (kg m-3)
-!  (in)     depth: ocean depth (m)
-!  (in)     nlevs: number of valid points in each column
-!  (in)     nkml : number of mixed layer pieces
-!  (in)     nkbl : number of buffer layer pieces
-!  (in)      hml : mixed layer depth
-
-    real, dimension(:,:,:), intent(in) :: rho
-    real, dimension(size(rho,3)), intent(in) :: zin
-    real, dimension(:), intent(in) :: Rb
-    real, dimension(size(rho,1),size(rho,2)), intent(in) :: depth
-    real, dimension(size(rho,1),size(rho,2)), optional, intent(in) ::nlevs
-    logical, optional, intent(in) :: debug
-    real, dimension(size(rho,1),size(rho,2),size(Rb,1)) :: zi
-    integer, intent(in), optional :: nkml, nkbl
-    real, intent(in), optional    :: hml
-
-    real, dimension(size(rho,1),size(rho,3)) :: rho_
-    real, dimension(size(rho,1)) :: depth_
-    logical :: unstable
-    integer :: dir
-    integer, dimension(size(rho,1),size(Rb,1)) :: ki_
-    real, dimension(size(rho,1),size(Rb,1)) :: zi_
-    integer, dimension(size(rho,1),size(rho,2)) :: nlevs_
-    integer, dimension(size(rho,1)) :: lo,hi        
-    real :: slope,drhodz,hml_
-    integer :: i,j,k,l,nx,ny,nz
-    integer :: nlay,nkml_,nkbl_
-    logical :: debug_ = .false.
-    
-    real, parameter :: zoff=0.999
-    
-    nlay=size(Rb)-1
-    
-    zi=0.0
-
-
-    if (PRESENT(debug)) debug_=debug
-    
-    nx = size(rho,1); ny=size(rho,2); nz = size(rho,3) 
-
-    nlevs_(:,:) = size(rho,3)
-
-    nkml_=0;nkbl_=0;hml_=0.0
-    if (PRESENT(nkml)) nkml_=nkml
-    if (PRESENT(nkbl)) nkbl_=nkbl
-    if (PRESENT(hml)) hml_=hml    
-    
-    if (PRESENT(nlevs)) then
-        nlevs_(:,:) = int(nlevs(:,:))
-    endif
-
-    do j=1,ny
-       rho_(:,:) = rho(:,j,:)
-       i_loop: do i=1,nx
-          if (debug_) then
-              print *,'looking for interfaces, i,j,nlevs= ',i,j,nlevs_(i,j)
-              print *,'initial density profile= ', rho_(i,:)
-          endif
-          unstable=.true.
-          dir=1
-          do while (unstable)
-             unstable=.false.
-             if (dir == 1) then
-                 do k=2,nlevs_(i,j)-1
-                    if (rho_(i,k) - rho_(i,k-1) < 0.0 ) then
-                        if (k.eq.2) then
-                            rho_(i,k-1)=rho_(i,k)-epsln
-                        else
-                            drhodz = (rho_(i,k+1)-rho_(i,k-1))/(zin(k+1)-zin(k-1))
-                            if (drhodz  < 0.0) then
-                                unstable=.true.
-                            endif
-                            rho_(i,k) = rho_(i,k-1)+drhodz*zoff*(zin(k)-zin(k-1)) 
-                        endif
-                    endif
-                 enddo
-                 dir=-1*dir
-             else
-                 do k=nlevs_(i,j)-1,2,-1
-                    if (rho_(i,k+1) - rho_(i,k) < 0.0) then
-                        if (k .eq. nlevs_(i,j)-1) then
-                            rho_(i,k+1)=rho_(i,k-1)+epsln
-                        else
-                            drhodz = (rho_(i,k+1)-rho_(i,k-1))/(zin(k+1)-zin(k-1))
-                            if (drhodz  < 0.0) then
-                                unstable=.true.
-                            endif
-                            rho_(i,k) = rho_(i,k+1)-drhodz*(zin(k+1)-zin(k)) 
-                        endif
-                    endif
-                 enddo
-                 dir=-1*dir
-             endif
-          enddo
-          if (debug_) then
-              print *,'final density profile= ', rho_(i,:)
-          endif          
-       enddo i_loop
-          
-       ki_(:,:) = 0
-       zi_(:,:) = 0.0          
-       depth_(:)=-1.0*depth(:,j)
-       lo(:)=1
-       hi(:)=nlevs_(:,j)
-       ki_ = bisect_fast(rho_,Rb,lo,hi)
-       ki_(:,:) = max(1,ki_(:,:)-1)
-       do i=1,nx
-          do l=2,nlay
-             slope = (zin(ki_(i,l)+1) - zin(ki_(i,l)))/max(rho_(i,ki_(i,l)+1) - rho_(i,ki_(i,l)),epsln)
-             zi_(i,l) = -1.0*(zin(ki_(i,l)) + slope*(Rb(l)-rho_(i,ki_(i,l))))
-             zi_(i,l) = max(zi_(i,l),depth_(i))
-             zi_(i,l) = min(zi_(i,l),-1.0*hml_)
-          enddo
-          zi_(i,nlay+1)=depth_(i)
-          do l=2,nkml_+1
-             zi_(i,l)=max(((1.0-real(l))/real(nkml_))*hml_,depth_(i))
-          enddo
-          do l=nlay,nkml_+2,-1
-             if (zi_(i,l) < zi_(i,l+1)+epsln) then
-                 zi_(i,l)=zi_(i,l+1)+epsln
-             endif
-             if (zi_(i,l)>-1.0*hml_) then
-                 zi_(i,l)=max(-1.0*hml_,depth_(i))
-             endif
-          enddo
-       enddo
-       zi(:,j,:)=zi_(:,:)
-    enddo
-
-
-  end function find_interfaces
 
   subroutine meshgrid(x,y,x_T,y_T)
     

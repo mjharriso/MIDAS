@@ -1154,6 +1154,7 @@ class state(object):
                  if DEBUG == 1 or verbose == True:
                      print " Successfully extracted interface data named %(nam)s from %(fil)s "%{'nam':interfaces,'fil':path_interfaces}
                      print " Resulting shape = ",vars(self)[interfaces].shape
+                     print " Max/Min = ",np.max(vars(self)[interfaces]),np.min(vars(self)[interfaces])
                      
              else:
                  zint=np.take(np.take(np.take(np.take(interfaces,slice_int_read[3],axis=3),slice_int_read[2],axis=2),slice_int_read[1],axis=1),slice_int_read[0],axis=0)
@@ -2691,7 +2692,7 @@ class state(object):
 
     return None
 
-  def remap_to_isopycnals(self,temp_name='temp',salt_name='salt',R=None,p_ref=2.e7,wet=None,nkml=None,nkbl=None,hml=None,fit_target=False):
+  def remap_to_isopycnals(self,temp_name='temp',salt_name='salt',R=None,p_ref=2.e7,wet=None,nkml=None,nkbl=None,hml=None,fit_target=False,smooth=False,num_pass=0):
     """
 
     Remap z or z-like data from geopotential surfaces to a potential
@@ -2719,8 +2720,8 @@ class state(object):
 
     print '...Filling interior points in z-space'
     
-    self.fill_interior(temp_name)
-    self.fill_interior(salt_name)
+    self.fill_interior(temp_name,smooth=smooth,num_pass=num_pass)
+    self.fill_interior(salt_name,smooth=smooth,num_pass=num_pass)
 
     
     self.create_field('wright_eos(vars(self)[\''+temp_name+'\'],vars(self)[\''+salt_name+'\'],'+str(p_ref)+')','sigma',var_dict=self.var_dict[temp_name])
@@ -4107,6 +4108,7 @@ class state(object):
             for d in dimlist:
                 dims.append(str(d))
             varlist = f.variables
+            print varlist
             for v in varlist:
                 vars.append(str(v))
         else:
@@ -4242,6 +4244,7 @@ class state(object):
             if DEBUG == 1:
                 print 'field=',field,'dims= ',dims
 
+            FillValue=None
             if self.var_dict[field]['_FillValue'] is not None:
                 FillValue = self.var_dict[field]['_FillValue']          
                 var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
@@ -4270,7 +4273,9 @@ class state(object):
             if self.var_dict[ifield]['X'] is not None:
                 dims.append(str(self.var_dict[ifield]['X']))
 
-            var=f.createVariable('eta','f4',dims)
+            if FillValue is None:
+                FillValue=-1.e34
+            var=f.createVariable('eta','f4',dims,fill_value=FillValue)
             outv.append(var)
       
 
