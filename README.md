@@ -84,13 +84,18 @@ GFDL-HPCS INSTALL
 	#  enough hardware.
 	#
 	
-	(cd fms_build;./build_fms.csh)
-	
 	# If you have not already done so...
 	
 	module load python 
 	module load netcdf/4.2
 	module load intel_compilers
+	
+	
+	# Build FMS
+	
+	(cd fms_build;./build_fms.csh)
+	
+
 	
 	# This builds the python interfaces to the underlying FMS code
 	
