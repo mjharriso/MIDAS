@@ -40,16 +40,15 @@ class profile_index(object):
         dict={}
         line=fo.readline()
         line=line.split(',')
-        if len(line) >= 14: 
+        if len(line) >= 11: 
           dict['id']=line[0]
           dict['path']=line[2]
-          dict['date_string']=line[4]
-          dict['time_string']=line[5]
+          dict['date_string']=line[3]
           dict['ncDateTime']=parser.parse(dict['date_string'])
-          dict['lat']=np.float(line[7])
-          dict['lon']=np.float(line[8])
-          dict['data_mode']=line[11]
-          dict['num_lev']=np.int(line[12])
+          dict['lat']=np.float(line[5])
+          dict['lon']=np.float(line[7])
+          dict['depth_min']=line[9]
+          dict['depth_max']=line[10]          
 
 
           passed=0;failed=0
@@ -131,7 +130,7 @@ class profile_list(object):
               pr.data={}
               pr.data['DataType']=f.variables['data_type'][:].tostring()
               pr.data['ref_dateTime']=f.variables['reference_date_time'][:].tostring()
-              pr.data['time']=f.variables['time'][:][0]
+              pr.data['time']=f.variables['juld'][:][0]
               reft = pr.data['ref_dateTime']
               reft = 'days since '+reft[0:4]+'-'+reft[4:6]+'-'+reft[6:9]
               pr.data['ncDateTime_indx']=parser.parse(date_string)
@@ -143,12 +142,27 @@ class profile_list(object):
               pr.data['latitude']=f.variables['latitude'][:][0]
               pr.data['longitude']=f.variables['longitude'][:][0]
 
-              pr.data['pressure']=sq(f.variables['pressure'][:] )
-              pr.data['temp']=sq(f.variables['temperature'][:])
+              pr.data['pressure']=sq(f.variables['pres'][:] )
               try:
-                pr.data['salt']=sq(f.variables['salinity'][:])
+                pr.data['pressure_adj']=sq(f.variables['pres_adjusted'][:])              
+              except:
+                pr.data['pressure_adj']=None
+                
+              pr.data['temp']=sq(f.variables['temp'][:])
+              try:
+                pr.data['temp_adj']=sq(f.variables['temp_adjusted'][:])
+              except:
+                pr.data['temp_adj']=None
+                
+              try:
+                pr.data['salt']=sq(f.variables['psal'][:])
               except:
                 pr.data['salt']=None
+
+              try:
+                pr.data['salt_adj']=sq(f.variables['psal_adjusted'][:])
+              except:
+                pr.data['salt_adj']=None                
 
               try:
                 pr.data['positioning_system']=string.join(f.variables['positioning_system'][:])
@@ -160,10 +174,6 @@ class profile_list(object):
               except:
                 pr.data['position_qc']=None
 
-              try:
-                pr.data['inst_reference']=string.join(f.variables['inst_reference'][:])
-              except:
-                pr.data['inst_reference']=None
 
                 # Avoid confusion with direction attribute
               dp = np.roll(pr.data['pressure'],shift=-1)-pr.data['pressure']
