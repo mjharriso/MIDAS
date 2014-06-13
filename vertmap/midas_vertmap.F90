@@ -238,8 +238,8 @@ contains
    integer :: g,ge,gw,gn,gs,k
    logical :: xcyclic,tripolar_north,do_smooth
 
-   integer, parameter :: num_pass_default = 10
-   real, parameter :: relc = 0.25, crit = 1.e-5
+   integer, parameter :: num_pass_default = 1000
+   real, parameter :: relc = 0.25, crit = 1.e-3
 
    integer :: npass
 
@@ -342,28 +342,35 @@ contains
        do k=1,npass
           do j=1,ny
              do i=1,nx
-                sor=0.0
-                if (fill(i,j) .eq. 1 .and. good(i,j) .eq. 0) sor=relc            
-                ip=i+1;im=i-1
-                jp=j+1;jm=j-1
-                ijp=i
-                if (xcyclic) then
-                    if (ip.eq.nx+1) ip=1
-                    if (im.eq.0) im=nx
-                else
-                    if (ip.eq.nx+1) ip=nx
-                    if (im.eq.0) im=1
-                endif
-                if (jm .eq. 0) jm=1
-                if (tripolar_north) then
-                    if (jp.eq.ny+1) jp=ny;ijp=nx-i+1
-                else
-                    if (jp.eq.ny+1) jp=ny;ijp=i
-                endif
-                east=min(fill(i,j),fill(ip,j));west=min(fill(i,j),fill(im,j))
-                north=min(fill(i,j),fill(ijp,jp));south=min(fill(i,j),fill(i,jm))
+                if (fill(i,j) .eq. 1) then
+                    if (good(i,j).eq.1) stop 'good and bad!!'
+                    ip=i+1;im=i-1
+                    jp=j+1;jm=j-1
+                    ijp=i
+                    if (xcyclic) then
+                        if (ip.eq.nx+1) ip=1
+                        if (im.eq.0) im=nx
+                    else
+                        if (ip.eq.nx+1) ip=nx
+                        if (im.eq.0) im=1
+                    endif
+                    if (jm .eq. 0) jm=1
+                    if (tripolar_north) then
+                        if (jp.eq.ny+1) then
+                            jp=ny;ijp=nx-i+1
+                        endif
+                    else
+                        if (jp.eq.ny+1) then
+                            jp=ny;ijp=i
+                        endif
+                    endif
+                    east=max(good(ip,j),fill(ip,j));west=max(good(im,j),fill(im,j))
+                    north=max(good(i,jp),fill(ijp,jp));south=max(good(i,jm),fill(i,jm))
             
-                r(i,j) = sor*(south*aout(i,jm)+north*aout(ijp,jp)+west*aout(im,j)+east*aout(ip,j) - (south+north+west+east)*aout(i,j))
+                    r(i,j) = relc*(south*aout(i,jm)+north*aout(ijp,jp)+west*aout(im,j)+east*aout(ip,j) - (south+north+west+east)*aout(i,j))
+                else
+                    r(i,j) = 0.
+                endif ! fill==0
              enddo
           enddo
       
@@ -373,6 +380,10 @@ contains
               exit
           endif
        enddo
+
+       if (maxval(abs(r)) > crit) then
+           print *,'Smoothing did not converge, max residual = ',maxval(abs(r)),' num iterations= ',k-1
+       endif
    endif
 
  end function fill_miss_2d

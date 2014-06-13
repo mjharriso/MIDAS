@@ -1635,7 +1635,7 @@ class state(object):
 #        eb = 0.5*(e+np.roll(e,shift=-1,axis=1))
 #        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=1),eb),axis=1)            
     
-  def fill_interior(self,field=None,smooth=False,num_pass=10):
+  def fill_interior(self,field=None,smooth=False,num_pass=10000):
     """
     Fill interior above the topography .
 
