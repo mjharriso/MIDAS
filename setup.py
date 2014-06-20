@@ -41,9 +41,15 @@ hinterp = Extension(name = 'midas.hinterp',
 
 
 
-vertmap = Extension(name = 'midas.vertmap',
-                sources = ['vertmap/midas_vertmap.F90']
+vertmap_GOLD = Extension(name = 'midas.vertmap_GOLD',
+                sources = ['vertmap_GOLD/vertmap_GOLD.F90']
                 )
+
+vertmap_ALE = Extension(name = 'midas.vertmap_ALE',
+                include_dirs = ['MOM6_ALE/build'],
+                library_dirs = ['MOM6_ALE/build'],
+                libraries = ['ale'],                        
+                sources = ['MOM6_ALE/pyale.f90'])
 
 
 if __name__ == '__main__':
@@ -58,6 +64,6 @@ if __name__ == '__main__':
           license = 'CCL',
           platforms = ["any"],
           packages=['midas'],
-          ext_modules = [hinterp,remap_sfc_fluxes,vertmap],
+          ext_modules = [hinterp,remap_sfc_fluxes,vertmap_GOLD,vertmap_ALE],
           )
     

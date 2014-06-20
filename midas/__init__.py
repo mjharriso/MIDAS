@@ -701,7 +701,7 @@ class state(object):
 
   """
   
-  def __init__(self,path=None,grid=None,geo_region=None,time_indices=None,date_bounds=None,z_indices=None,fields=None,default_calendar=None,MFpath=None,interfaces=None,path_interfaces=None,MFpath_interfaces=None,stagger=None,verbose=True):
+  def __init__(self,path=None,grid=None,geo_region=None,time_indices=None,date_bounds=None,z_indices=None,fields=None,default_calendar=None,MFpath=None,interfaces=None,path_interfaces=None,MFpath_interfaces=None,stagger=None,verbose=True,z_orientation=None):
     """
 #    >>> from midas import *
 #    >>> import hashlib
@@ -809,10 +809,25 @@ class state(object):
                zunits = getattr(dim,'units')
            except:
                zunits='none'
-           
+           if z_orientation is not None:
+               var_dict['Zdir']=z_orientation
+
 
            if interfaces is not None:
-               var_dict['Ztype'] = 'Generalized'
+               if path_interfaces is not None:
+                   f_interfaces = nc.Dataset(path_interfaces)
+               elif MFpath_interfaces is not None:
+                   f_interfaces = nc.MFDataset(MFpath_interfaces)
+               else:
+                   f_interfaces = self.rootgrp
+               if f_interfaces.variables[interfaces].ndim == 3:
+                   var_dict['Ztype'] = 'Fixed'
+               elif f_interfaces.variables[interfaces].ndim == 4:
+                   var_dict['Ztype'] = 'Generalized'
+               else:
+                   print 'Invalid shape for interface variable'
+                   return None
+               
            else:
                var_dict['Ztype'] = 'Fixed'
                
@@ -1046,7 +1061,13 @@ class state(object):
            shape_read.append(1)
 
        slice_int_read = [];shape_int_read = []; shape_int_out=[]; slice_int_out = []
-       for s in [t_indices,z_interfaces,y_indices]:
+
+       if var_dict['Ztype'] == 'Fixed':
+           dims_list = [z_interfaces,y_indices]
+       else:
+           dims_list = [t_indices,z_interfaces,y_indices]
+           
+       for s in dims_list:
          if s is not None:
              if len(s) == 1:  # This seems necessary due to a NC4 bug
                  slice_int_read.append(s[0])
@@ -1115,10 +1136,12 @@ class state(object):
        if var_dict['_FillValue'] is not None or var_dict['missing_value']  is not None:
          if var_dict['_FillValue'] is not None:
              vars(self)[v] = np.ma.masked_where(np.abs(vars(self)[v] - var_dict['_FillValue']) < np.abs(var_dict['_FillValue']*.01),vars(self)[v])
-             var_dict['missing_value']=var_dict['_FillValue']
+             if var_dict['missing_value'] is None:
+                 var_dict['missing_value']=var_dict['_FillValue']
          else:
              vars(self)[v] = np.ma.masked_where(np.abs(vars(self)[v] - var_dict['missing_value']) < np.abs(var_dict['missing_value']*0.01),vars(self)[v])
-             var_dict['_FillValue']=var_dict['missing_value']
+             if var_dict['missing_value'] is None:             
+                 var_dict['_FillValue']=var_dict['missing_value']
 
          var_dict['masked']=True
          
@@ -1171,7 +1194,7 @@ class state(object):
        else:
            self.interfaces = None
            
-       if var_dict['Z'] is not None and var_dict['Ztype'] is not 'Generalized':
+       if var_dict['Z'] is not None and var_dict['Ztype'] is not 'Generalized' and interfaces is None:
          if var_dict['zbax_data'] is not None:
            tmp = np.reshape(var_dict['zbax_data'][z_interfaces],(nz+1,1,1))
            if geo_region is not None:
@@ -1180,13 +1203,25 @@ class state(object):
            else:
              ny = len(self.rootgrp.variables[var_dict['Y']][:])
              nx = len(self.rootgrp.variables[var_dict['X']][:])
-              
+
            var_dict['z_interfaces']  = var_dict['Zdir']*np.tile(tmp,(1,ny,nx))
            tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))             
            var_dict['z'] = tmp[0:-1,:,:]
-           var_dict['dz'] = var_dict['z_interfaces'] - np.roll(var_dict['z_interfaces'],axis=0,shift=-1)
+           var_dict['dz'] = (var_dict['z_interfaces'] - np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
            var_dict['dz'] = var_dict['dz'][0:-1,:,:]
-             
+
+       if var_dict['Z'] is not None and var_dict['Ztype'] is 'Fixed' and interfaces is not None:
+           if type(interfaces) == str:
+               var_dict['z_interfaces']  = vars(self)[interfaces]
+           else:
+               var_dict['z_interfaces']  = interfaces
+               
+           tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))             
+           var_dict['z'] = tmp[0:-1,:,:]
+
+           var_dict['dz'] = (var_dict['z_interfaces'] - np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
+           var_dict['dz'] = var_dict['dz'][0:-1,:,:]
+           
        if var_dict['Z'] is not None and var_dict['Ztype'] is 'Generalized' and interfaces is not None:
            if type(interfaces) == str:
                var_dict['z_interfaces']  = vars(self)[interfaces]
@@ -1195,7 +1230,7 @@ class state(object):
                
            tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=1,shift=-1))             
            var_dict['z'] = tmp[:,0:-1,:,:]
-           var_dict['dz'] = var_dict['z_interfaces'] - np.roll(var_dict['z_interfaces'],axis=1,shift=-1)
+           var_dict['dz'] = (var_dict['z_interfaces'] - np.roll(var_dict['z_interfaces'],axis=1,shift=-1))
            var_dict['dz'] = var_dict['dz'][:,0:-1,:,:]
          
        try:
@@ -1361,10 +1396,14 @@ class state(object):
         else:
             var_dict['interface_variable']=False
 
+        var_dict['Ztype'] = 'Fixed'                            
         if self.interfaces is not None:
-            var_dict['Ztype'] = 'Generalized'
-        else:
-            var_dict['Ztype'] = 'Fixed'
+            if var_dict['z_interfaces'].ndim == 4:
+                var_dict['Ztype'] = 'Generalized'
+            else:
+                var_dict['Ztype'] = 'Fixed'                
+
+
             
     else:
         z_indices = None
@@ -1443,13 +1482,13 @@ class state(object):
         var_dict['z_interfaces']  = var_dict['Zdir']*np.tile(tmp,(1,ny,nx))
         tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))             
         var_dict['z'] = tmp[0:-1,:,:]
-        var_dict['dz'] = var_dict['z_interfaces'] - np.roll(var_dict['z_interfaces'],axis=0,shift=-1)
+        var_dict['dz'] = (var_dict['z_interfaces'] - np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
         var_dict['dz'] = var_dict['dz'][0:-1,:,:]
       if var_dict['Z'] is not None and use_interfaces and self.interfaces is not None:           
         var_dict['z_interfaces']  = vars(self)[self.interfaces]
         tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=1,shift=-1))             
         var_dict['z'] = tmp[:,0:-1,:,:]
-        var_dict['dz'] = var_dict['z_interfaces'] - np.roll(var_dict['z_interfaces'],axis=1,shift=-1)
+        var_dict['dz'] = (var_dict['z_interfaces'] - np.roll(var_dict['z_interfaces'],axis=1,shift=-1))
         var_dict['dz'] = var_dict['dz'][:,0:-1,:,:]
       if use_interfaces and self.interfaces is None:
           print """ use_interfaces=True and self.interfaces is None in call to add_field"""
@@ -1635,7 +1674,7 @@ class state(object):
 #        eb = 0.5*(e+np.roll(e,shift=-1,axis=1))
 #        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=1),eb),axis=1)            
     
-  def fill_interior(self,field=None,smooth=False,num_pass=10000):
+  def fill_interior(self,field=None,smooth=False,num_pass=10000,relax_criteria=1.e-3):
     """
     Fill interior above the topography .
 
@@ -1663,7 +1702,7 @@ class state(object):
     -18.8982071632
     """
 
-    from midas import vertmap
+    from midas import vertmap_GOLD
 
     FVal_=-1.e34
 
@@ -1683,10 +1722,13 @@ class state(object):
     
     if self.var_dict[field]['_FillValue'] is not None:
         FillValue = self.var_dict[field]['_FillValue']          
-    elif self.var_dict[field]['missing_value'] is not None:
+
+    if self.var_dict[field]['missing_value'] is not None:
         FillValue = self.var_dict[field]['missing_value']
-    else:
-        
+
+
+    if self.var_dict[field]['missing_value'] is None and self.var_dict[field]['_FillValue'] is None:
+
         FillValue = FVal_
         self.var_dict[field]['_FillValue'] = FVal_
         self.var_dict[field]['missing_value'] = FVal_                
@@ -1711,7 +1753,7 @@ class state(object):
         good = np.zeros([tmp.shape[0],tmp.shape[1]])
         good[~mask_in]=1
         v_filled = np.zeros([tmp.shape[1],tmp.shape[0]])
-        v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass)
+        v_filled=vertmap_GOLD.vertmap_gold_mod.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass,relax_criteria=relax_criteria)
         v_filled=v_filled.T
         v_filled[mask_out==1]=FillValue
         val[i,0,:]=v_filled[:]
@@ -1739,9 +1781,9 @@ class state(object):
 
             if j>0:
                 # initialize with nearest fill or value at previous level
-                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,val_prev.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass)
+                v_filled=vertmap_GOLD.vertmap_gold_mod.fill_miss_2d(tmp.T,good.T,fill.T,val_prev.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass,relax_criteria=relax_criteria)
             else:
-                v_filled=vertmap.midas_vertmap.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass)
+                v_filled=vertmap_GOLD.vertmap_gold_mod.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass,relax_criteria=relax_criteria)
 
         
             v_filled=v_filled.T
@@ -2238,7 +2280,7 @@ class state(object):
 
       if target is not None:
           ts,te = find_date_bounds(self.var_dict[field]['dates'],target['date_bounds'][j],target['date_bounds'][j+1])
-          print 'j,ts,te= ',j,ts,te
+
           
           if ts != -1 and te != -1:
               if self.var_dict[field]['masked']:              
@@ -2430,8 +2472,6 @@ class state(object):
         
     result = result / weights
 
-    if DEBUG:
-        print 'result 002=',result
         
     if self.var_dict[field]['masked']:
         result = np.ma.masked_where(nsamp==0.,result)
@@ -2853,14 +2893,14 @@ class state(object):
 #            exec(expr)
 
 
-  def remap_vertical(self,fields=None,z_bounds=None,zbax_data=None,method='pcm',bndy_extrapolation=False):
+  def remap_ALE(self,fields=None,z_bounds=None,zbax_data=None,method='pcm',bndy_extrapolation=False):
 
-    import pyale_mod
+
     """
 
     Re-mapping [fields] between generalized vertical coordinates:
 
-    x1=self.var_dict['z_interfaces']  , and
+    x1=self.var_dict[\'z_interfaces\']  , and
     x2=z_bounds
 
     zbax_data is optional and is used only for plotting
@@ -2869,15 +2909,15 @@ class state(object):
 
     Method is either,
 
-    'pcm','plm','ppm',or 'pqm'
+    pcm,plm,ppm,or pqm
 
     following (White and Adcroft, JCP, 2008, vol 227, pp 7394-7422).
 
-    
-    
     """
+    
+
     try:
-        from midas import vertmap 
+        import vertmap_ALE
     except:
         print """ ALE/vertmap not installed """
         return 
@@ -2893,7 +2933,9 @@ class state(object):
         else:
             nx2=z_bounds.shape[0]-1
             ztype='Fixed'
-    
+
+
+            
     for fld in fields:
 
         # initialize an array for output data
@@ -2916,7 +2958,7 @@ class state(object):
         else:
             vdict['zbax_data']=None
             vdict['zax_data']=None
-            
+
         vdict['z_indices']=np.arange(0,nx2+1)
 
         vdict['z_interfaces']=z_bounds.copy()
@@ -2939,20 +2981,20 @@ class state(object):
             # edges are stored in a temporary copy of the
             # global array t-slice here.  
 
-        
+
             if self.var_dict[fld]['Ztype'] in ['Isopycnal','Generalized','Sigma']:
-                xb1 = -self.var_dict[fld]['z_interfaces'][n,:]
+                xb1 = self.var_dict[fld]['z_interfaces'][n,:]
                 if ztype == 'Fixed':
-                    xb2=-z_bounds
+                    xb2=z_bounds
                 else:
-                    xb2=-np.take(z_bounds,[n],axis=0)                                
+                    xb2=np.take(z_bounds,[n],axis=0)
             else:
-                xb1 = -self.var_dict[fld]['z_interfaces'][:]
+                xb1 = self.var_dict[fld]['z_interfaces'][:]
                 if ztype == 'Fixed':
-                    xb2=-z_bounds.copy() # Force an array copy since we will be adjusting these
+                    xb2=z_bounds.copy() # Force an array copy since we will be adjusting these
                                         # coordinates to match the outer edges of x1
                 else:
-                    xb2=-np.take(z_bounds,[n],axis=0)
+                    xb2=np.take(z_bounds,[n],axis=0)
 
 
             nx1=xb1.shape[0]-1
@@ -2960,53 +3002,66 @@ class state(object):
 
             xb2[0,:,:]=xb1[0,:,:] # reset top interface to xb1[0]
             for k in np.arange(1,xb2.shape[0]-1):
-                xb2[k,:,:]=np.maximum(xb2[k-1,:,:],xb2[k,:,:]) # avoid negative thicknesses 
-                xb2[k,:,:]=np.minimum(xb2[k,:,:],xb1[nx1,:,:])
-
+                if vdict['Zdir']==-1:
+                    xb2[k,:,:]=np.minimum(xb2[k-1,:,:],xb2[k,:,:]) # avoid negative thicknesses 
+                    xb2[k,:,:]=np.maximum(xb2[k,:,:],xb1[nx1,:,:])
+                else:
+                    xb2[k,:,:]=np.maximum(xb2[k-1,:,:],xb2[k,:,:]) # avoid negative thicknesses 
+                    xb2[k,:,:]=np.minimum(xb2[k,:,:],xb1[nx1,:,:])
+                    
             xb2[nx2,:]=xb1[nx1,:]
-            
-            h2=np.roll(xb2,shift=-1,axis=0)-xb2
-            h2=h2[:-1,:]
 
-            
-
+            if ztype == 'Fixed':            
+                h2=vdict['Zdir']*(np.roll(xb2,shift=-1,axis=0)-xb2)
+                h2=h2[:-1,:]
+            else:
+                h2=vdict['Zdir']*(np.roll(xb2,shift=-1,axis=1)-xb2)
+                h2=h2[:,:-1,:]
 
             if ztype == 'Fixed':
-                vdict['z_interfaces'][:]=-xb2
-                zout=xb2-np.roll(xb2,shift=-1,axis=0)
+                vdict['z_interfaces'][:]=xb2
+                zout=0.5*(xb2+np.roll(xb2,shift=-1,axis=0))
                 vdict['z']=zout[:-1,:]
                 vdict['dz'][:]=h2                
             else:
-                vdict['z_interfaces'][n,:]=-xb2
-                zout=xb2-np.roll(xb2,shift=-1,axis=0)
-                vdict['z'][n,:]=zout[:-1,:]                
+                vdict['z_interfaces'][n,:]=xb2
+                zout=0.5*(xb2+np.roll(xb2,shift=-1,axis=1))
+                vdict['z'][n,:]=zout[:,:-1,:]                
                 vdict['dz'][n,:]=h2
                 
             data=np.take(vars(self)[fld],[n],axis=0)
             data2=np.zeros((nx2,nj,ni))
 
-            missing_value=1.e20
+            missing_value=-1.e20
+            vdict['missing_value']=missing_value
             data=np.ma.filled(data,missing_value)
 
             data=sq(data).T
             data2=data2.T
-            xb1=xb1.T
-            xb2=sq(xb2).T
+            xb1= -xb1.T
+            xb2= -sq(xb2).T
 
+#            data[data>1e10]=0
+#            plt.pcolormesh(sq(data[:,:,0]).T);plt.colorbar();plt.show();raise
             
-            pyale_mod.pyale_mod.remap(data,data2,xb1,xb2,method,bndy_extrapolation=bndy_extrapolation,missing=missing_value)
+            vertmap_ALE.pyale_mod.remap(data,data2,xb1,xb2,method,bndy_extrapolation=bndy_extrapolation,missing=missing_value)
 
             data2=data2.T
-            xb2=xb2.T
-            
-            dz=np.roll(xb2,shift=-1,axis=0)-xb2
-            dz=dz[:-1,:]
-            mask=dz.copy()
-            mask[mask>1.e-9]=1.0
-            mask[mask<=1.e-9]=0.0
+            xb2=-xb2.T
 
-            data2=np.ma.masked_where(mask==0.0,data2)
+            if ztype == 'Fixed':            
+                dz=vdict['Zdir']*(np.roll(xb2,shift=-1,axis=0)-xb2)
+                dz=dz[:-1,:]
+            else:
+                dz=vdict['Zdir']*(np.roll(xb2,shift=-1,axis=1)-xb2)
+                dz=dz[:,:-1,:]
+                
+#            mask=dz.copy()
+#            mask[mask>1.e-9]=1.0
+#            mask[mask<=1.e-9]=0.0
 
+#            data2=np.ma.masked_where(mask==0.0,data2)
+#            data2=np.ma.filled(data2,vdict['missing_value'])
             fld_out[n,:]=data2
 
         fnam=fld+'_remap'
@@ -3016,10 +3071,11 @@ class state(object):
 
 
     
-  def adjust_thickness(self,field=None,min_thickness=0.0):
+  def adjust_thickness(self,field=None,min_thickness=0.0,z_top=None):
     """
 
-    Adjust cell thicknesses based on grid.D 
+    Adjust cell thicknesses based on grid.D
+    and optionally top interface position.
     
     """
 
@@ -3035,12 +3091,12 @@ class state(object):
 
         nz = vars(self)[field].shape[1]    
         D = np.tile(self.grid.D,(nz,1,1))
-        floor_dz=D - np.roll(zb,shift=1,axis=0) # Distance from depth
-        mask=np.logical_and(zb > D,np.roll(zb,shift=1,axis=0) <= D) # mask for bottom-most cell
-        dz[mask]=floor_dz[mask]
-        zb=np.cumsum(dz,axis=0)
-        dz[zb>D]=epsln
-        zb=np.cumsum(dz,axis=0)
+        floor_dz=D - np.roll(zb,shift=1,axis=0) # Distance from seafloor to bottom interface of cell
+        mask=np.logical_and(zb < D,np.roll(zb,shift=1,axis=0) <= D) # mask for bottom-most cell
+#        dz[mask]=floor_dz[mask]
+#        zb=np.cumsum(dz,axis=0)
+#        dz[zb>D]=epsln
+#        zb=np.cumsum(dz,axis=0)
         z=0.5*(zb+np.roll(zb,axis=0,shift=1))
         z[0,:]=0.5*dz[0,:]
         zb=np.concatenate((np.zeros((1,self.grid.jm,self.grid.im)),zb),axis=0)
@@ -3079,7 +3135,7 @@ class state(object):
             self.var_dict[field]['z']=z
             self.var_dict[field]['z_interfaces']=zb                        
         
-  def horiz_interp(self,field=None,target=None,src_modulo=False,method=1,PrevState=None,field_x=None,field_y=None,verbose=0):
+  def horiz_interp(self,field=None,target=None,src_modulo=False,method='bilinear',PrevState=None,field_x=None,field_y=None,verbose=0):
     """
       Interpolate from a spherical grid to a general logically
       rectangular grid using a non-conservative \"bilinear\" interpolation
@@ -3088,7 +3144,7 @@ class state(object):
     
     from midas import hinterp
 
-
+    
     is_vector = False
     if field_x is not None:
         if field_y is not None:
@@ -3127,7 +3183,7 @@ class state(object):
 
     nj_in = self.grid.lonh.shape[0]; ni_in = self.grid.lonh.shape[0]
 
-    if method==0:
+    if method=='conservative0':
         if hasattr(self.grid,'x_T_bounds'):
             lon_in=self.grid.x_T_bounds
             lat_in=self.grid.y_T_bounds
@@ -3151,7 +3207,7 @@ class state(object):
                   supergrids"""
             return None
         
-    else:
+    elif method == 'bilinear':
         if hasattr(self.grid,'x_T'):
             lon_in=self.grid.x_T
             lat_in=self.grid.y_T
@@ -3171,7 +3227,9 @@ class state(object):
             nj=target.x.shape[0];ni=target.x.shape[1]
             lon_out = target.x
             lat_out = target.y
-
+    else:
+        print 'Invalid method in call to hinterp'
+        return None
       
     max_lat_in = np.max(lat_in)
     if np.logical_and(max_lat_in < 90.0 - epsln,add_NP):
@@ -3212,7 +3270,7 @@ class state(object):
         elif self.var_dict[field_x]['_FillValue'] is not None:
             missing = np.float64(self.var_dict[field_x]['_FillValue'])
         else:
-            missing = np.float64(-1.e10)
+            missing = np.float64(-1.e34)
             
         varin_x = vars(self)[field_x].astype('float64')
         varin_y = vars(self)[field_y].astype('float64')
@@ -3232,7 +3290,7 @@ class state(object):
         elif self.var_dict[field]['_FillValue'] is not None:
             missing = np.float64(self.var_dict[field]['_FillValue'])
         else:
-            missing = np.float64(-1.e10)
+            missing = np.float64(-1.e34)
             
         varin = vars(self)[field].astype('float64')
         if np.ma.is_masked(varin):
@@ -3330,7 +3388,9 @@ class state(object):
       lat_in=np.concatenate((lat_in,np.take(lat_in,[0],axis=1)),axis=1)
       lat_in=np.concatenate((np.take(lat_in,[-2],axis=1),lat_in),axis=1)
       lon_in=np.concatenate((lon_in,np.take(lon_in,[0],axis=1)+2.0*np.pi),axis=1)
-      lon_in=np.concatenate((np.take(lon_in,[-2],axis=1)-2.0*np.pi,lon_in),axis=1)            
+      lon_in=np.concatenate((np.take(lon_in,[-2],axis=1)-2.0*np.pi,lon_in),axis=1)
+ 
+
 
     lon_in=np.float64(lon_in)
     lat_in=np.float64(lat_in)
@@ -3347,14 +3407,17 @@ class state(object):
             y=varin_y.copy()
             varin_x = x*np.cos(angle_dx) + y*np.sin(angle_dx)
             varin_y = y*np.cos(angle_dx) - x*np.sin(angle_dx) 
-#        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin_x.T,lon_out.T,lat_out.T,mask_out.T,varout_x.T,False,method,missing)
-#        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,mask.T,varin_y.T,lon_out.T,lat_out.T,mask_out.T,varout_y.T,False,method,missing)
+
         varin_x=np.float64(varin_x)
         varin_y=np.float64(varin_y)                
         
-        
-        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_x.T,lon_out.T,lat_out.T,varout_x.T,False,method,missing)
-        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_y.T,lon_out.T,lat_out.T,varout_y.T,False,method,missing)        
+        if method=='conservtive0':
+            hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_x.T,lon_out.T,lat_out.T,varout_x.T,False,0,missing)
+            hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_y.T,lon_out.T,lat_out.T,varout_y.T,False,0,missing)
+        elif method == 'bilinear':
+            hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_x.T,lon_out.T,lat_out.T,varout_x.T,False,1,missing)
+            hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_y.T,lon_out.T,lat_out.T,varout_y.T,False,1,missing)
+            
         angle_dx = target.angle_dx[np.newaxis,np.newaxis,:]
         angle_dx = np.tile(angle_dx,(nt,nk,1,1))
         x_rot = varout_x*np.cos(angle_dx) - varout_y*np.sin(angle_dx)
@@ -3363,9 +3426,12 @@ class state(object):
         varout=np.zeros((nt,nk,nj,ni))
 
         varin=np.float64(varin)
-        
-        hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin.T,lon_out.T,lat_out.T,varout.T,False,method,missing,verbose)        
-    
+
+        if method == 'conservative0':
+            hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin.T,lon_out.T,lat_out.T,varout.T,False,0,missing,verbose)
+        elif method == 'bilinear':
+            hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin.T,lon_out.T,lat_out.T,varout.T,False,1,missing,verbose)
+            
     if PrevState is not None:
       S=PrevState
     else:
@@ -4080,7 +4146,7 @@ class state(object):
       return None
 
 
-  def write_nc(self,filename=None,fields=None,format='NETCDF3_CLASSIC',append=False):
+  def write_nc(self,filename=None,fields=None,format='NETCDF3_CLASSIC',append=False,write_interface_positions=False):
 
     import os.path      
     """
@@ -4108,7 +4174,6 @@ class state(object):
             for d in dimlist:
                 dims.append(str(d))
             varlist = f.variables
-            print varlist
             for v in varlist:
                 vars.append(str(v))
         else:
@@ -4192,13 +4257,20 @@ class state(object):
                 xv.units =   self.var_dict[field]['zunits']
                 xv.direction = self.var_dict[field]['Zdir']
                 xv.cartesian_axis = 'Z'
-                if self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal'] and write_interfaces is False:
-                    if 'z_interfaces'  in self.var_dict[field]:
-                        if self.var_dict[field]['z_interfaces'] is not None:
-                            write_interfaces = True
-                            ifield=field
-                            zi=self.var_dict[field]['z_interfaces'][:]
-                            ziax=self.var_dict[field]['zbax_data'][:]
+                if self.var_dict[field]['Zdir'] == -1:
+                    xv.positive='down'
+                    
+                if self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal','Fixed'] and write_interfaces is False:
+                      if 'z_interfaces' in self.var_dict[field].keys():
+                          if self.var_dict[field]['z_interfaces'] is not None:
+                            if  self.var_dict[field]['Ztype'] == 'Fixed' and write_interface_positions == True:
+                                write_interfaces = True
+                            elif self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal']:
+                                write_interfaces = True
+                            if write_interfaces == True:
+                                ifield=field
+                                zi=self.var_dict[field]['z_interfaces'][:]
+                                ziax=self.var_dict[field]['zbax_data'][:]
             dim_nam=str(self.var_dict[field]['Y'])
             if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
                 dims.append(dim_nam)
@@ -4247,7 +4319,8 @@ class state(object):
             FillValue=None
             if self.var_dict[field]['_FillValue'] is not None:
                 FillValue = self.var_dict[field]['_FillValue']          
-                var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
+#                var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
+                var=f.createVariable(field,'f4',dimensions=dims)                
             else:
                 var=f.createVariable(field,'f4',dimensions=dims)      
             if self.var_dict[field]['missing_value'] is not None:
@@ -4264,8 +4337,10 @@ class state(object):
 
         if write_interfaces:
             dims=[]
-            if self.var_dict[ifield]['T'] is not None:
-                dims.append(str(self.var_dict[ifield]['T']))
+
+            if  self.var_dict[field]['Ztype'] != 'Fixed':
+                if self.var_dict[ifield]['T'] is not None:
+                    dims.append(str(self.var_dict[ifield]['T']))
             if self.var_dict[ifield]['Z'] is not None:
                 dims.append('interfaces')        
             if self.var_dict[ifield]['Y'] is not None:
@@ -4275,7 +4350,8 @@ class state(object):
 
             if FillValue is None:
                 FillValue=-1.e34
-            var=f.createVariable('eta','f4',dims,fill_value=FillValue)
+#            var=f.createVariable('eta','f4',dims,fill_value=FillValue)
+            var=f.createVariable('eta','f4',dims)                
             outv.append(var)
       
 
@@ -4294,9 +4370,11 @@ class state(object):
                 else:
                     outv[m][n,:]=sq(self.__dict__[field][n-tstart,:])
 
-                if write_interfaces and m == 0:
-                    outv[-1][n,:]=sq(zi[n-tstart,:])
-        
+                if write_interfaces and m==0:
+                    if  self.var_dict[field]['Ztype'] == 'Fixed':
+                        outv[-1][:]=sq(zi[:])
+                    else:
+                        outv[-1][n,:]=sq(zi[n-tstart,:])
 
                 tv[n]=tdat[n-tstart]
                 
@@ -4307,6 +4385,29 @@ class state(object):
     f.close()
 
 
+  def fill_nearest(self,field):
+
+      """
+
+      Extrapolate into thin layers from above
+
+      """
+
+
+
+      nz = vars(self)[field].shape[1]
+      missing = self.var_dict[field]['missing_value']
+      
+
+      tmp_km = vars(self)[field][:,0,:].copy()
+      for k in np.arange(1,nz):
+          tmp=vars(self)[field][:,k,:].copy()
+          tmp[tmp==missing]=tmp_km[tmp==missing]
+          vars(self)[field][:,k,:]=tmp
+          tmp_km=tmp
+
+      return
+  
   def calculate_bias(self,path=None,varin=None,varout=None,monthly_clim=False,ann_clim=False):
       
       """
