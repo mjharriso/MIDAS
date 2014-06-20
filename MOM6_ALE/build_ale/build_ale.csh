@@ -1,21 +1,21 @@
 #!/bin/csh -v
 
 set workdir = $cwd
-set root = $cwd:h:h:h
+set root = $cwd:h:h
 #set platform = linux
 set platform = gfdl_hpcs
 
-set maledir=$root/MIDAS/MOM6_ALE/src
+set maledir=$root/MOM6_ALE/src
 
 
-set mkmfTemplate = $root/MIDAS/fms/site/$platform/mkmf.template
+set mkmfTemplate = $root/fms/site/$platform/mkmf.template
 set npes = 1
 
 
 
-set MKMF         = $root/bin/mkmf
+set MKMF         = $root/fms/bin/mkmf
 set cppDefs      = ("" )
-set LISTPATHS    = $root/bin/list_paths
+set LISTPATHS    = $root/fms/bin/list_paths
 
 
 if ($platform == 'gfdl_hpcs') then
