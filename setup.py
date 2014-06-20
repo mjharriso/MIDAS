@@ -46,8 +46,8 @@ vertmap_GOLD = Extension(name = 'midas.vertmap_GOLD',
                 )
 
 vertmap_ALE = Extension(name = 'midas.vertmap_ALE',
-                include_dirs = ['MOM6_ALE/build'],
-                library_dirs = ['MOM6_ALE/build'],
+                include_dirs = ['MOM6_ALE/build_ale'],
+                library_dirs = ['MOM6_ALE/build_ale'],
                 libraries = ['ale'],                        
                 sources = ['MOM6_ALE/pyale.f90'])
 
