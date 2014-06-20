@@ -25,6 +25,11 @@ INSTALL
 	sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_fms.csh;\
 	./build_fms.csh)
 	
+	(cd MOM6_ALE/build_ale;cp build_ale.csh tmp;\
+	sed -e 's/#set platform = linux/set platform = linux/' < tmp > tmp2;\
+	sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_ale.csh;\
+	./build_ale.csh)
+	
 	python setup.py config_fc --fcompiler=gfortran --f90flags="-fcray-pointer -fdefault-real-8 \
 	-ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build
 
@@ -96,8 +101,11 @@ GFDL-HPCS INSTALL
 	(cd fms_build;./build_fms.csh)
 	
 
+	# Build ALE code
 	
-	# This builds the python interfaces to the underlying FMS code
+	(cd MOM6_ALE/build_ale;./build_ale.csh)
+	
+	# This builds the python interfaces to the underlying FMS and MOM6 codes
 	
 	(python setup.py config_fc --f90flags="-i4 -r8 -DPY_SOLO" --fcompiler=intelem build)
 
