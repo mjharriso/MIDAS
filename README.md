@@ -30,8 +30,8 @@ INSTALL
 	sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_ale.csh;\
 	./build_ale.csh)
 	
-	python setup.py config_fc --fcompiler=gfortran --f90flags="-fcray-pointer -fdefault-real-8 \
-	-ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build
+	(\rm -rf build;python setup.py config_fc --fcompiler=gfortran --f90flags="-fcray-pointer -fdefault-real-8 \
+	-ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build)
 
 	#  sudo python setup.py install # for root users
 	#  otherwise, install midas in your home directory
@@ -107,7 +107,7 @@ GFDL-HPCS INSTALL
 	
 	# This builds the python interfaces to the underlying FMS and MOM6 codes
 	
-	(python setup.py config_fc --f90flags="-i4 -r8 -DPY_SOLO" --fcompiler=intelem build)
+	(\rm -rf build;python setup.py config_fc --f90flags="-i4 -r8 -DPY_SOLO" --fcompiler=intelem build)
 
   	# This places the executables and modules where
   	# Python can find them. The environment variable is set here:
