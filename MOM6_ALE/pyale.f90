@@ -102,6 +102,7 @@ contains
     
     ni=size(u0,1);nj=size(u0,2);nz=size(u0,3);nz2=size(u1,3)
 
+    
     select case (method)
     case ('pcm')
         imethod=INTEGRATION_PCM
@@ -136,7 +137,7 @@ contains
               uin(:)=u0(i,j,:)
 
               if (PRESENT(missing)) then
-                  do k=2,nz
+                  do k=2,nz-1
                      if (abs((uin(k)-missing)/missing) < 1.e-3) then
                          uin(k)=uin(k-1)
                      endif
@@ -180,6 +181,7 @@ contains
     enddo
 
     call pyale_grid_destroy()
+    call ppoly_destroy(ppoly)
     
   end subroutine remap
   

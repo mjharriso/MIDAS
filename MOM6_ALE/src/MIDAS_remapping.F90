@@ -151,12 +151,13 @@ subroutine remapping_integration ( grid0, u0, ppoly0, grid1, u1, method )
         
     end do ! end loop on source grid cells
 
-!    if (j0 == -1 .or. j1 == -1) then
-!        print *, 'Unable to find target grid edges '
-!        print *, 'grid0%x = ',grid0%x
-!        print *, 'x0, x1 = ',x0, x1
-!        call abort
-!    endif
+    if (j0 == -1 .or. j1 == -1) then
+        print *, 'Unable to find target grid edges '
+        print *, 'grid0%x = ',grid0%x
+        print *, 'x0, x1 = ',x0, x1
+        print *, 'j0,j1= ',j0, j1
+        call abort
+    endif
     
     ! Here, we make sure that the boundary edges of boundary cells
     ! coincide

@@ -3000,16 +3000,14 @@ class state(object):
             nx1=xb1.shape[0]-1
             xb2=sq(xb2)
 
-            xb2[0,:,:]=xb1[0,:,:] # reset top interface to xb1[0]
-            for k in np.arange(1,xb2.shape[0]-1):
-                if vdict['Zdir']==-1:
-                    xb2[k,:,:]=np.minimum(xb2[k-1,:,:],xb2[k,:,:]) # avoid negative thicknesses 
-                    xb2[k,:,:]=np.maximum(xb2[k,:,:],xb1[nx1,:,:])
-                else:
-                    xb2[k,:,:]=np.maximum(xb2[k-1,:,:],xb2[k,:,:]) # avoid negative thicknesses 
-                    xb2[k,:,:]=np.minimum(xb2[k,:,:],xb1[nx1,:,:])
-                    
-            xb2[nx2,:]=xb1[nx1,:]
+            xb1[0,:,:]=xb2[0,:,:] # reset top interface to xb1[0]
+            for k in np.arange(1,xb1.shape[0]):
+                xb1[k,:,:]=np.minimum(xb1[k-1,:,:]-1.e-9,xb1[k,:,:]) # avoid zero thicknesses
+            xb1[-1,:]=np.minimum(xb1[-1,:],xb2[-1,:]-1.e-9)            
+#            xb2[0,:,:]=xb1[0,:,:] # reset top interface to xb1[0]
+#            for k in np.arange(1,xb2.shape[0]):
+#                xb2[k,:,:]=np.minimum(xb2[k-1,:,:]-1.e-9,xb2[k,:,:]) # avoid zero thicknesses 
+
 
             if ztype == 'Fixed':            
                 h2=vdict['Zdir']*(np.roll(xb2,shift=-1,axis=0)-xb2)
@@ -3079,6 +3077,7 @@ class state(object):
     
     """
 
+    
     if self.var_dict[field]['Z'] is None:
       return None
       
@@ -3087,53 +3086,74 @@ class state(object):
         
         dz = self.var_dict[field]['dz']
         dz[dz<epsln]=epsln
-        zb=np.cumsum(dz,axis=0)
+
+
 
         nz = vars(self)[field].shape[1]    
-        D = np.tile(self.grid.D,(nz,1,1))
-        floor_dz=D - np.roll(zb,shift=1,axis=0) # Distance from seafloor to bottom interface of cell
-        mask=np.logical_and(zb < D,np.roll(zb,shift=1,axis=0) <= D) # mask for bottom-most cell
-#        dz[mask]=floor_dz[mask]
-#        zb=np.cumsum(dz,axis=0)
-#        dz[zb>D]=epsln
-#        zb=np.cumsum(dz,axis=0)
+        D = np.tile(self.grid.D,(nz+1,1,1))
+        ztop = np.zeros((nz+1,self.grid.jm,self.grid.im))
+        if z_top is not None:
+            ztop = z_top
+            ztop = np.tile(ztop,(nz+1,1,1))
+
+        if self.var_dict[field]['Zdir']==-1:
+            zb=self.var_dict[field]['z_interfaces'].copy()
+            zb[zb>ztop]=ztop[zb>ztop]
+            zb[zb<-D]=-D[zb<-D]
+            zb[-1,:]=-(self.grid.D)
+
+            dz = zb-np.roll(zb,shift=-1,axis=0)
+            dz=dz[:-1,:]
+            dz=np.maximum(dz,1.e-3)
+            ztop=ztop[0,:]
+            ztop=ztop[np.newaxis,:]
+            zb=ztop-np.cumsum(dz,axis=0)
+            zb=np.concatenate((ztop,zb),axis=0)
+
+        
         z=0.5*(zb+np.roll(zb,axis=0,shift=1))
-        z[0,:]=0.5*dz[0,:]
-        zb=np.concatenate((np.zeros((1,self.grid.jm,self.grid.im)),zb),axis=0)
+
 
         self.var_dict[field]['dz']=dz        
-        if self.var_dict[field]['Zdir']==-1:
-            self.var_dict[field]['z']=-z
-            self.var_dict[field]['z_interfaces']=-zb
-        else:
-            self.var_dict[field]['z']=z
-            self.var_dict[field]['z_interfaces']=zb
+        self.var_dict[field]['z']=z
+        self.var_dict[field]['z_interfaces']=zb
     else:
         
         dz = self.var_dict[field]['dz']
 
-        zb=np.cumsum(dz,axis=1)
-        
-        nt= dz.shape[0]
-        nz = vars(self)[field].shape[1]    
-        D = np.tile(self.grid.D,(nt,nz,1,1))
+        dz[dz<epsln]=epsln
 
-        floor_dz=D - np.roll(zb,shift=1,axis=1) # Distance from depth
-        mask=np.logical_and(zb > D,np.roll(zb,shift=1,axis=1) <= D) # mask for bottom-most cell
-        dz[mask]=floor_dz[mask]
-        dz= np.maximum(dz,min_thickness)
-        zb=np.cumsum(dz,axis=1)
+
+
+        nz = vars(self)[field].shape[1]
+        nt = vars(self)[field].shape[0]
+        D = np.tile(self.grid.D,(nt,nz+1,1,1))
+        ztop = np.zeros((nt,nz+1,self.grid.jm,self.grid.im))
+        if z_top is not None:
+            ztop = z_top
+            ztop = np.tile(ztop,(nt,nz+1,1,1))
+
+        if self.var_dict[field]['Zdir']==-1:
+            zb=self.var_dict[field]['z_interfaces'].copy()
+            zb[zb>ztop]=ztop[zb>ztop]
+            zb[zb<-D]=-D[zb<-D]
+            zb[:,-1,:]=-(self.grid.D)
+
+            dz = zb-np.roll(zb,shift=-1,axis=1)
+            dz=dz[:,:-1,:]
+            dz=np.maximum(dz,1.e-3)
+            ztop=ztop[:,0,:]
+            ztop=ztop[:,np.newaxis,:]
+            zb=ztop-np.cumsum(dz,axis=1)
+            zb=np.concatenate((ztop,zb),axis=1)
+
+        
         z=0.5*(zb+np.roll(zb,axis=1,shift=1))
-        z[:,0,:]=0.5*dz[:,0,:]
-        zb=np.concatenate((np.zeros((nt,1,self.grid.jm,self.grid.im)),zb),axis=1)
+
 
         self.var_dict[field]['dz']=dz        
-        if self.var_dict[field]['Zdir']==-1:
-            self.var_dict[field]['z']=-z
-            self.var_dict[field]['z_interfaces']=-zb
-        else:
-            self.var_dict[field]['z']=z
-            self.var_dict[field]['z_interfaces']=zb                        
+        self.var_dict[field]['z']=z
+        self.var_dict[field]['z_interfaces']=zb
         
   def horiz_interp(self,field=None,target=None,src_modulo=False,method='bilinear',PrevState=None,field_x=None,field_y=None,verbose=0):
     """
