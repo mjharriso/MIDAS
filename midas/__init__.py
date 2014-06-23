@@ -43,6 +43,7 @@ from netCDF4 import num2date
 from  datetime import *
 import pickle
 import matplotlib.pyplot as plt
+import resource
 
 # End REQUIRED packages
 
@@ -676,7 +677,6 @@ class rectgrid(object):
     
 
     return None
-
 
 class state(object):
   """Returns a model state of (fields). The default is 
@@ -2892,7 +2892,6 @@ class state(object):
 #            print expr
 #            exec(expr)
 
-
   def remap_ALE(self,fields=None,z_bounds=None,zbax_data=None,method='pcm',bndy_extrapolation=False):
 
 
@@ -2922,6 +2921,7 @@ class state(object):
         print """ ALE/vertmap not installed """
         return 
 
+    print 'Memory usage: %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss    
 
     if z_bounds is None:
         print 'No output grid in call to vert_remap'
@@ -3065,7 +3065,8 @@ class state(object):
         fnam=fld+'_remap'
         self.add_field_from_array(fld_out,fnam,var_dict=vdict)
 
-
+        vertmap_ALE.pyale_mod.pyale_grid_destroy()
+        
 
 
     
@@ -3155,7 +3156,7 @@ class state(object):
         self.var_dict[field]['z']=z
         self.var_dict[field]['z_interfaces']=zb
         
-  def horiz_interp(self,field=None,target=None,src_modulo=False,method='bilinear',PrevState=None,field_x=None,field_y=None,verbose=0):
+  def horiz_interp(self,field=None,target=None,src_modulo=None,method='bilinear',PrevState=None,field_x=None,field_y=None,verbose=0):
     """
       Interpolate from a spherical grid to a general logically
       rectangular grid using a non-conservative \"bilinear\" interpolation
@@ -3164,6 +3165,7 @@ class state(object):
     
     from midas import hinterp
 
+    print 'Memory usage: %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     
     is_vector = False
     if field_x is not None:
@@ -3388,6 +3390,8 @@ class state(object):
       mask=np.concatenate((pole,mask),axis=2)
       
 
+    if src_modulo is not None:
+        src_modulo = self.grid.cyclic_x
 
 
     if src_modulo:
