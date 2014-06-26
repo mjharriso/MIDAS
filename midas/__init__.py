@@ -1662,18 +1662,18 @@ class state(object):
     if field is None:
       return None
 
-#    if self.var_dict[field]['Ztype'] is not 'Fixed':
-    e=self.var_dict[field]['z_interfaces']
-    eb = 0.5*(e+np.roll(e,shift=-1,axis=3))
-    self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=3),eb),axis=3)
-    eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
-    self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=2),eb),axis=2)
-#    else:
-#        e=self.var_dict[field]['z_interfaces']
-#        eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
-#        self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=2),eb),axis=2)
-#        eb = 0.5*(e+np.roll(e,shift=-1,axis=1))
-#        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=1),eb),axis=1)            
+    if self.var_dict[field]['Ztype'] is not 'Fixed':
+        e=self.var_dict[field]['z_interfaces']
+        eb = 0.5*(e+np.roll(e,shift=-1,axis=3))
+        self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=3),eb),axis=3)
+        eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
+        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=2),eb),axis=2)
+    else:
+        e=self.var_dict[field]['z_interfaces']
+        eb = 0.5*(e+np.roll(e,shift=-1,axis=2))
+        self.var_dict[field]['z_interfaces_ew']=np.concatenate((np.take(eb,[-1],axis=2),eb),axis=2)
+        eb = 0.5*(e+np.roll(e,shift=-1,axis=1))
+        self.var_dict[field]['z_interfaces_ns']=np.concatenate((np.take(eb,[0],axis=1),eb),axis=1)            
     
   def fill_interior(self,field=None,smooth=False,num_pass=10000,relax_criteria=1.e-3):
     """
@@ -2948,7 +2948,9 @@ class state(object):
 
         vdict=self.var_dict[fld].copy()
 
-        vdict['Z']='z_remap'
+        vdict['Z']='level'
+        vdict['Y']='latitude'
+        vdict['X']='longitude'        
 
         vdict['zb_indices']=np.arange(0,nx2+1)
 
@@ -3091,9 +3093,6 @@ class state(object):
     if self.var_dict[field]['Ztype'] == 'Fixed':
         
         dz = self.var_dict[field]['dz']
-        dz[dz<epsln]=epsln
-
-
 
         nz = vars(self)[field].shape[1]    
         D = np.tile(self.grid.D,(nz+1,1,1))
@@ -3106,18 +3105,26 @@ class state(object):
             zb=self.var_dict[field]['z_interfaces'].copy()
             zb[zb>ztop]=ztop[zb>ztop]
             zb[zb<-D]=-D[zb<-D]
-            zb[-1,:]=-(self.grid.D)
-
-            dz = zb-np.roll(zb,shift=-1,axis=0)
-            dz=dz[:-1,:]
-            dz=np.maximum(dz,1.e-3)
+            dz = zb[:-1]-zb[1:]
+            
             ztop=ztop[0,:]
             ztop=ztop[np.newaxis,:]
             zb=ztop-np.cumsum(dz,axis=0)
             zb=np.concatenate((ztop,zb),axis=0)
+            
+        else:
+            zb=self.var_dict[field]['z_interfaces'].copy()
+            zb[zb<ztop]=ztop[zb<ztop]
+            zb[zb>D]=D[zb>D]
+            dz = zb[1:]-zb[:-1]
+            
+            ztop=ztop[0,:]
+            ztop=ztop[np.newaxis,:]
+            zb=ztop+np.cumsum(dz,axis=0)
+            zb=np.concatenate((ztop,zb),axis=0)
 
-        
-        z=0.5*(zb+np.roll(zb,axis=0,shift=1))
+        z=0.5*(zb[1:]+zb[0:-1])   
+
 
 
         self.var_dict[field]['dz']=dz        
@@ -3143,19 +3150,25 @@ class state(object):
             zb=self.var_dict[field]['z_interfaces'].copy()
             zb[zb>ztop]=ztop[zb>ztop]
             zb[zb<-D]=-D[zb<-D]
-            zb[:,-1,:]=-(self.grid.D)
-
-            dz = zb-np.roll(zb,shift=-1,axis=1)
-            dz=dz[:,:-1,:]
-            dz=np.maximum(dz,1.e-3)
+            dz = zb[:,:-1]-zb[:,1:]
+            
             ztop=ztop[:,0,:]
             ztop=ztop[:,np.newaxis,:]
             zb=ztop-np.cumsum(dz,axis=1)
             zb=np.concatenate((ztop,zb),axis=1)
+            
+        else:
+            zb=self.var_dict[field]['z_interfaces'].copy()
+            zb[zb<ztop]=ztop[zb<ztop]
+            zb[zb>D]=D[zb>D]
+            dz = zb[:,1:]-zb[:,:-1]
+            
+            ztop=ztop[:,0,:]
+            ztop=ztop[:,np.newaxis,:]
+            zb=ztop+np.cumsum(dz,axis=1)
+            zb=np.concatenate((ztop,zb),axis=1)
 
-        
-        z=0.5*(zb+np.roll(zb,axis=1,shift=1))
-
+        z=0.5*(zb[:,1:]+zb[:,0:-1])
 
         self.var_dict[field]['dz']=dz        
         self.var_dict[field]['z']=z
