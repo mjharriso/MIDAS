@@ -16,14 +16,18 @@ use regrid_polynomial      ! see 'regrid_solvers.F90'
 
 implicit none ; private
 
+integer, parameter :: max_tri  = 100
+
 ! -----------------------------------------------------------------------------
 ! Private variables used only in this module
 ! -----------------------------------------------------------------------------
-real, dimension(:), allocatable :: tri_l;   ! trid. system (lower diagonal)
-real, dimension(:), allocatable :: tri_d;   ! trid. system (middle diagonal)
-real, dimension(:), allocatable :: tri_u;   ! trid. system (upper diagonal)
-real, dimension(:), allocatable :: tri_x;   ! trid. system (unknowns vector)
-real, dimension(:), allocatable :: tri_b;   ! trid. system (rhs)
+real, dimension(max_tri) :: tri_l;   ! trid. system (lower diagonal)
+real, dimension(max_tri) :: tri_d;   ! trid. system (middle diagonal)
+real, dimension(max_tri) :: tri_u;   ! trid. system (upper diagonal)
+real, dimension(max_tri) :: tri_x;   ! trid. system (unknowns vector)
+real, dimension(max_tri) :: tri_b;   ! trid. system (rhs)
+
+
 
 ! -----------------------------------------------------------------------------
 ! The following routines are visible to the outside world
@@ -1028,11 +1032,11 @@ subroutine tridiagonal_system_0_memory_allocation ( N )
   ! Argument
   integer, intent(in)   :: N
 
-  allocate ( tri_l(N+1) )
-  allocate ( tri_d(N+1) )
-  allocate ( tri_u(N+1) )
-  allocate ( tri_b(N+1) )
-  allocate ( tri_x(N+1) )
+!  allocate ( tri_l(N+1) )
+!  allocate ( tri_d(N+1) )
+!  allocate ( tri_u(N+1) )
+!  allocate ( tri_b(N+1) )
+!  allocate ( tri_x(N+1) )
 
 end subroutine tridiagonal_system_0_memory_allocation
 
@@ -1041,11 +1045,11 @@ end subroutine tridiagonal_system_0_memory_allocation
 !------------------------------------------------------------------------------
 subroutine tridiagonal_system_0_memory_deallocation ( )
 
-  deallocate ( tri_l )
-  deallocate ( tri_d )
-  deallocate ( tri_u )
-  deallocate ( tri_b )
-  deallocate ( tri_x )
+!  deallocate ( tri_l )
+!  deallocate ( tri_d )
+!  deallocate ( tri_u )
+!  deallocate ( tri_b )
+!  deallocate ( tri_x )
 
 end subroutine tridiagonal_system_0_memory_deallocation
 

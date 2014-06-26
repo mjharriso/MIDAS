@@ -26,10 +26,10 @@ public remapping_integration, inflate_vanished_layers
 subroutine remapping_integration ( grid0, u0, ppoly0, grid1, u1, method )
   
   ! Arguments
-  type(grid1d_t), intent(in)        :: grid0;   ! source grid
+  type(grid1d_t), intent(in)      :: grid0;   ! source grid
   real, dimension(:), intent(in)    :: u0;      ! source cell averages
-  type(ppoly_t), intent(in)         :: ppoly0;  ! source piecewise polynomial
-  type(grid1d_t), intent(in)        :: grid1;   ! target grid
+  type(ppoly_t), intent(inout) :: ppoly0;  ! source piecewise polynomial
+  type(grid1d_t), intent(inout)        :: grid1;   ! target grid
   real, dimension(:), intent(inout) :: u1;      ! target cell averages
   integer                           :: method;  ! remapping scheme to use
   

@@ -18,11 +18,9 @@ module pyale_mod
 
 
   integer, parameter :: max_grids=100
-  type(grid1d_t), dimension(max_grids) :: grid
+  type(grid1d_t), dimension(0:max_grids), target :: grid
   
   integer :: ngrids = 0
-
-
 
   public :: pyale_grid_init, pyale_grid_set, remap, pyale_grid_destroy
   
@@ -33,12 +31,14 @@ contains
 
     integer, intent(in) :: nb_cells
     integer :: pyale_grid_init
+    type(grid1d_t), pointer :: grid_ptr
 
-    ngrids=ngrids+1
-
-    call grid1d_init(grid(ngrids),nb_cells)
+    grid_ptr=>grid(ngrids)
+    call grid1d_init(grid_ptr,nb_cells,ngrids)
 
     pyale_grid_init=ngrids
+
+    ngrids=ngrids+1
 
     return
 
@@ -47,9 +47,11 @@ contains
   subroutine pyale_grid_destroy()
 
     integer :: n
-
-    do n=1,ngrids
-       call grid1d_destroy(grid(n))
+    type(grid1d_t), pointer :: grid_ptr
+    
+    do n=0,ngrids
+       grid_ptr => grid(n)
+       call grid1d_destroy(grid_ptr)
     enddo
 
     ngrids=0
@@ -68,7 +70,9 @@ contains
 
     if (nz /= grid(n)%nb_cells) then
         print *,'improper size array in call to grid_set'
-        return
+        print *, 'ngrids= ',ngrids
+        print *,'nz= ',nz, ' n= ',n,' nb_cells= ',grid(n)%nb_cells
+        call abort
     endif        
 
     do k=1,nz
@@ -120,12 +124,12 @@ contains
         print *,'Invalid integration method'
         call abort()
     end select
-    
+
     n1= pyale_grid_init(nz)
     n2= pyale_grid_init(nz2)    
 
     call ppoly_init(ppoly,nz,degree)
-    
+
     do j=1,nj
        do i=1,ni
           if (abs(zi(i,j,nz)-epsln)>1.e-2) then
@@ -152,6 +156,7 @@ contains
                   call plm_reconstruction(grid(n1),ppoly,uin)
                   if (bndy_extrapolation) call plm_boundary_extrapolation(grid(n1),ppoly,uin)
               case('ppm_h4')
+!                  print *,grid
                   call edge_values_explicit_h4(grid(n1),uin,ppoly%E)
                   call ppm_reconstruction(grid(n1),ppoly,uin)
                   if (bndy_extrapolation) call ppm_boundary_extrapolation(grid(n1),ppoly,uin)

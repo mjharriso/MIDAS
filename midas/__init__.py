@@ -166,7 +166,8 @@ class rectgrid(object):
 
         self.wet = np.ones((self.jm,self.im))
         self.cyclic_x=supergrid.dict['cyclic_x']
-
+        self.tripolar_n=supergrid.dict['tripolar_n']
+        
         if supergrid.have_metrics:
             dx=supergrid.dx
             dy=supergrid.dy
@@ -1706,7 +1707,8 @@ class state(object):
 
     FVal_=-1.e34
 
-  
+    print 'Memory usage fill_miss (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    
     if field is None:
       print """
        Please specify a field name
@@ -1800,6 +1802,8 @@ class state(object):
 
     vars(self)[field]=val
 
+    print 'Memory usage fill_miss (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    
     return None
 
     
@@ -2921,7 +2925,7 @@ class state(object):
         print """ ALE/vertmap not installed """
         return 
 
-    print 'Memory usage: %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss    
+    print 'Memory usage vertmap_ALE (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss    
 
     if z_bounds is None:
         print 'No output grid in call to vert_remap'
@@ -3041,7 +3045,7 @@ class state(object):
 
 #            data[data>1e10]=0
 #            plt.pcolormesh(sq(data[:,:,0]).T);plt.colorbar();plt.show();raise
-            
+
             vertmap_ALE.pyale_mod.remap(data,data2,xb1,xb2,method,bndy_extrapolation=bndy_extrapolation,missing=missing_value)
 
             data2=data2.T
@@ -3066,6 +3070,8 @@ class state(object):
         self.add_field_from_array(fld_out,fnam,var_dict=vdict)
 
         vertmap_ALE.pyale_mod.pyale_grid_destroy()
+
+        print 'Memory usage vertmap_ALE (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss            
         
 
 
@@ -3165,7 +3171,7 @@ class state(object):
     
     from midas import hinterp
 
-    print 'Memory usage: %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    print 'Memory usage hinterp (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     
     is_vector = False
     if field_x is not None:
@@ -3561,7 +3567,8 @@ class state(object):
             vars(S)[field] = np.ma.masked_where(np.abs(varout - missing) < np.abs(missing)*1.e-3,varout)
 
             
-
+    print 'Memory usage hinterp (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    
     return S
 
   def grid_overlay(self,field=None,target=None,debug=0):
@@ -4177,7 +4184,10 @@ class state(object):
 
     Write (fields) to an NC file. 
 
-    """  
+    """
+
+    print 'Memory usage write_nc (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    
     if fields is None:
       return None
 
@@ -4408,7 +4418,8 @@ class state(object):
     f.sync()
     f.close()
 
-
+    print 'Memory usage write_nc (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    
   def fill_nearest(self,field):
 
       """

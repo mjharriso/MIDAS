@@ -4,6 +4,8 @@ implicit none ; private
 
 public :: ppoly_t, ppoly_init, ppoly_destroy
 
+integer, parameter :: nb_cells_max = 1000, max_degree = 6
+
 ! -----------------------------------------------------------------------------
 ! Definition of the piecewise polynomial structure
 ! -----------------------------------------------------------------------------
@@ -13,8 +15,8 @@ type ppoly_t
   
   ! 'E' and 'S' are arrays of edge values (E) and edge slopes (S). There
   ! are two edge values and slopes per cell
-  real, dimension(:,:), allocatable :: E;
-  real, dimension(:,:), allocatable :: S;   
+  real, dimension(nb_cells_max,max_degree) :: E;
+  real, dimension(nb_cells_max,max_degree) :: S;   
 
   ! This array holds the coefficients of each polynomial in each cell, 
   ! expressed in terms of the normalized coordinate xi \in [0,1]. The size 
@@ -22,9 +24,10 @@ type ppoly_t
   ! of the polynomial used for the reconstruction. E.g., a polynomial of
   ! degree 1 needs two coefficients. Note that polynomials are expressed
   ! as follows: P(\xi) = c_0 + c_1 \xi + c_2 \xi^2 + ...
-  real, dimension(:,:), allocatable :: coefficients;
+  real, dimension(nb_cells_max,max_degree) :: coefficients;
   
 end type ppoly_t 
+
 
 contains
 
@@ -40,9 +43,13 @@ subroutine ppoly_init ( ppoly, nb_cells, degree )
   integer, intent(in)          :: nb_cells;
   integer, intent(in)          :: degree;
 
-  allocate ( ppoly%E(nb_cells,2) );
-  allocate ( ppoly%S(nb_cells,2) );
-  allocate ( ppoly%coefficients(nb_cells,degree+1) );
+!  allocate ( ppoly%E(nb_cells,2) );
+!  allocate ( ppoly%S(nb_cells,2) );
+!  allocate ( ppoly%coefficients(nb_cells,degree+1) );
+
+
+!  allocate ( ppoly%S(nb_cells,2) );
+!  allocate ( ppoly%coefficients(nb_cells,degree+1) );  
   ppoly%nb_cells = nb_cells;
 
 end subroutine ppoly_init
@@ -57,9 +64,12 @@ subroutine ppoly_destroy ( ppoly )
 
   type(ppoly_t), intent(inout) :: ppoly;
 
-  deallocate ( ppoly%E );
-  deallocate ( ppoly%S );
-  deallocate ( ppoly%coefficients );
+!  ppoly => NULL()
+
+  
+!  deallocate ( ppoly%E );
+!  deallocate ( ppoly%S );
+!  deallocate ( ppoly%coefficients );
 
 end subroutine ppoly_destroy
 

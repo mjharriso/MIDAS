@@ -53,6 +53,7 @@ class supergrid(object):
 
         vdict['cyclic_x']=cyclic_x
         vdict['cyclic_y']=cyclic_y
+        vdict['tripolar_n']=tripolar_n
         vdict['nxtot']=self.x.shape[1]
         vdict['nytot']=self.x.shape[0]
         vdict['axis_units']=f.variables['x'].units

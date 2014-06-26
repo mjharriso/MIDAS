@@ -375,7 +375,7 @@ contains
                         endif
                     endif
                     east=max(good(ip,j),fill(ip,j));west=max(good(im,j),fill(im,j))
-                    north=max(good(i,jp),fill(ijp,jp));south=max(good(i,jm),fill(i,jm))
+                    north=max(good(ijp,jp),fill(ijp,jp));south=max(good(i,jm),fill(i,jm))
             
                     r(i,j) = relc*(south*aout(i,jm)+north*aout(ijp,jp)+west*aout(im,j)+east*aout(ip,j) - (south+north+west+east)*aout(i,j))
                 else

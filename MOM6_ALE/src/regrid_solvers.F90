@@ -81,7 +81,7 @@ subroutine solve_linear_system ( A, B, X, system_size )
     if ( .NOT. found_pivot ) then
 !      call MOM_error ( FATAL, 'The linear system is singular !' );
        write(0,*) A
-       call abort ( 'The linear system is quite singular ' );  
+!       call abort ( 'The linear system is quite singular ' );  
     end if
 
     ! If the pivot is in a row that is different than row i, that is if
