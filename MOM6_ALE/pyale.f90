@@ -17,7 +17,7 @@ module pyale_mod
   private
 
 
-  integer, parameter :: max_grids=100
+  integer, parameter :: max_grids=10
   type(grid1d_t), dimension(0:max_grids), target :: grid
   
   integer :: ngrids = 0
@@ -132,11 +132,11 @@ contains
 
     do j=1,nj
        do i=1,ni
-          if (abs(zi(i,j,nz)-epsln)>1.e-2) then
+!          if (abs(zi(i,j,nz)-epsln)>1.e-2) then
               call pyale_grid_set(n1,zi(i,j,:))
               call pyale_grid_set(n2,zo(i,j,:))
-              call inflate_vanished_layers(grid(n1),min_thickness)
-              call inflate_vanished_layers(grid(n2),min_thickness)              
+!              call inflate_vanished_layers(grid(n1),min_thickness)
+!              call inflate_vanished_layers(grid(n2),min_thickness)              
 
               uin(:)=u0(i,j,:)
 
@@ -181,7 +181,7 @@ contains
               
               call remapping_integration(grid(n1),uin,ppoly,grid(n2),u1(i,j,:),imethod)
 
-          endif
+!          endif
        enddo
     enddo
 

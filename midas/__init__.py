@@ -2925,8 +2925,6 @@ class state(object):
         print """ ALE/vertmap not installed """
         return 
 
-    print 'Memory usage vertmap_ALE (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss    
-
     if z_bounds is None:
         print 'No output grid in call to vert_remap'
         return
@@ -3046,8 +3044,9 @@ class state(object):
 #            data[data>1e10]=0
 #            plt.pcolormesh(sq(data[:,:,0]).T);plt.colorbar();plt.show();raise
 
+            print 'Memory usage vertmap_ALE (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss                        
             vertmap_ALE.pyale_mod.remap(data,data2,xb1,xb2,method,bndy_extrapolation=bndy_extrapolation,missing=missing_value)
-
+            print 'Memory usage vertmap_ALE (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss            
             data2=data2.T
             xb2=-xb2.T
 
@@ -3069,9 +3068,9 @@ class state(object):
         fnam=fld+'_remap'
         self.add_field_from_array(fld_out,fnam,var_dict=vdict)
 
-        vertmap_ALE.pyale_mod.pyale_grid_destroy()
+#        vertmap_ALE.pyale_mod.pyale_grid_destroy()
 
-        print 'Memory usage vertmap_ALE (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss            
+
         
 
 

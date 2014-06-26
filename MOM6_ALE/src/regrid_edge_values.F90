@@ -16,7 +16,7 @@ use regrid_polynomial      ! see 'regrid_solvers.F90'
 
 implicit none ; private
 
-integer, parameter :: max_tri  = 100
+integer, parameter :: max_tri  = 10
 
 ! -----------------------------------------------------------------------------
 ! Private variables used only in this module

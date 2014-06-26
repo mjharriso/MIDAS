@@ -73,7 +73,6 @@ subroutine grid1d_destroy ( grid )
 
   type(grid1d_t), intent(inout) :: grid;
 
-!  grid=>NULL()
   
 !  deallocate ( grid%x );
 
