@@ -2086,11 +2086,11 @@ class state(object):
         return None      
 
       if normalize:
-          result = np.sum(np.sum(np.sum(sout*dx*dy*dz,axis=3),axis=2),axis=1)/np.sum(np.sum(np.sum(dx*dy*dz,axis=3),axis=2),axis=1)
+          result = np.sum(np.sum(np.sum(sout*dx*dy*dz,axis=3),axis=2),axis=1)/np.sum(np.sum(np.sum(dx*dy*dz,axis=2),axis=1),axis=0)
           result=np.reshape(result,(result.shape[0],1,1,1))
           name = field+'_xyzav'
       else:
-          result = np.sum(np.sum(np.sum(sout*dx*dy*dz_masked,axis=3),axis=2),axis=1)
+          result = np.sum(np.sum(np.sum(sout*dx*dy*dz,axis=3),axis=2),axis=1)
           result=np.reshape(result,(result.shape[0],1,1,1))
           name = field+'_xyzint'
           
