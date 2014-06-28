@@ -1818,66 +1818,52 @@ class state(object):
 
 
     if self.var_dict[field]['interface_variable']:
-        is_interface_var = True
-    else:
-        is_interface_var = False
-    
+        print 'Volume integrals not available for interface variables'
+        return None
     
     sout=vars(self)[field]
     
     var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent 
 
-    if self.var_dict[field]['Z'] is not None and not is_interface_var :
-      if self.var_dict[field]['Ztype'] is 'Fixed':
+    if self.var_dict[field]['Z'] is not None:
 
-        dz=self.var_dict[field]['dz'][:].reshape(1,sout.shape[1],sout.shape[2],sout.shape[3])
-        dz = np.tile(dz,(sout.shape[0],1,1,1))
-
-
-        if self.var_dict[field]['masked']:
-          dz_masked = np.ma.masked_where(sout.mask,dz)
-        else:
-          dz_masked = dz
-
-      else:
         dz=self.var_dict[field]['dz'][:]
 
-
         if self.var_dict[field]['masked']:
-          dz_masked = np.ma.masked_where(sout.mask,dz)
-        else:
-          dz_masked = dz
+          mask_out = np.any(sout.mask,axis=0)
+          dz=np.ma.masked_array(dz)
+          dz.mask = mask_out
           
     else:
-      dz = np.ones((sout.shape))      
-      dz_masked = dz
+      dz = np.ones((self.grid.jm,self.grid.im))      
+      if self.var_dict[field]['masked']:
+          mask_out = np.any(sout.mask,axis=0)
+          dz=np.ma.masked_array(dz)
+          dz.mask=mask_out
 
     dy=self.grid.dyh
-    dy = np.tile(dy,(sout.shape[0],sout.shape[1],1,1))
-
-
     dx=self.grid.dxh
-    dx = np.tile(dx,(sout.shape[0],sout.shape[1],1,1))        
-        
-    if self.var_dict[field]['masked']:
-      dy_masked = np.ma.masked_where(sout.mask,dy)
-      dx_masked = np.ma.masked_where(sout.mask,dx)
-    else:
-      dy_masked = dy
-      dx_masked = dx
+
+    im=self.grid.im;jm=self.grid.jm
+    nt=vars(self)[field].shape[0]
+    nz=vars(self)[field].shape[1]
+
 
     if axis.upper() == 'Z':
 
       if var_dict['Z'] is None:
-        return None
+        return
 
       if normalize:
-          result = np.sum(sout*dz,axis=1)/np.sum(dz_masked,axis=1)
-          result=np.reshape(result,(result.shape[0],1,result.shape[1],result.shape[2]))
+          if self.var_dict[field]['Ztype']=='Fixed':
+              result = np.sum(sout*dz,axis=1)/np.sum(dz,axis=0)
+          else:
+              result = np.sum(sout*dz,axis=1)/np.sum(dz,axis=1)
+          result=np.reshape(result,(nt,1,jm,im))
           name = field+'_zav'
       else:
           result = np.sum(sout*dz,axis=1)
-          result=np.reshape(result,(result.shape[0],1,result.shape[1],result.shape[2]))
+          result=np.reshape(result,(nt,1,jm,im))
           name = field+'_zint'
           
       vars(self)[name]=result
@@ -1896,129 +1882,135 @@ class state(object):
 
       var_dict['Z']=None
 
-
-
       if self.var_dict[field]['Ztype'] is 'Fixed':
           zlow=np.take(var_dict['z_interfaces'],[-1],axis=0)                
           zup=np.take(var_dict['z_interfaces'],[0],axis=0)
           var_dict['z_interfaces']=np.concatenate((zup,zlow),axis=0)
           result=var_dict['z_interfaces'][0,:]-var_dict['z_interfaces'][-1,:]
-          result=np.reshape(result,(1,1,result.shape[0],result.shape[1]))          
+          result=np.reshape(result,(1,jm,im))          
+
+          var_dict['dz']=result
+          var_dict['z']=np.mean(var_dict['z_interfaces'],axis=0)
+          var_dict['z']=var_dict['z'].reshape(1,jm,im)
+          var_dict['z_interfaces']=np.reshape(var_dict['z_interfaces'],(2,jm,im))
+
       else:
           zlow=np.take(var_dict['z_interfaces'],[-1],axis=1)                
           zup=np.take(var_dict['z_interfaces'],[0],axis=1)
           var_dict['z_interfaces']=np.concatenate((zup,zlow),axis=1)
           result=var_dict['z_interfaces'][:,0,:]-var_dict['z_interfaces'][:,-1,:]
-          result=np.reshape(result,(result.shape[0],1,result.shape[1],result.shape[2]))          
+          result=np.reshape(result,(nt,1,jm,im))          
 
-      var_dict['dz']=result
-      var_dict['z']=np.mean(var_dict['z_interfaces'],axis=1)
-      var_dict['z_interfaces']=np.reshape(var_dict['z_interfaces'],(result.shape[0],2,result.shape[2],result.shape[3]))
+          var_dict['dz']=result
+          var_dict['z']=np.mean(var_dict['z_interfaces'],axis=1)
+          var_dict['z_interfaces']=np.reshape(var_dict['z_interfaces'],(nt,2,jm,im))
 
-      if var_dict['Ztype'] is 'Fixed':
-        var_dict['z']=np.take(var_dict['z'],[0],axis=0)
-        var_dict['dz']=np.take(var_dict['dz'],[0],axis=0)
-        var_dict['z_interfaces']=np.take(var_dict['z_interfaces'],[0],axis=1)                
       
 
       self.var_dict[name]=var_dict
       self.variables[name]=name
-      
-        
+
+
     if axis.upper() == 'Y':
 
+      if var_dict['Y'] is None:
+        return 
+
       if normalize:
-          result = np.sum(sout*dz_masked*dy_masked*dx_masked,axis=2)/np.sum(dz_masked*dy_masked*dx_masked,axis=2)
-          result=np.reshape(result,(sout.shape[0],sout.shape[1],1,sout.shape[3]))
+          if self.var_dict[field]['Ztype']=='Fixed':
+              result = np.sum(sout*dx*dy*dz,axis=2)/np.sum(dx*dy*dz,axis=1)
+          else:
+              result = np.sum(sout*dx*dy*dz,axis=2)/np.sum(dz,axis=2)
+          result=np.reshape(result,(nt,nz,1,im))
           name = field+'_yav'
       else:
-          result = np.sum(sout*dz_masked*dy_masked*dx_masked,axis=2)
-          result=np.reshape(result,(sout.shape[0],sout.shape[1],1,sout.shape[3]))
+          result = np.sum(sout*dx*dy*dz,axis=2)
+          result=np.reshape(result,(nt,nz,1,im))
           name = field+'_yint'
           
       vars(self)[name]=result
 
-
-
+      
       if var_dict['Z'] is not None:
-        var_dict['dz'] = np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=2)/np.sum(dz_masked*dy_masked*dx_masked,axis=2)      
-        var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],sout.shape[1],1,sout.shape[3]))      
         if var_dict['Ztype'] is 'Fixed':
+            var_dict['dz'] = np.sum(dz*dz*dy*dx,axis=1)/np.sum(dz*dy*dx,axis=1)  
+            var_dict['dz']=np.reshape(var_dict['dz'],(nz,1,im))      
             z0 = np.take(var_dict['z_interfaces'],[0],axis=0)
+            result = np.sum(z0*dy*dx,axis=1)/np.sum(dy*dx,axis=0)
+            result = np.reshape(result,(1,1,im))
+            var_dict['z_interfaces']=-np.cumsum(var_dict['dz'],axis=0)
+            var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=0)
+            var_dict['z']=0.5*(var_dict['z_interfaces'][:-1,:] + var_dict['z_interfaces'][1:,:])
         else:
+            var_dict['dz'] = np.sum(dz*dz*dy*dx,axis=2)/np.sum(dz*dy*dx,axis=2)  
+            var_dict['dz']=np.reshape(var_dict['dz'],(nt,nz,1,im))      
             z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
-        dy0 = np.take(dy_masked,[0],axis=1)
-        dx0 = np.take(dx_masked,[0],axis=1)
-        result = np.sum(z0*dy0*dx0,axis=2)/np.sum(dy0*dx0,axis=2)
-        result = np.reshape(result,(sout.shape[0],1,1,sout.shape[3]))
-        var_dict['z_interfaces']=-np.cumsum(var_dict['dz'],axis=1)
-        var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=1)
+            result = np.sum(z0*dy*dx,axis=2)/np.sum(dy*dx,axis=0)
+            result = np.reshape(result,(nt,1,1,im))
+            var_dict['z_interfaces']=-np.cumsum(var_dict['dz'],axis=1)
+            var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=1)
+            var_dict['z']=0.5*(var_dict['z_interfaces'][:,:-1,:] + var_dict['z_interfaces'][:,1:,:])
 
-
-        tmp=0.5*(var_dict['z_interfaces'] + np.roll(var_dict['z_interfaces'],axis=1,shift=-1))
-        tmp = tmp[:,0:-1,:,:]
-
-        if var_dict['Ztype'] is 'Fixed':
-          var_dict['z']=np.take(tmp,[0],axis=0)
-          var_dict['dz']=np.take(var_dict['dz'],[0],axis=0)
-          var_dict['z_interfaces']=np.take(var_dict['z_interfaces'],[0],axis=0)                
-        else:
-          var_dict['z']=tmp
         
       var_dict['rootgrp']=None
       var_dict['Y']=None
       var_dict['yax_data']=[np.mean(var_dict['yax_data'])]
-      var_dict['rootgrp']=None
       
 
       self.var_dict[name]=var_dict
       self.variables[name]=name
-
+      self.var_dict[name]=var_dict
+      self.variables[name]=name
+      
         
     if axis.upper() == 'X':
 
+      if var_dict['X'] is None:
+        return 
+
       if normalize:
-          result = np.sum(sout*dz_masked*dy_masked*dx_masked,axis=3)/np.sum(dz_masked*dy_masked*dx_masked,axis=3)
-          result=np.reshape(result,(sout.shape[0],sout.shape[1],sout.shape[2],1))
+          if self.var_dict[field]['Ztype']=='Fixed':
+              result = np.sum(sout*dx*dy*dz,axis=3)/np.sum(dx*dy*dz,axis=2)
+          else:
+              result = np.sum(sout*dx*dy*dz,axis=3)/np.sum(dz,axis=2)
+          result=np.reshape(result,(nt,nz,jm,1))
           name = field+'_xav'
       else:
-          result = np.sum(sout*dz_masked*dy_masked*dx_masked,axis=3)
-          result=np.reshape(result,(sout.shape[0],sout.shape[1],sout.shape[2],1))
+          result = np.sum(sout*dx*dy*dz,axis=3)
+          result=np.reshape(result,(nt,nz,jm,1))
           name = field+'_xint'
           
       vars(self)[name]=result
 
-
+      
       if var_dict['Z'] is not None:
-        
-        var_dict['dz'] = np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=3)/np.sum(dz_masked*dy_masked*dx_masked,axis=3)      
-        var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],sout.shape[1],sout.shape[2],1))
         if var_dict['Ztype'] is 'Fixed':
+            var_dict['dz'] = np.sum(dz*dz*dy*dx,axis=2)/np.sum(dz*dy*dx,axis=2)  
+            var_dict['dz']=np.reshape(var_dict['dz'],(nz,jm,1))      
             z0 = np.take(var_dict['z_interfaces'],[0],axis=0)
+            result = np.sum(z0*dy*dx,axis=2)/np.sum(dy*dx,axis=1)
+            result = np.reshape(result,(1,jm,1))
+            var_dict['z_interfaces']=-np.cumsum(var_dict['dz'],axis=0)
+            var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=0)
+            var_dict['z']=0.5*(var_dict['z_interfaces'][:-1,:] + var_dict['z_interfaces'][1:,:])
         else:
+            var_dict['dz'] = np.sum(dz*dz*dy*dx,axis=3)/np.sum(dz*dy*dx,axis=3)  
+            var_dict['dz']=np.reshape(var_dict['dz'],(nt,nz,jm,1))      
             z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
-        dy0 = np.take(dy_masked,[0],axis=1)
-        dx0 = np.take(dx_masked,[0],axis=1)
-        result = np.sum(z0*dy0*dx0,axis=3)/np.sum(dy0*dx0,axis=3)
-        result = np.reshape(result,(sout.shape[0],1,sout.shape[2],1))
-        var_dict['z_interfaces']=-np.cumsum(var_dict['dz'],axis=1)
-        var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=1)
-        tmp=0.5*(var_dict['z_interfaces'] + np.roll(var_dict['z_interfaces'],axis=1,shift=-1))
-        tmp = tmp[:,0:-1,:,:]
+            result = np.sum(z0*dy*dx,axis=3)/np.sum(dy*dx,axis=1)
+            result = np.reshape(result,(nt,1,jm,1))
+            var_dict['z_interfaces']=-np.cumsum(var_dict['dz'],axis=1)
+            var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=1)
+            var_dict['z']=0.5*(var_dict['z_interfaces'][:,:-1,:] + var_dict['z_interfaces'][:,1:,:])
 
-        if var_dict['Ztype'] is 'Fixed':
-          var_dict['z']=np.take(tmp,[0],axis=0)
-          var_dict['dz']=np.take(var_dict['dz'],[0],axis=0)
-          var_dict['z_interfaces']=np.take(var_dict['z_interfaces'],[0],axis=0)                
-        else:
-          var_dict['z']=tmp
         
-
-
       var_dict['rootgrp']=None
       var_dict['X']=None
       var_dict['xax_data']=[np.mean(var_dict['xax_data'])]
-      var_dict['rootgrp']=None
+      
+
+      self.var_dict[name]=var_dict
+      self.variables[name]=name
       
 
       self.var_dict[name]=var_dict
@@ -2027,54 +2019,50 @@ class state(object):
 
     if axis.upper() == 'XY' or axis.upper() == 'YX':
 
+      if var_dict['X'] is None and var_dict['Y'] is None:
+        return 
+      
       if normalize:
-          result = np.sum(np.sum(sout*dz_masked*dy_masked*dx_masked,axis=3),axis=2)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=2)
-          result=np.reshape(result,(sout.shape[0],sout.shape[1],1,1))
+          if self.var_dict[field]['Ztype']=='Fixed':
+              result = np.sum(np.sum(sout*dx*dy*dz,axis=3),axis=2)/np.sum(np.sum(dx*dy*dz,axis=2),axis=1)
+          else:
+              result = np.sum(np.sum(sout*dx*dy*dz,axis=3),axis=2)/np.sum(np.sum(dx*dy*dz,axis=3),axis=2)
+          result=np.reshape(result,(nt,nz,1,1))
           name = field+'_xyav'
       else:
-          result = np.sum(np.sum(sout*dz_masked*dy_masked*dx_masked,axis=3),axis=2)
-          result=np.reshape(result,(sout.shape[0],sout.shape[1],1,1))
+          result = np.sum(np.sum(sout*dx*dy*dz,axis=3),axis=2)
+          result=np.reshape(result,(nt,nz,1,1))
           name = field+'_xyint'
-
           
       vars(self)[name]=result
 
-      if var_dict['Z'] is not None:      
-        var_dict['dz'] = np.sum(np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=3),axis=2)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=2)
-        var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],sout.shape[1],1,1))
-        if not is_interface_var :
-            result = np.sum(np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=3),axis=2)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=2)
-            result = np.reshape(result,(sout.shape[0],sout.shape[1],1,1))
-            var_dict['dz']=result.copy()
-            zi = -np.cumsum(result,axis=1)
-            if var_dict['Ztype'] is 'Fixed':
-                z0 = [0]
-                z0 = np.reshape(z0,(1,1,1,1))
-                zi=np.take(zi,[0],axis=0)
-                zi=np.concatenate((z0,zi),axis=1)
-                var_dict['z_interfaces']=zi.copy()
-                tmp=0.5*(zi + np.roll(zi,axis=0,shift=-1))
-                tmp = tmp[0:-1,:,:]
-                var_dict['z']=tmp                
-            else:
-                z0 = [0]
-                z0 = np.reshape(z0,(1,1,1,1))                
-                zi=np.concatenate((z0,zi),axis=1)            
-                var_dict['z_interfaces']=zi.copy()
-                tmp=0.5*(zi + np.roll(zi,axis=1,shift=-1))
-                tmp = tmp[:,0:-1,:,:]                
-                var_dict['z']=tmp
-
+      
+      if var_dict['Z'] is not None:
+        if var_dict['Ztype'] is 'Fixed':
+            var_dict['dz'] = np.sum(np.sum(dz*dz*dy*dx,axis=2),axis=1)/np.sum(np.sum(dz*dy*dx,axis=2),axis=1)
+            var_dict['dz']=np.reshape(var_dict['dz'],(nz,1,1))      
+            z0 = np.take(var_dict['z_interfaces'],[0],axis=0)
+            result = np.sum(np.sum(z0*dy*dx,axis=2),axis=1)/np.sum(np.sum(dy*dx,axis=1),axis=0)
+            result = np.reshape(result,(1,1,1))
+            var_dict['z_interfaces']=-np.cumsum(var_dict['dz'],axis=0)
+            var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=0)
+            var_dict['z']=0.5*(var_dict['z_interfaces'][:-1,:] + var_dict['z_interfaces'][1:,:])
         else:
-            var_dict['z_interfaces']=None
-            
+            var_dict['dz'] = np.sum(np.sum(dz*dz*dy*dx,axis=3),axis=2)/np.sum(np.sum(dz*dy*dx,axis=3),axis=2)  
+            var_dict['dz']=np.reshape(var_dict['dz'],(nt,nz,1,1))      
+            z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
+            result = np.sum(np.sum(z0*dy*dx,axis=3),axis=2)/np.sum(np.sum(dy*dx,axis=1),axis=0)
+            result = np.reshape(result,(nt,1,1,1))
+            var_dict['z_interfaces']=-np.cumsum(var_dict['dz'],axis=1)
+            var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=1)
+            var_dict['z']=0.5*(var_dict['z_interfaces'][:,:-1,:] + var_dict['z_interfaces'][:,1:,:])
 
-
-      var_dict['X']=None
-      var_dict['Y']=None      
-      var_dict['xax_data']=[np.mean(var_dict['xax_data'])]
-      var_dict['yax_data']=[np.mean(var_dict['yax_data'])]      
+        
       var_dict['rootgrp']=None
+      var_dict['X']=None
+      var_dict['xax_data']=[np.mean(var_dict['xax_data'])]
+      var_dict['Y']=None
+      var_dict['yax_data']=[np.mean(var_dict['yax_data'])]
       
 
       self.var_dict[name]=var_dict
@@ -2084,93 +2072,13 @@ class state(object):
       
     if axis.upper() == 'XZ' or axis.upper() == 'ZX':
 
-      if var_dict['Z'] is None or var_dict['X'] is None:
-        return None
-
-      if normalize:
-          result = np.sum(np.sum(sout*dz_masked*dy_masked*dx_masked,axis=3),axis=1)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=1)
-          result=np.reshape(result,(result.shape[0],1,result.shape[1],1))
-          name = field+'_xzav'
-      else:
-          result = np.sum(np.sum(sout*dz_masked*dy_masked*dx_masked,axis=3),axis=1)
-          result=np.reshape(result,(result.shape[0],1,result.shape[1],1))
-          name = field+'_xzint'
-          
-      vars(self)[name]=result
-      
-      var_dict['dz'] = np.sum(np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=3),axis=1)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=3),axis=1)
-      var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],1,sout.shape[2],1))            
-
-      z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
-      dy0 = np.take(dy_masked,[0],axis=1)
-      dx0 = np.take(dx_masked,[0],axis=1)      
-      result = np.sum(z0*dy0*dx0,axis=3)/np.sum(dy0*dx0,axis=3)
-      result = result[:,:,:,np.newaxis]
-
-      var_dict['z_interfaces']=-np.reshape(np.sum(var_dict['dz'],axis=1),(sout.shape[0],1,sout.shape[2],1))
-    
-      var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=1)
-
-      var_dict['z_indices']=[0]
-      var_dict['zax_data']=[np.mean(var_dict['zax_data'])]
-      var_dict['zbax_data']=[var_dict['zbax_data'][0],var_dict['zbax_data'][-1]]
-      
-      if var_dict['Ztype'] == 'Fixed':
-        var_dict['z_interfaces']=np.take(var_dict['z_interfaces'],[0],axis=0)
-
-      var_dict['Z']=None
-      var_dict['X']=None
-      var_dict['xax_data']=[np.mean(var_dict['xax_data'])]
-      var_dict['rootgrp']=None
-      
-
-      self.var_dict[name]=var_dict
-      self.variables[name]=name
-      
+        print 'XZ integrals not implemented '
+        return
 
     if axis.upper() == 'YZ' or axis.upper() == 'ZY':
 
-      if var_dict['Z'] is None or var_dict['Y'] is None:
-        return None
-
-      if normalize:
-          result = np.sum(np.sum(sout*dx_masked*dy_masked*dz_masked,axis=2),axis=1)/np.sum(np.sum(dx_masked*dy_masked*dz_masked,axis=2),axis=1)
-          result=np.reshape(result,(result.shape[0],1,1,result.shape[1]))
-          name = field+'_yzav'
-      else:
-          result = np.sum(np.sum(sout*dx_masked*dy_masked*dz_masked,axis=2),axis=1)
-          result=np.reshape(result,(result.shape[0],1,1,result.shape[1]))
-          name = field+'_yzint'
-          
-      vars(self)[name]=result
-      
-      var_dict['dz'] = np.sum(np.sum(dz_masked*dz_masked*dy_masked*dx_masked,axis=2),axis=1)/np.sum(np.sum(dz_masked*dy_masked*dx_masked,axis=2),axis=1)
-      var_dict['dz']=np.reshape(var_dict['dz'],(sout.shape[0],1,1,sout.shape[3]))                  
-
-      z0 = np.take(var_dict['z_interfaces'],[0],axis=1)
-      dy0 = np.take(dy_masked,[0],axis=1)
-      dx0 = np.take(dx_masked,[0],axis=1)      
-      result = np.sum(z0*dy0*dx0,axis=2)/np.sum(dy0*dx0,axis=2)
-      result = np.reshape(result,(sout.shape[0],1,1,sout.shape[3]))
-      var_dict['z_interfaces']=-np.reshape(np.sum(var_dict['dz'],axis=1),(sout.shape[0],1,1,sout.shape[3]))
-    
-      var_dict['z_interfaces']=np.concatenate((result,var_dict['z_interfaces']),axis=1)
-
-      var_dict['z_indices']=[0]
-      var_dict['zax_data']=[np.mean(var_dict['zax_data'])]
-      var_dict['zbax_data']=[var_dict['zbax_data'][0],var_dict['zbax_data'][-1]]
-      
-      if var_dict['Ztype'] == 'Fixed':
-        var_dict['z_interfaces']=np.take(var_dict['z_interfaces'],[0],axis=0)
-
-      var_dict['Z']=None
-      var_dict['Y']=None
-      var_dict['yax_data']=[np.mean(var_dict['yax_data'])]      
-      var_dict['rootgrp']=None
-      
-
-      self.var_dict[name]=var_dict
-      self.variables[name]=name
+        print 'YZ integrals not implemented '
+        return
 
     if axis.upper() == 'XYZ':
 
@@ -2178,11 +2086,11 @@ class state(object):
         return None      
 
       if normalize:
-          result = np.sum(np.sum(np.sum(sout*dx_masked*dy_masked*dz_masked,axis=3),axis=2),axis=1)/np.sum(np.sum(np.sum(dx_masked*dy_masked*dz_masked,axis=3),axis=2),axis=1)
+          result = np.sum(np.sum(np.sum(sout*dx*dy*dz,axis=3),axis=2),axis=1)/np.sum(np.sum(np.sum(dx*dy*dz,axis=3),axis=2),axis=1)
           result=np.reshape(result,(result.shape[0],1,1,1))
           name = field+'_xyzav'
       else:
-          result = np.sum(np.sum(np.sum(sout*dx_masked*dy_masked*dz_masked,axis=3),axis=2),axis=1)
+          result = np.sum(np.sum(np.sum(sout*dx*dy*dz_masked,axis=3),axis=2),axis=1)
           result=np.reshape(result,(result.shape[0],1,1,1))
           name = field+'_xyzint'
           
@@ -2334,13 +2242,13 @@ class state(object):
             var_dict['dz'] = np.reshape(var_dict['dz'],(nt,shape[1],shape[2],shape[3]))            
 
         else:
-            var_dict['z_interfaces']=sq(interfaces)
+            var_dict['z_interfaces']=np.reshape(sq(interfaces),(shape[1]+1,shape[2],shape[3]))
             dz=np.ma.zeros(np.hstack(sout.shape[1:]))
             for k in np.arange(0,sout.shape[1]):
                 dz[k,:,:]=interfaces[k,:,:]-interfaces[k+1,:,:]                    
             var_dict['dz']=dz
-            tmp = 0.5*(var_dict['z_interfaces']+np.roll(var_dict['z_interfaces'],axis=0,shift=-1))
-            var_dict['z'] = tmp[0:-1,:,:]
+            tmp = 0.5*(var_dict['z_interfaces'][1:]+var_dict['z_interfaces'][0:-1])
+            var_dict['z'] = tmp
             var_dict['z'] = np.reshape(var_dict['z'],(shape[1],shape[2],shape[3]))
             var_dict['dz'] = np.reshape(var_dict['dz'],(shape[1],shape[2],shape[3]))
 
@@ -2361,7 +2269,7 @@ class state(object):
         var_dict['T'] = 'time'
         var_dict['dt']=[np.sum(dt)]      
         var_dict['tax_data'] = avg_time    
-
+        
 
     var_dict['rootgrp']=None
 
@@ -4270,7 +4178,8 @@ class state(object):
 
 #               print "adjusted time stamps = ",tdat
             outv.append(f.variables[field])
-            
+           
+        
         nt=len(tdat)
         tstart=len(tv[:])
     else:    
@@ -4365,10 +4274,13 @@ class state(object):
             FillValue=None
             if self.var_dict[field]['_FillValue'] is not None:
                 FillValue = self.var_dict[field]['_FillValue']          
-#                var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
-                var=f.createVariable(field,'f4',dimensions=dims)                
+                var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
             else:
-                var=f.createVariable(field,'f4',dimensions=dims)      
+                if self.var_dict[field]['missing_value'] is not None:
+                    FillValue = self.var_dict[field]['missing_value']
+                    var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)      
+                else:
+                    var=f.createVariable(field,'f4',dimensions=dims)      
             if self.var_dict[field]['missing_value'] is not None:
                 var.missing_value = self.var_dict[field]['missing_value']
 
