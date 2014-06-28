@@ -1063,10 +1063,13 @@ class state(object):
 
        slice_int_read = [];shape_int_read = []; shape_int_out=[]; slice_int_out = []
 
-       if var_dict['Ztype'] == 'Fixed':
-           dims_list = [z_interfaces,y_indices]
+       if var_dict['Z'] is None:
+           dims_list = [y_indices]
        else:
-           dims_list = [t_indices,z_interfaces,y_indices]
+           if var_dict['Ztype'] == 'Fixed':
+               dims_list = [z_interfaces,y_indices]
+           else:
+               dims_list = [t_indices,z_interfaces,y_indices]
            
        for s in dims_list:
          if s is not None:
