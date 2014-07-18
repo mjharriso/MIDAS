@@ -7,7 +7,7 @@ DESCRIPTION
  metadata information pertaining to variable attributes
  (units, standard name, ...) as well as the quadrilateral horizontal
  grid mesh on which the data reside and optional vertical cell boundaries
- between adjacent layers are stored (in a dictionary) for each feild.
+ between adjacent layers are stored (in a dictionary) for each field.
 
  To the extent possible, MIDAS follows CF conventions, however, the 
  encoding of grid cell and variable attributes is specific to this 
@@ -174,6 +174,9 @@ EXAMPLES
 	python hinterp_example.py # fms/horiz_interp does bi-linear interpolation from the original
 	                          # 1-deg to a 5-deg grid with masking
 	python hist.py            # volume-weighted histogram of salinity in the Indian Ocean
+	python subtile.py         # use subtiling algorithm to calculate un-weighted
+ 	       			  # cell average bathymetry and roughness. Example along the Eastern US 
+
 	
 USAGE
 =====
@@ -184,22 +187,15 @@ USAGE
 	# or contact your system administrator.
 	
 	ipython
-	>>> import midas
-	>>> midas.[Tab]   # complete listing of methods 
-	>>> midas.state?  # Description of state instance
-	>>> midas.state.[Tab] # available methods for state objects
-	>>> midas.state.volume_integrals?  # integrate scalars over the domain
-	                                   # in 'X','Y','Z','XY','XZ',...
-	                                   
-	
-	>>> midas.rectgrid? # a generic rectangular grid description
+	>>> import midas.rectgrid as rectgrid
+	>>> rectgrid.[Tab]   # complete listing of methods 
+	>>> rectgrid.quadmesh       # a generic rectangular grid description
 				    # Can be read from a file or provided as
 				    # 2-d lat/lon position arrays.
-	>>> import midas.hinterp
-	>>> midas.hinterp.hinterp_mod.hinterp? # docstring for Python interface
-	                                       # to fms/shared/horiz_interp
-	                                       # this module is not called directly in MIDAS,
-	                                       # but via a class method.
+	>>> rectgrid.state?  # Description of state instance
+	>>> state.state.[Tab] # available methods for state objects
+	>>> rectgrid.state.volume_integral?  # integrate scalars over the domain
+	                                   # in 'X','Y','Z','XY','XZ',...
 	                                      
 	                                      
 UPDATING TO LATEST ON GitHub 
