@@ -1,18 +1,10 @@
 """
 ==============================
 
- MIDAS specializes in handling data on a 2-dimensional
- lattice of grid cells lying in a 
- cartesian space or on a sphere.  The vertical
- coordinate accomodates generalized surfaces
- i.e. surfaces which are static dynamic in time.
-
- MIDAS (Modular Isosurface Data Analysis System)
+ MIDAS (Modular Iso-surface Data Analysis System)
  was first developed by Matthew Harrison
- in 2011-2012 as an employee of NOAA in the 
- GFDL Oceans and Climate Group. MIDAS is being made readily
- available through Github.  #NOAA#GFDL
- 
+ starting in 2011 as an employee of NOAA in the 
+ GFDL Oceans and Ice Sheet Processes Group. 
 
  This work is licensed under the Creative Commons
  Attribution-NonCommercial-ShareAlike 3.0 Unported License.
@@ -27,7 +19,7 @@
 doclines = __doc__.split("\n")
 
 
-from numpy.distutils.core import Extension
+from numpy.distutils.core import setup,Extension
 
 remap_sfc_fluxes = Extension(name = 'midas.remap_sfc_fluxes',
                 sources = ['remap_sfc_fluxes/remap_sfc_fluxes.f90'])
@@ -55,7 +47,7 @@ vertmap_ALE = Extension(name = 'midas.vertmap_ALE',
 if __name__ == '__main__':
     from numpy.distutils.core import setup
     setup(name = "midas",
-          version = '1.0',
+          version = '1.1',
           description = doclines[0],
           long_description = "\n".join(doclines[2:]),
           author = "Matthew Harrison",

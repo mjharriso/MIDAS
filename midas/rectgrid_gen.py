@@ -1,6 +1,20 @@
+"""
+==============================
+
+ This work is licensed under the Creative Commons
+ Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+ To view a copy of this license, visit   
+ http://creativecommons.org/licenses/by-nc-sa/3.0/
+ or send a letter to Creative Commons, 444 Castro Street,
+ Suite 900, Mountain View, California, 94041, USA.
+
+===============================
+"""
+
+
 import numpy as np
 import netCDF4 as nc
-from midas_grid_utils import *
+from rectgrid_utils import *
 import copy
 
     
@@ -14,7 +28,7 @@ class supergrid(object):
 
       A super-grid for FMS-based models.
 
-      >>> from midas_grid_gen import *
+      >>> from midas.rectgrid_gen import *
       >>> import hashlib
       >>> x=np.arange(0.,360.);y=np.arange(-90.,90.);X,Y=np.meshgrid(x,y)
       >>> sgrid=supergrid(xdat=X,ydat=Y)
@@ -209,7 +223,7 @@ class supergrid(object):
     """
     Returns the grid increment in the j direction given y in radians
  
-    >>> from midas_grid_gen import *
+    >>> from midas.rectgrid_gen import *
     >>> import hashlib
     >>> sgrid=supergrid(360,180,'mercator','degrees',-60.,120.,0.,360.)
     >>> dydj=sgrid.dy_dj(0.)
@@ -233,7 +247,7 @@ class supergrid(object):
     """
     Returns the grid increment in the j direction given y in radians
  
-    >>> from midas_grid_gen import *
+    >>> from midas.rectgrid_gen import *
     >>> import hashlib
     >>> sgrid=supergrid(360,180,'mercator','degrees',-60.,120.,0.,360.)
     >>> dsdj=sgrid.ds_dj(0.)
@@ -252,16 +266,13 @@ class supergrid(object):
     """
     Returns the grid increment in the i direction
  
-    >>> from midas_grid_gen import *
+    >>> from midas.rectgrid_gen import *
     >>> import hashlib
     >>> sgrid=supergrid(360,180,'mercator','degrees',-60.,120.,0.,360.)
     >>> dxdi=sgrid.dx_di(0.);dxdi=np.asarray(dxdi)
     >>> hash=hashlib.md5(dxdi)
     >>> print hash.hexdigest()
     bb119dc580e9847bc3ef6ca9237b5f0d
-    >>> from midas_grid_gen import *
-    >>> import hashlib
-    >>> sgrid=supergrid(360,180,'mercator','degrees',-60.,120.,0.,360.)
     >>> dsdi=sgrid.ds_di(0.,0.);dsdi=np.asarray(dsdi)
     >>> hash=hashlib.md5(dsdi)
     >>> print hash.hexdigest()
@@ -475,7 +486,7 @@ class supergrid(object):
     Displace the pole of the grid to (ra2,phia) with an option
     to exclude a portion of the grid nearest the pole
 
-    >>> from midas_grid_gen import *
+    >>> from midas.rectgrid_gen import *
     >>> import hashlib
     >>> sgrid=supergrid(360,30,'spherical','degrees',-90.,30.,0.,360.)
     >>> r,phi = sgrid.displaced_pole(0.25,180.)

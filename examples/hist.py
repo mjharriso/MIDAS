@@ -1,11 +1,11 @@
-from midas import *
-import matplotlib.pylab as pylab
+from midas.rectgrid import *
+import matplotlib.pyplot as plt
 
 print """\n
          Produce a volume-weighted histogram
          from WOA09 salinity data in the Indian Ocean\n"""
 
-grid=rectgrid('http://data.nodc.noaa.gov/thredds/dodsC/woa09/salinity_annual_1deg.nc',var='s_an')
+grid=quadmesh('http://data.nodc.noaa.gov/thredds/dodsC/woa09/salinity_annual_1deg.nc',var='s_an')
 iop=grid.geo_region(x=(30,160),y=(-30,25))
 S=state('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/salinity_annual_1deg.nc',grid=grid,geo_region=iop,fields=['s_an'],default_calendar='noleap')
 
@@ -41,15 +41,7 @@ wt=np.ma.masked_where(b.mask,wt)
 bm= np.sum(c)/np.sum(wt)
 
 
-plt.clf()
-
 n,bins,patches = plt.hist(b,bins=np.arange(30,36.5,.1),weights=wt,normed=True,cumulative=False,color='blue')
-
-#n=n/np.sum(n*np.diff(bins))
-#bins_mid = 0.5*(bins + np.roll(bins,shift=1))
-#bins_mid = bins_mid[0:-1]
-#plt.bar(bins_mid,n)
-
 plt.xlim(30,36.5)
 plt.plot([bm,bm],[0,5],'r-')
 plt.grid()
@@ -62,9 +54,7 @@ S=state('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/salinity_a
 b = sq(S.s_an)
 area=S.grid.Ah
 area=area[np.newaxis,:]
-
 vol = np.tile(S.grid.Ah,(1,2,1,1))*S.var_dict['s_an']['dz']
-print vol.shape
 wt = vol.flatten()
 b=b.flatten()
 c=b*wt

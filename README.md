@@ -1,3 +1,46 @@
+DESCRIPTION
+===========
+
+ MIDAS is a Python package primarily for processing
+ gridded data stored in CF-compliant NetCDF format
+ (http://cfconventions.org). Accompanying
+ metadata information pertaining to variable attributes
+ (units, standard name, ...) as well as the quadrilateral horizontal
+ grid mesh on which the data reside and optional vertical cell boundaries
+ between adjacent layers are stored (in a dictionary) for each feild.
+
+ To the extent possible, MIDAS follows CF conventions, however, the 
+ encoding of grid cell and variable attributes is specific to this 
+ application. The grid and field variable dictionaries are visible and malleable
+ which is not without its disadvantages. It is entirely possible that
+ this package will evolve to a more CF-like convention for class 
+ methods. For example, instead of the current field.dict['units'] syntax
+ a more fully class-based method could be used, i.e. field.get_units().
+ 
+
+ A handful of class methods have been employed which make use of 
+ the stored information. For example, spatial interpolation between quad meshes 
+ (FMS) and temporal interpolation between calendar dates (Datetime). Spatial
+ integration in one to three cartesian directions, e.g. 'X','XY' or 'XYZ' 
+ and temporal averaging (Datetime).
+ 
+ 
+ MIDAS (Modular Isosurface Data Analysis System) was first developed by 
+ Matthew Harrison 2011-2012 as an employee of NOAA in the 
+ GFDL Oceans and Climate Group. The goal of this project is to produce a
+ class for handling finite volume representations of numerical model output
+ produced by GOLD and later MOM6. The resulting class instances can be spatially
+ and temporally processed and saved for additional analysis and visualization.
+
+
+ This work is licensed under the Creative Commons
+ Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+ To view a copy of this license, visit   
+ http://creativecommons.org/licenses/by-nc-sa/3.0/
+ or send a letter to Creative Commons, 444 Castro Street,
+ Suite 900, Mountain View, California, 94041, USA.
+
+
 INSTALL 
 =======
 

@@ -1,7 +1,19 @@
-from midas_utils import *
+"""
+==============================
+
+ This work is licensed under the Creative Commons
+ Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+ To view a copy of this license, visit   
+ http://creativecommons.org/licenses/by-nc-sa/3.0/
+ or send a letter to Creative Commons, 444 Castro Street,
+ Suite 900, Mountain View, California, 94041, USA.
+
+===============================
+"""
+
+from utils import *
 from wright_eos import *
 import copy
-import matplotlib.pyplot as plt
 import scipy as sp
 import netCDF4 as nc
 from dateutil import parser

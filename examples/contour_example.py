@@ -1,12 +1,11 @@
-from midas import *
-
+from midas.rectgrid import *
+import matplotlib.pyplot as plt
 # This is a simple plot routine. I spent about 5 minutes 
 # making this... 
 
 
 k_plt = 10
-
-grid_obs=rectgrid(path='http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an')
+grid_obs=quadmesh(path='http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an')
 S=state(path='http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',grid=grid_obs,geo_region=None,fields=['t_an'],z_indices=np.arange(k_plt,k_plt+1))
 
 xax=S.grid.x_T

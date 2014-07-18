@@ -1,3 +1,16 @@
+"""
+==============================
+
+ This work is licensed under the Creative Commons
+ Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+ To view a copy of this license, visit   
+ http://creativecommons.org/licenses/by-nc-sa/3.0/
+ or send a letter to Creative Commons, 444 Castro Street,
+ Suite 900, Mountain View, California, 94041, USA.
+
+===============================
+"""
+
 import numpy as np
 
 
@@ -10,8 +23,8 @@ def min_resolution(grid=None,x=None,y=None):
   the adjacent point to its left along a 1-dimensional
   axis or 2-d regular grid.
 
-  >>> import midas_grid_utils
-  >>> min_dx=midas_grid_utils.min_resolution(x=[0.9999,1.0,2.0])
+  >>> import rectgrid_utils
+  >>> min_dx=rectgrid_utils.min_resolution(x=[0.9999,1.0,2.0])
   >>> print min_dx[0]
   0.0001
   """
@@ -38,8 +51,8 @@ def max_resolution(grid=None,x=None,y=None):
   the adjacent point to its left along a 1-dimensional
   axis or 2-d regular grid.
 
-  >>> import midas_grid_utils
-  >>> max_dx=midas_grid_utils.max_resolution(x=[0.9999,1.0,2.0,10.0])
+  >>> import rectgrid_utils
+  >>> max_dx=rectgrid_utils.max_resolution(x=[0.9999,1.0,2.0,10.0])
   >>> print max_dx[0]
   8.0
   """
@@ -67,12 +80,12 @@ def find_axis_bounds(axis,x=None,modulo_360=False):
   Returns the bounding indices for axis in the
   range x.
 
-  >>> import midas_grid_utils
+  >>> import rectgrid_utils
   >>> import numpy as np
   >>> axis=np.arange(0.,10.,1.)
-  >>> xs,xe=midas_grid_utils.find_axis_bounds(axis,x=[3.,5.])
+  >>> xs,xe=rectgrid_utils.find_axis_bounds(axis,x=[3.,5.])
   >>> print xs,xe
-  3 5
+  3 4
   """
 
   [max_dx,junk] = max_resolution(x=axis)  
@@ -87,7 +100,7 @@ def find_axis_bounds(axis,x=None,modulo_360=False):
         xmax=xmax-360.
     res = np.nonzero(np.abs(axis - xmin) < max_dx)
     xs = res[0][0]
-    res = np.nonzero(np.abs(axis - xmax) < max_dx)
+    res = np.nonzero(np.abs(axis - xmax) <= max_dx)
     xe = res[0][0]
 
 
@@ -98,10 +111,10 @@ def cartesian_dist(x1,y1,x2,y2,metric):
     """
     Calculate the distance between (x1,y1) and (x2,y2) on a cartesian grid
 
-    >>> import midas_grid_utils
+    >>> import rectgrid_utils
     >>> x1=0.0;x2=1.0;y1=0.0;y2=1.0
     >>> metric=1.0
-    >>> d=midas_grid_utils.cartesian_dist(x1,y1,x2,y2,metric)
+    >>> d=rectgrid_utils.cartesian_dist(x1,y1,x2,y2,metric)
     >>> print d
     1.41421356237
     """
@@ -115,10 +128,10 @@ def spherical_dist_latlon(x1,y1,x2,y2,metric):
     Calculate the distance between (x1,y1) and (x2,y2) on a sphere along lines
     of constant latitude or longitude
 
-    >>> import midas_grid_utils
+    >>> import rectgrid_utils
     >>> x1=0.0;x2=1.0;y1=0.0;y2=0.0
     >>> metric=R_earth
-    >>> d=midas_grid_utils.spherical_dist_latlon(x1,y1,x2,y2,metric)
+    >>> d=rectgrid_utils.spherical_dist_latlon(x1,y1,x2,y2,metric)
     >>> print d
     6371000.0
     """
@@ -140,9 +153,9 @@ def mdist(x1,x2):
   """
   Returns positive distance modulo 360.
 
-  >>> import midas_grid_utils
+  >>> import rectgrid_utils
   >>> x1=0.0;x2=730.
-  >>> d=midas_grid_utils.mdist(x1,x2)
+  >>> d=rectgrid_utils.mdist(x1,x2)
   >>> print d
   10.0
   """
