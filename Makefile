@@ -5,6 +5,6 @@ all: MIDAS
 
 MIDAS: 
 	-rm -rf build/*
-	python setup_default.py install --home=$(INSTALL_PATH)
+	python setup.py install --home=$(INSTALL_PATH)
 
 

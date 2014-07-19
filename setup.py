@@ -19,31 +19,6 @@
 doclines = __doc__.split("\n")
 
 
-from numpy.distutils.core import setup,Extension
-
-remap_sfc_fluxes = Extension(name = 'midas.remap_sfc_fluxes',
-                sources = ['remap_sfc_fluxes/remap_sfc_fluxes.f90'])
-
-hinterp = Extension(name = 'midas.hinterp',
-                include_dirs = ['fms_build'],
-                library_dirs = ['fms_build'],
-                libraries = ['fms','netcdf','netcdff'],
-                extra_objects = ['fms_build/*.o'],
-                sources = ['hinterp/hinterp.f90'])
-
-
-
-vertmap_GOLD = Extension(name = 'midas.vertmap_GOLD',
-                sources = ['vertmap_GOLD/vertmap_GOLD.F90']
-                )
-
-vertmap_ALE = Extension(name = 'midas.vertmap_ALE',
-                include_dirs = ['MOM6_ALE/build_ale'],
-                library_dirs = ['MOM6_ALE/build_ale'],
-                libraries = ['ale'],                        
-                sources = ['MOM6_ALE/pyale.f90'])
-
-
 if __name__ == '__main__':
     from numpy.distutils.core import setup
     setup(name = "midas",
@@ -56,6 +31,5 @@ if __name__ == '__main__':
           license = 'CCL',
           platforms = ["any"],
           packages=['midas'],
-          ext_modules = [hinterp,remap_sfc_fluxes,vertmap_GOLD,vertmap_ALE],
           )
     

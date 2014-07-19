@@ -8,7 +8,6 @@ tmp/
 path_names*
 pt_orig*
 *~
-Makefile
 *.a
 *.o
 *.mod
