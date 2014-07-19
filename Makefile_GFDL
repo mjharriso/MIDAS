@@ -1,0 +1,26 @@
+# To use
+#
+# module load python
+# module load netcdf/4.2
+# module load intel_compilers
+
+SHELL=bash
+PYTHONPATH = "/home/$(USER)/local"
+
+all: MIDAS
+
+MIDAS: fms_build/libfms.a MOM6_ALE/build_ale/libale.a
+	-rm -rf build/*
+	python setup.py config_fc --f90flags="-i4 -r8 -DPY_SOLO" --fcompiler=intelem build
+ 	python setup.py install --home=$(PYTHONPATH)
+
+
+fms_build/libfms.a:
+	cd fms;tar xvf fms_tikal_201312.tar
+	(cd fms_build;./build_fms.csh)
+
+MOM6_ALE/build_ale/libale.a: 
+	(cd MOM6_ALE/build_ale;./build_ale.csh)
+
+
+
