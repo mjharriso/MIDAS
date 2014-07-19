@@ -15,23 +15,22 @@ DESCRIPTION
  which is not without its disadvantages. It is entirely possible that
  this package will evolve to a more CF-like convention for class 
  methods. For example, instead of the current field.dict['units'] syntax
- a more fully class-based method could be used, i.e. field.get_units().
+ a method-based approach, i.e. field.get_units(), would be desirable.
  
 
- A handful of class methods have been employed which make use of 
- the stored information. For example, spatial interpolation between quad meshes 
- (FMS) and temporal interpolation between calendar dates (Datetime). Spatial
- integration in one to three cartesian directions, e.g. 'X','XY' or 'XYZ' 
+ A handful of functions have been employed which make use of 
+ the stored information. For example: spatial interpolation between quad meshes 
+ (FMS) and temporal interpolation between calendar dates (Datetime); spatial
+ integration in one to three cartesian directions, e.g. 'X','XY' or 'XYZ'; 
  and temporal averaging (Datetime).
  
  
  MIDAS (Modular Isosurface Data Analysis System) was first developed by 
  Matthew Harrison 2011-2012 as an employee of NOAA in the 
  GFDL Oceans and Climate Group. The goal of this project is to produce a
- class for handling finite volume representations of numerical model output
- produced by GOLD and later MOM6. The resulting class instances can be spatially
- and temporally processed and saved for additional analysis and visualization.
-
+ convenient and internally consistent environment in which to work with 
+ gridded output from numerical models.    
+ 
 
  This work is licensed under the Creative Commons
  Attribution-NonCommercial-ShareAlike 3.0 Unported License.
