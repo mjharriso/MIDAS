@@ -55,6 +55,7 @@ COMPLETE BUILD
 ==============
 
 cd /home/$USER/$install_dir
+
 git clone https://github.com/mjharriso/MIDAS.git
 
 # Alternatively using ssh
@@ -63,6 +64,7 @@ git clone https://github.com/mjharriso/MIDAS.git
 cd MIDAS
 
 # simple install. Pure Python.
+
 make   
 
 # With F90 external modules using gFortran
