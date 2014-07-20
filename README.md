@@ -40,38 +40,39 @@ DESCRIPTION
  Suite 900, Mountain View, California, 94041, USA.
 
 
+
+CONDA INSTALL 
+==============
+
+Python only, no extensions.
+
+For Anaconda users: 
+
+conda install -c https://conda.binstar.org/matthewharrison midas
+	
+	
 INSTALL 
 =======
 
-	# (Tested on: Linux 3.8.0-30-generic i686 with GFortran and gcc version 4.7.3)
-	
-	# On i686-linux platform with NetCDF library compiled using gFortran
-	# NOTE: 'extra_objects' are redundant in this environment.
+# (Tested on: Linux 3.8.0-30-generic i686 with GFortran and gcc version 4.7.3)
+# On i686-linux platform with NetCDF library compiled using gFortran
+# NOTE: 'extra_objects' are redundant in this environment.
+cd /home/$USER/$install_dir
+git clone https://github.com/mjharriso/MIDAS.git
+# Alternatively using ssh
+# git clone git@github.com:mjharriso/MIDAS.git
+cd MIDAS
+# simple install. Pure Python.
+make   
+# With F90 external modules using gFortran
+make -f Makefile_gfortran
 
-        # From the shell
-        
-	cd /home/$USER/$install_dir
-	
-	git clone https://github.com/mjharriso/MIDAS.git
-	# Alternatively using ssh
-	# git clone git@github.com:mjharriso/MIDAS.git
-	
-	cd MIDAS
-	# simple install. Pure Python.
-	# ============================
-
-	make   
-
-	# With F90 external modules using gFortran
-	# =======================================
-	make -f Makefile_gfortran
-
-	# On GFDL HPCS using Intel
-	# ============
-	module load python
-	module load netcdf/4.2
-	module load intel_compilers
-	make -f Makefile_GFDL
+# On GFDL HPCS using Intel
+# ========================
+module load python
+module load netcdf/4.2
+module load intel_compilers
+make -f Makefile_GFDL
 	
 
 EXAMPLES
