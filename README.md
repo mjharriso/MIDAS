@@ -41,80 +41,69 @@ DESCRIPTION
 
 
 
-CONDA INSTALL 
-==============
+INSTALL 
+=======
 
-Python only, no extensions.
 
-For Anaconda users: 
+
+For Anaconda users (Python only, no extensions) 
 
 conda install -c https://conda.binstar.org/matthewharrison midas
 	
 	
-INSTALL 
-=======
+COMPLETE BUILD
+==============
 
-# (Tested on: Linux 3.8.0-30-generic i686 with GFortran and gcc version 4.7.3)
-# On i686-linux platform with NetCDF library compiled using gFortran
-# NOTE: 'extra_objects' are redundant in this environment.
 cd /home/$USER/$install_dir
 git clone https://github.com/mjharriso/MIDAS.git
+
 # Alternatively using ssh
 # git clone git@github.com:mjharriso/MIDAS.git
+
 cd MIDAS
+
 # simple install. Pure Python.
 make   
+
 # With F90 external modules using gFortran
-make -f Makefile_gfortran
+#make -f Makefile_gfortran
 
 # On GFDL HPCS using Intel
-# ========================
-module load python
-module load netcdf/4.2
-module load intel_compilers
-make -f Makefile_GFDL
+#module load python
+#module load netcdf/4.2
+#module load intel_compilers
+#make -f Makefile_GFDL
 	
 
 EXAMPLES
 ========
 
-	cd examples
-	python contour_example.py # Fetches OpenDAP URL from NODC and plots with Matplotlib
-	python hinterp_example.py # fms/horiz_interp does bi-linear interpolation from the original
+cd examples
+python contour_example.py # Fetches OpenDAP URL from NODC and plots with Matplotlib
+python hinterp_example.py # fms/horiz_interp does bi-linear interpolation from the original
 	                          # 1-deg to a 5-deg grid with masking
-	python hist.py            # volume-weighted histogram of salinity in the Indian Ocean
-	python subtile.py         # use subtiling algorithm to calculate un-weighted
- 	       			  # cell average bathymetry and roughness. Example along the Eastern US 
+python hist.py            # volume-weighted histogram of salinity in the Indian Ocean
+python subtile.py         # use subtiling algorithm to calculate un-weighted
+ 	       		  # cell average bathymetry and roughness. Example along the Eastern US 
 
 	
 USAGE
 =====
 	
-
-	# STRONGLY RECOMMEND using the Ipython interpreter.
-	# If you are having trouble, submit a help desk ticket
-	# or contact your system administrator.
+# STRONGLY RECOMMEND using the Ipython interpreter.
+# If you are having trouble, submit a help desk ticket
+# or contact your system administrator.
 	
-	ipython
-	>>> import midas.rectgrid as rectgrid
-	>>> rectgrid.[Tab]   # complete listing of methods 
-	>>> rectgrid.quadmesh       # a generic rectangular grid description
-				    # Can be read from a file or provided as
-				    # 2-d lat/lon position arrays.
-	>>> rectgrid.state?  # Description of state instance
-	>>> state.state.[Tab] # available methods for state objects
-	>>> rectgrid.state.volume_integral?  # integrate scalars over the domain
-	                                   # in 'X','Y','Z','XY','XZ',...
+ipython
+>>> import midas.rectgrid as rectgrid
+>>> rectgrid.[Tab]   # complete listing of methods 
+>>> rectgrid.quadmesh       # a generic rectangular grid description
+			    # Can be read from a file or provided as
+			    # 2-d lat/lon position arrays.
+>>> rectgrid.state?  # Description of state instance
+>>> state.state.[Tab] # available methods for state objects
+>>> rectgrid.state.volume_integral?  # integrate scalars over the domain
+				     # in 'X','Y','Z','XY','XZ',...
 	                                      
 	                                      
-UPDATING TO LATEST ON GitHub 
-============================
 
-	cd /home/foo/install_dir/MIDAS
-	git status    
-	git fetch
-	# If you have updated your code, substitute a merge)
-	git pull
-	[python setup.py build from above]
-	[python setup.py install from above]
-	
