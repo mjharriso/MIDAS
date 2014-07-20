@@ -1373,7 +1373,7 @@ class state(object):
 
         var_dict['Ztype'] = 'Fixed'                            
         if self.interfaces is not None:
-            if var_dict['z_interfaces'].ndim == 4:
+            if self.interfaces.ndim == 4:
                 var_dict['Ztype'] = 'Generalized'
             else:
                 var_dict['Ztype'] = 'Fixed'                

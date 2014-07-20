@@ -20,7 +20,7 @@ doclines = __doc__.split("\n")
 
 
 if __name__ == '__main__':
-    from numpy.distutils.core import setup
+    from distutils.core import setup
     setup(name = "midas",
           version = '1.1',
           description = doclines[0],
