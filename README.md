@@ -8,7 +8,9 @@ DESCRIPTION
  (units, standard name, ...) as well as the quadrilateral horizontal
  grid mesh on which the data reside and optional vertical cell boundaries
  between adjacent layers are stored (in a dictionary) for each field.
-
+ The goal of this project is to produce a convenient and internally consistent 
+ environment for gridded output from numerical models. 
+ 
  To the extent possible, MIDAS follows CF conventions, however, the 
  encoding of grid cell and variable attributes is specific to this 
  application. The grid and field variable dictionaries are visible and malleable
@@ -27,9 +29,7 @@ DESCRIPTION
  
  MIDAS (Modular Isosurface Data Analysis System) was first developed by 
  Matthew Harrison 2011-2012 as an employee of NOAA in the 
- GFDL Oceans and Climate Group. The goal of this project is to produce a
- convenient and internally consistent environment in which to work with 
- gridded output from numerical models.    
+ GFDL Oceans and Climate Group.    
  
 
  This work is licensed under the Creative Commons
@@ -67,14 +67,15 @@ COMPLETE BUILD
 
 	make   
 
-	# With F90 external modules using gFortran
-	#make -f Makefile_gfortran
+	# OR With F90 external modules using gFortran
+	
+	make -f Makefile_gfortran
 
-	# On GFDL HPCS using Intel
-	#module load python
-	#module load netcdf/4.2
-	#module load intel_compilers
-	#make -f Makefile_GFDL
+	# OR On GFDL HPCS using Intel
+	module load python
+	module load netcdf/4.2
+	module load intel_compilers
+	make -f Makefile_GFDL
 	
 
 EXAMPLES
