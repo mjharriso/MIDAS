@@ -41,8 +41,8 @@ DESCRIPTION
 
 
 
-INSTALL 
-=======
+CONDA INSTALL
+=============
 
 
 
@@ -51,8 +51,9 @@ INSTALL
 	conda install -c https://conda.binstar.org/matthewharrison midas
 	
 	
-COMPLETE BUILD
+PYTHON INSTALL 
 ==============
+
 
 	cd /home/$USER/$install_dir
 
