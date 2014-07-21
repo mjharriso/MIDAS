@@ -1,0 +1,36 @@
+# conda recipe
+
+package:
+  name: midas
+  version: "1.1"
+
+build:
+  number: 1
+
+source:
+  git_url: git://github.com/mjharriso/MIDAS.git
+
+
+requirements:
+  build:
+    - python
+  run:
+    - python
+    - numpy
+    - scipy
+    - netcdf4
+    - basemap
+    - dateutil
+test:
+  imports:
+    - midas.rectgrid
+  commands:
+    - echo "Testing from the meta.yaml"
+    - echo "This is Windows" # [win]
+    - echo "This is not Windows" # [not win]
+    - echo "This is OSX" # [osx]
+    - echo "This is not OSX" # [not osx]
+
+about:
+  home: https://github.com/mjharriso/MIDAS
+  license: CreativeCommons 3.0
