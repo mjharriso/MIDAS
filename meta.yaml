@@ -6,10 +6,12 @@ package:
 
 build:
   number: 1
+  binary_relocation: true
 
 source:
-  git_url: git://github.com/mjharriso/MIDAS.git
-
+  # git_url: git://github.com/mjharriso/MIDAS.git
+  fn: master.zip
+  url: https://github.com/mjharriso/MIDAS/archive/master.zip
 
 requirements:
   build:
