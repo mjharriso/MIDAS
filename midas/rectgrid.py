@@ -464,18 +464,18 @@ class quadmesh(object):
      xs,xe,ys,ye = self.find_geo_bounds(x=x,y=y)
 
      if xe == xs:
-         xe=xe+2
+         xe=xe+1
 
 
      if ye == ys:
-         ye=ye+2
+         ye=ye+1
 
      section['y']=np.arange(ys,ye+1)
      section['yax_data']= self.lath[section['y']]
 
 
      if xe>=xs:
-         section['x']=np.arange(xs,xe+1)
+         section['x']=np.arange(xs,xe)
          section['x_read']=section['x']
          section['xax_data']=self.lonh[section['x']]
      else:
