@@ -11,21 +11,23 @@
 ===============================
 """
 
-from utils import *
-from wright_eos import *
+import numpy as numpy
+import netCDF4 as netCDF4 
+import datetime as datetime
 import copy
-import scipy as sp
-import netCDF4 as nc
 from dateutil import parser
+from wright_eos import *
 
+HAVE_GSW = False
 try:
   import gsw
+  HAVE_GSW = True
 except:
   pass
 
 class profile_index(object):
 
-  def __init__(self,index_file=None,lon_bounds=None,lat_bounds=None,months=None,index_file_format='nodc'):
+  def __init__(self,index_file=None,lon_bounds=None,lat_bounds=None,year_bounds=None,months=None,index_file_format='nodc'):
 
     import os
 
@@ -57,8 +59,8 @@ class profile_index(object):
           dict['path']=line[2]
           dict['date_string']=line[3]
           dict['ncDateTime']=parser.parse(dict['date_string'])
-          dict['lat']=np.float(line[5])
-          dict['lon']=np.float(line[7])
+          dict['lat']=numpy.float(line[5])
+          dict['lon']=numpy.float(line[7])
           dict['depth_min']=line[9]
           dict['depth_max']=line[10]          
 
@@ -67,7 +69,7 @@ class profile_index(object):
 
           if lon_bounds is not None or lat_bounds is not None:
             if lon_bounds is not None:
-              if np.logical_and((dict['lon']>=lon_bounds[0]),(dict['lon']<=lon_bounds[1])):
+              if numpy.logical_and((dict['lon']>=lon_bounds[0]),(dict['lon']<=lon_bounds[1])):
                 passed=passed+1
               else:
                 failed=failed+1
@@ -75,7 +77,7 @@ class profile_index(object):
               is_n = dict['lat'] >= lat_bounds[0]
               is_s = lat_bounds[1] >= dict['lat'] 
 
-              if np.logical_and(is_n,is_s):
+              if numpy.logical_and(is_n,is_s):
                 passed=passed+1
               else:
                 failed=failed+1
@@ -86,8 +88,15 @@ class profile_index(object):
               passed=passed+1
             else:
               failed=failed+1
-            
-          if np.logical_and(passed>=0,failed==0):              
+
+          if year_bounds is not None:
+            yr=dict['ncDateTime'].year
+            if yr>= year_bounds[0] and yr<=year_bounds[1]:
+              passed=passed+1
+            else:
+              failed=failed+1
+              
+          if numpy.logical_and(passed>=0,failed==0):              
             self.dict.append(dict)
         else:
           break
@@ -132,7 +141,7 @@ class profile_list(object):
           flist=[];prof_dict={}
           for file in path:
             try:
-              f=nc.Dataset(file['path'])
+              f=netCDF4.Dataset(file['path'])
             except:
               continue
 
@@ -188,21 +197,21 @@ class profile_list(object):
 
 
                 # Avoid confusion with direction attribute
-              dp = np.roll(pr.data['pressure'],shift=-1)-pr.data['pressure']
+              dp = numpy.roll(pr.data['pressure'],shift=-1)-pr.data['pressure']
 
-              if np.isscalar(dp):
+              if numpy.isscalar(dp):
                 dp=[dp]
 
               if len(dp) > 4:
                 dp = dp[:-2]
                 
               if len(dp) > 4:
-                if np.all(dp>0):
+                if numpy.all(dp>0):
                   pr.data['direction']='A'
-                  pr.data['min_dp']=np.min(dp)
-                elif np.all(dp<0):
+                  pr.data['min_dp']=numpy.min(dp)
+                elif numpy.all(dp<0):
                   pr.data['direction']='D'
-                  pr.data['min_dp']=np.min(-dp)
+                  pr.data['min_dp']=numpy.min(-dp)
                 else:
                   continue
               else:
@@ -218,8 +227,8 @@ class profile_list(object):
     for pr in self.pr:
 
       try:
-        data=np.squeeze(pr.data[var])
-        z=np.squeeze(pr.data['pressure'])
+        data=numpy.squeeze(pr.data[var])
+        z=numpy.squeeze(pr.data['pressure'])
       except:
         print 'unable to find ',var
         raise
@@ -236,8 +245,8 @@ class profile_list(object):
         continue
 
       if pr.data['direction'] == 'A':
-        dVar = np.roll(data,shift=-1)-data
-        denom=np.roll(z,shift=-1)-z
+        dVar = numpy.roll(data,shift=-1)-data
+        denom=numpy.roll(z,shift=-1)-z
         denom[denom==0.]=1.e-12
           
         Idz  = 1.0/denom
@@ -249,8 +258,8 @@ class profile_list(object):
 
 
       if pr.data['direction'] == 'D':
-        dVar = data-np.roll(data,shift=-1)
-        Idz  = 1.0/(z-np.roll(z,shift=-1))
+        dVar = data-numpy.roll(data,shift=-1)
+        Idz  = 1.0/(z-numpy.roll(z,shift=-1))
         dVar_dz = dVar*Idz 
         if bc == 'interior':
           dVar_dz[-1]=dVar_dz[-2]
@@ -307,7 +316,7 @@ class profile_list(object):
 
     self.expression('beta_wright_eos(pr.data[\'temp\'],pr.data[\'salt\'],pr.data[\'pressure\'])*pr.data[\'dsalt_dZ\']',name='beta_dSdZ')
 
-    self.expression('np.arctan2(pr.data[\'alpha_dTdZ\'] + pr.data[\'beta_dSdZ\'],pr.data[\'alpha_dTdZ\'] - pr.data[\'beta_dSdZ\'])',name='Tu')
+    self.expression('numpy.arctan2(pr.data[\'alpha_dTdZ\'] + pr.data[\'beta_dSdZ\'],pr.data[\'alpha_dTdZ\'] - pr.data[\'beta_dSdZ\'])',name='Tu')
 
   
   

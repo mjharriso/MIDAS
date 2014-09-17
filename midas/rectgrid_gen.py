@@ -12,14 +12,12 @@
 """
 
 
-import numpy as np
-import netCDF4 as nc
-from rectgrid_utils import *
+
 import copy
-
-    
+import netCDF4
+import numpy    
   
-
+PI_180 = numpy.pi/180.
 
 class supergrid(object):
 
@@ -30,7 +28,7 @@ class supergrid(object):
 
       >>> from midas.rectgrid_gen import *
       >>> import hashlib
-      >>> x=np.arange(0.,360.);y=np.arange(-90.,90.);X,Y=np.meshgrid(x,y)
+      >>> x=numpy.arange(0.,360.);y=numpy.arange(-90.,90.);X,Y=numpy.meshgrid(x,y)
       >>> sgrid=supergrid(xdat=X,ydat=Y)
       >>> hash=hashlib.md5(sgrid.x)
       >>> print hash.hexdigest()
@@ -42,7 +40,7 @@ class supergrid(object):
       self.yDir = 1
       
       if file is not None:
-        f=nc.Dataset(file)
+        f=netCDF4.Dataset(file)
         vdict={}
         self.x=f.variables['x'][:]
         self.y=f.variables['y'][:]
@@ -100,8 +98,8 @@ class supergrid(object):
           vdict['doughnut']=doughnut
           vdict['radius']=radius          
           
-          jind=np.arange(vdict['nytot']);iind=np.arange(vdict['nxtot'])
-          jindp=np.arange(vdict['nytot']+1);iindp=np.arange(vdict['nxtot']+1)                  
+          jind=numpy.arange(vdict['nytot']);iind=numpy.arange(vdict['nxtot'])
+          jindp=numpy.arange(vdict['nytot']+1);iindp=numpy.arange(vdict['nxtot']+1)                  
           self.grid_y=vdict['ystart']+jindp*vdict['leny']/vdict['nytot']
           self.grid_x=vdict['xstart']+iindp*vdict['lenx']/vdict['nxtot']          
 
@@ -164,43 +162,43 @@ class supergrid(object):
         
       self.dict=dict.copy(vdict)
         
-      jind=np.arange(nytot);iind=np.arange(nxtot)
-      jindp=np.arange(nytot+1);iindp=np.arange(nxtot+1)        
+      jind=numpy.arange(nytot);iind=numpy.arange(nxtot)
+      jindp=numpy.arange(nytot+1);iindp=numpy.arange(nxtot+1)        
 
       if config == 'cartesian':
         self.is_cartesian=True
         self.is_latlon=False        
         self.grid_y=ystart+jindp*leny/nytot
         self.grid_x=xstart+iindp*lenx/nxtot
-        self.x=np.tile(self.grid_x,(nytot+1,1))
-        self.y=np.tile(self.grid_y.reshape((nytot+1,1)),(1,nxtot+1))
+        self.x=numpy.tile(self.grid_x,(nytot+1,1))
+        self.y=numpy.tile(self.grid_y.reshape((nytot+1,1)),(1,nxtot+1))
       elif config == 'spherical':
         self.is_cartesian=False
         self.is_latlon=True
         self.grid_y=ystart+jindp*leny/nytot
         self.grid_x=xstart+iindp*lenx/nxtot
-        self.x=np.tile(self.grid_x,(nytot+1,1))
-        self.y=np.tile(self.grid_y.reshape((nytot+1,1)),(1,nxtot+1))
+        self.x=numpy.tile(self.grid_x,(nytot+1,1))
+        self.y=numpy.tile(self.grid_y.reshape((nytot+1,1)),(1,nxtot+1))
       elif config == 'mercator':
         self.is_cartesian=False
         self.is_latlon=True             
-        jRef=np.floor(-nytot*ystart/leny)
+        jRef=numpy.floor(-nytot*ystart/leny)
         fnRef=self.Int_dj_dy(0.0)
         y0=ystart*PI_180
-        self.grid_y=np.zeros(nytot+1)
+        self.grid_y=numpy.zeros(nytot+1)
         itt=0
-        for j in np.arange(nytot+1):
+        for j in numpy.arange(nytot+1):
           jd = fnRef + (j-jRef+1)
-          self.grid_y[j]=self.find_root_y(jd,y0,-0.5*np.pi,0.5*np.pi,itt)
+          self.grid_y[j]=self.find_root_y(jd,y0,-0.5*numpy.pi,0.5*numpy.pi,itt)
           y0=self.grid_y[j]
         self.grid_x=xstart+iindp*lenx/nxtot
         self.grid_y=self.grid_y/PI_180
-        self.x=np.tile(self.grid_x,(nytot+1,1))
-        self.y=np.tile(self.grid_y.reshape((nytot+1,1)),(1,nxtot+1))
+        self.x=numpy.tile(self.grid_x,(nytot+1,1))
+        self.y=numpy.tile(self.grid_y.reshape((nytot+1,1)),(1,nxtot+1))
       if tripolar_n:
         self.lon_bpnp=self.grid_x[0]
         self.join_lat=self.grid_y[0]
-        self.rp=np.tan(0.5*(0.5*np.pi - (self.grid_y[0])*PI_180))            
+        self.rp=numpy.tan(0.5*(0.5*numpy.pi - (self.grid_y[0])*PI_180))            
         lon,lat=self.tp_trans()
         self.x=lon
         self.y=lat
@@ -237,7 +235,7 @@ class supergrid(object):
 
     if self.dict['isotropic']:
       C0=PI_180*lenx/nxtot
-      dydj=C0*np.cos(y)
+      dydj=C0*numpy.cos(y)
     else:
       dydj=PI_180*leny/nytot
       
@@ -269,11 +267,11 @@ class supergrid(object):
     >>> from midas.rectgrid_gen import *
     >>> import hashlib
     >>> sgrid=supergrid(360,180,'mercator','degrees',-60.,120.,0.,360.)
-    >>> dxdi=sgrid.dx_di(0.);dxdi=np.asarray(dxdi)
+    >>> dxdi=sgrid.dx_di(0.);dxdi=numpy.asarray(dxdi)
     >>> hash=hashlib.md5(dxdi)
     >>> print hash.hexdigest()
     bb119dc580e9847bc3ef6ca9237b5f0d
-    >>> dsdi=sgrid.ds_di(0.,0.);dsdi=np.asarray(dsdi)
+    >>> dsdi=sgrid.ds_di(0.,0.);dsdi=numpy.asarray(dsdi)
     >>> hash=hashlib.md5(dsdi)
     >>> print hash.hexdigest()
     ea1fe561e2aeb7cec82520ef7c5e2ed2
@@ -293,7 +291,7 @@ class supergrid(object):
    
     """
 
-    dsdi=self.dict['radius']*np.cos(y)*self.dx_di(x)
+    dsdi=self.dict['radius']*numpy.cos(y)*self.dx_di(x)
 
     return dsdi
 
@@ -309,10 +307,10 @@ class supergrid(object):
         
     dy=y2-y1
 
-    if np.abs(dy) > 2.5e-8:
-      r=((1.0-np.cos(dy))*np.cos(y1) + np.sin(dy)*np.sin(y1))/dy
+    if numpy.abs(dy) > 2.5e-8:
+      r=((1.0-numpy.cos(dy))*numpy.cos(y1) + numpy.sin(dy)*numpy.sin(y1))/dy
     else:
-      r=(0.5*dy*np.cos(y1) + np.sin(y1))
+      r=(0.5*dy*numpy.cos(y1) + numpy.sin(y1))
 
     dl=r*(x2-x1)
 
@@ -344,9 +342,9 @@ class supergrid(object):
 
 
       if y>=0.0:
-        r=I_C0*np.log((1.0+np.sin(y))/np.cos(y))
+        r=I_C0*numpy.log((1.0+numpy.sin(y))/numpy.cos(y))
       else:
-        r=-1.0*I_C0*np.log((1.0-np.sin(y))/np.cos(y))
+        r=-1.0*I_C0*numpy.log((1.0-numpy.sin(y))/numpy.cos(y))
     else:
       I_C0=self.dict['nytot']/self.dict['leny']/PI_180
       r=I_C0*y
@@ -377,7 +375,7 @@ class supergrid(object):
 
       fnbot=self.Int_dj_dy(ybot) - fnval
 
-      if np.logical_and(itt > 50,fnbot>0.0):
+      if numpy.logical_and(itt > 50,fnbot>0.0):
         print """
               Unable to find bottom bound for grid function"""
         raise
@@ -397,12 +395,12 @@ class supergrid(object):
         itt=itt+1
       fntop=self.Int_dj_dy(ytop)-fnval
 
-      if np.logical_and(itt>50,fntop<0.0):
+      if numpy.logical_and(itt>50,fntop<0.0):
         print """
               Unable to find top bound for grid function"""
         raise
 
-    for itt in np.arange(10):
+    for itt in numpy.arange(10):
       y=0.5*(ybot+ytop)
       fny=self.Int_dj_dy(y)-fnval
       if fny < 0.0:
@@ -412,7 +410,7 @@ class supergrid(object):
         fntop=fny
         ytop=y
 
-    for itt in np.arange(10):
+    for itt in numpy.arange(10):
       dy_dfn=self.dy_dj(y)
       fny=self.Int_dj_dy(y)-fnval
       dy=-1.0*fny*dy_dfn
@@ -421,10 +419,10 @@ class supergrid(object):
         y=ytop
       if y<ybot:
         y=ybot
-      if np.abs(dy) < 8.0e-15*np.abs(y)+1.e-20:
+      if numpy.abs(dy) < 8.0e-15*numpy.abs(y)+1.e-20:
         break
 
-    if np.abs(y) < 1.e-12:
+    if numpy.abs(y) < 1.e-12:
       y=0.0
 
     ittmax=itt
@@ -443,13 +441,13 @@ class supergrid(object):
   def bp_lon(self):
         
 # Co-latitudes of rotated grid sphere
-    chi=2.0*np.arctan(np.tan(0.5*(0.5*np.pi-self.y*PI_180))/self.rp)
+    chi=2.0*numpy.arctan(numpy.tan(0.5*(0.5*numpy.pi-self.y*PI_180))/self.rp)
 # Base grid longitude
-    lam = 0.5*np.pi - chi
+    lam = 0.5*numpy.pi - chi
 
     nxtot=self.dict['nxtot']
-    lam[:,:nxtot/2]=lam[:,:nxtot/2]-np.pi/2
-    lam[:,nxtot/2:]=np.pi/2-lam[:,nxtot/2:]
+    lam[:,:nxtot/2]=lam[:,:nxtot/2]-numpy.pi/2
+    lam[:,nxtot/2:]=numpy.pi/2-lam[:,nxtot/2:]
     
     return lam
 
@@ -461,9 +459,9 @@ class supergrid(object):
     lamc=self.bp_lon()
     phic=self.bp_colat()
         
-    chic=np.arccos(np.sin(phic)*np.cos(lamc))
-    gamma=np.arctan(np.tan(phic)*np.sin(lamc))        
-    lat=2.0*np.arctan(self.rp*np.tan(chic/2.0))
+    chic=numpy.arccos(numpy.sin(phic)*numpy.cos(lamc))
+    gamma=numpy.arctan(numpy.tan(phic)*numpy.sin(lamc))        
+    lat=2.0*numpy.arctan(self.rp*numpy.tan(chic/2.0))
     lat=lat/PI_180
     lat=90.-lat
     lon=gamma/PI_180
@@ -490,7 +488,7 @@ class supergrid(object):
     >>> import hashlib
     >>> sgrid=supergrid(360,30,'spherical','degrees',-90.,30.,0.,360.)
     >>> r,phi = sgrid.displaced_pole(0.25,180.)
-    >>> print np.sum(r),np.max(r),np.min(r)
+    >>> print numpy.sum(r),numpy.max(r),numpy.min(r)
     -833161.400782 -60.0 -89.4690265487
 
 
@@ -518,7 +516,7 @@ class supergrid(object):
       if excluded_fraction is not None:
         print 'excluding inner ',excluded_fraction*100.,' percent of the grid'
 
-    a=np.complex(ra2*np.cos(PI_180*-phia),ra2*np.sin(PI_180*-phia))
+    a=numpy.complex(ra2*numpy.cos(PI_180*-phia),ra2*numpy.sin(PI_180*-phia))
 
     phi=self.x
     
@@ -526,41 +524,41 @@ class supergrid(object):
 
     ny,nx=self.x.shape
 
-    theta_chg=np.arccos(2.0*ra/(1.0+ra*ra))
-    r_out=np.zeros(phi.shape)
-    phi_out=np.zeros(phi.shape)
+    theta_chg=numpy.arccos(2.0*ra/(1.0+ra*ra))
+    r_out=numpy.zeros(phi.shape)
+    phi_out=numpy.zeros(phi.shape)
 
-    for j in np.arange(phi.shape[0]):
-      for i in np.arange(phi.shape[1]):
+    for j in numpy.arange(phi.shape[0]):
+      for i in numpy.arange(phi.shape[1]):
 
         th_1 = (phi[j,i]+phia)*PI_180
-        if th_1 > np.pi:
-          th_1=th_1-2.0*np.pi
-        elif th_1 < -np.pi:
-          th_1 = th_1+2.0*np.pi
+        if th_1 > numpy.pi:
+          th_1=th_1-2.0*numpy.pi
+        elif th_1 < -numpy.pi:
+          th_1 = th_1+2.0*numpy.pi
 
         theta=th_1.copy()
-        if np.abs(np.sin(th_1)) <= 0.5*np.abs(np.cos(th_1)):
-          tan_tgt = np.tan(th_1)
+        if numpy.abs(numpy.sin(th_1)) <= 0.5*numpy.abs(numpy.cos(th_1)):
+          tan_tgt = numpy.tan(th_1)
           if th_1 >= 0.0:
             if tan_tgt >= 0.0:
               th_min = 0.0; th_max = theta_chg
             else:
-              th_min = theta_chg ; th_max = np.pi
+              th_min = theta_chg ; th_max = numpy.pi
           else:
             if tan_tgt <= 0.0:
               th_max = 0.0 ; th_min = -theta_chg
             else:
-              th_max = -theta_chg ; th_min = -np.pi
-          if np.logical_or(theta>th_max,theta<th_min):
+              th_max = -theta_chg ; th_min = -numpy.pi
+          if numpy.logical_or(theta>th_max,theta<th_min):
             theta = 0.5*(th_max+th_min)
 
-          for ii in np.arange(20):
-            denom =  np.cos(theta)*(1.+ra*ra) - 2.0*ra;
-            val = np.sin(theta)*(1.-ra*ra) / denom;
-            dval_dth = ((1.-ra**4) - 2.0*ra*(1.-ra**2)*np.cos(theta) ) / denom**2;
+          for ii in numpy.arange(20):
+            denom =  numpy.cos(theta)*(1.+ra*ra) - 2.0*ra;
+            val = numpy.sin(theta)*(1.-ra*ra) / denom;
+            dval_dth = ((1.-ra**4) - 2.0*ra*(1.-ra**2)*numpy.cos(theta) ) / denom**2;
             err = val - tan_tgt;
-            if np.abs(err) < 1e-12:
+            if numpy.abs(err) < 1e-12:
               break
             theta_prev = theta.copy();
             theta = theta - err / dval_dth;
@@ -572,30 +570,30 @@ class supergrid(object):
           if th_1==0.0:
             cot_tgt=0.0
           else:
-            cot_tgt = 1.0/np.tan(th_1)
+            cot_tgt = 1.0/numpy.tan(th_1)
                     
           if th_1>=0.0:
             if cot_tgt >=0.0:
               th_min = 0.0; th_max = theta_chg.copy()
             else:
-              th_min = theta_chg.copy() ; th_max = np.pi
+              th_min = theta_chg.copy() ; th_max = numpy.pi
           else:
             if cot_tgt<=0.0:
               th_max = 0.0
               th_min = -theta_chg
             else:
               th_max = -theta_chg
-              th_min = -np.pi
-          if np.logical_or(theta>th_max,theta<th_min):
+              th_min = -numpy.pi
+          if numpy.logical_or(theta>th_max,theta<th_min):
             theta = 0.5*(th_max+th_min)
 
 
-          for ii in np.arange(20):
-            denom = np.sin(theta)*(1.0-ra*ra)
-            val=(np.cos(theta)*(1.0+ra*ra) - 2.0*ra)/denom
-            dval_dth = (-(1.0-ra**4.0) + 2.0*ra*(1.0-ra**2.0)*np.cos(theta)) / denom**2.
+          for ii in numpy.arange(20):
+            denom = numpy.sin(theta)*(1.0-ra*ra)
+            val=(numpy.cos(theta)*(1.0+ra*ra) - 2.0*ra)/denom
+            dval_dth = (-(1.0-ra**4.0) + 2.0*ra*(1.0-ra**2.0)*numpy.cos(theta)) / denom**2.
             err = val -  cot_tgt
-            if np.abs(err) < 1.e-12:
+            if numpy.abs(err) < 1.e-12:
               break
             theta_prev=theta.copy()
             theta = theta - err / dval_dth
@@ -605,21 +603,21 @@ class supergrid(object):
               theta=0.5*(theta_prev+th_min)
 
         th_cor = theta-phia*PI_180
-        z=np.complex(r[j,i]*np.cos(th_cor),r[j,i]*np.sin(th_cor))
-        w = (z-a)/(1.0-z*np.conj(a))
-        r_out[j,i]=np.abs(w)
-        phi_out[j,i]=np.angle(w)/PI_180
+        z=numpy.complex(r[j,i]*numpy.cos(th_cor),r[j,i]*numpy.sin(th_cor))
+        w = (z-a)/(1.0-z*numpy.conj(a))
+        r_out[j,i]=numpy.abs(w)
+        phi_out[j,i]=numpy.angle(w)/PI_180
 
     r_out=-90.0+r_out*radius
 
 
-    for j in np.arange(0,phi_out.shape[0]):
-      tmp=np.squeeze(phi_out[j,:])
+    for j in numpy.arange(0,phi_out.shape[0]):
+      tmp=numpy.squeeze(phi_out[j,:])
       tmp0=tmp[0]
       if tmp0>0.:
         tmp0=tmp0-360.
       tmp[0]=tmp0
-      for i in np.arange(1,phi_out.shape[1]):
+      for i in numpy.arange(1,phi_out.shape[1]):
         dtmp=tmp[i]-tmp[i-1]
         if dtmp > 360.:
           tmp[i]=tmp[i]-360.
@@ -633,11 +631,11 @@ class supergrid(object):
     jmin=0;jmax=ny
     if excluded_fraction is not None:
       if pole == -1:
-        jmin=np.ceil(ny*excluded_fraction)
-        jmin=jmin+np.mod(jmin,2)
+        jmin=numpy.ceil(ny*excluded_fraction)
+        jmin=jmin+numpy.mod(jmin,2)
         return r_out[jmin:,:], phi_out[jmin:,:]        
       else:
-        jmax=np.ceil(ny*(1.0 - excluded_fraction))
+        jmax=numpy.ceil(ny*(1.0 - excluded_fraction))
         return r_out[:jmax,:], phi_out[:jmax,:]                
     else:
       return r_out,phi_out
@@ -645,9 +643,9 @@ class supergrid(object):
 
   def bound_grid_y(self,y_bnds,verbose=False):
 
-    y0=np.nonzero(self.grid_y >= y_bnds[0])[0][0]
-    y1=np.nonzero(self.grid_y <= y_bnds[1])[0][-1]    
-    y1=y1+np.mod(y1-y0,2)
+    y0=numpy.nonzero(self.grid_y >= y_bnds[0])[0][0]
+    y1=numpy.nonzero(self.grid_y <= y_bnds[1])[0][-1]    
+    y1=y1+numpy.mod(y1-y0,2)
     
 
     if verbose:
@@ -672,13 +670,13 @@ class supergrid(object):
           
   def merge_grid(self,grid2):
 
-    self.x=np.concatenate((self.x,grid2.x),axis=0)
-    self.y=np.concatenate((self.y,grid2.y),axis=0)
-    self.dx=np.concatenate((self.dx,grid2.dx),axis=0)                
-    self.dy=np.concatenate((self.dy,grid2.dy),axis=0)
-    self.area=np.concatenate((self.area,grid2.area),axis=0)
-    self.angle_dx=np.concatenate((self.angle_dx,np.take(grid2.angle_dx,[0],axis=0)),axis=0)    
-    self.angle_dx=np.concatenate((self.angle_dx,grid2.angle_dx),axis=0)
+    self.x=numpy.concatenate((self.x,grid2.x),axis=0)
+    self.y=numpy.concatenate((self.y,grid2.y),axis=0)
+    self.dx=numpy.concatenate((self.dx,grid2.dx),axis=0)                
+    self.dy=numpy.concatenate((self.dy,grid2.dy),axis=0)
+    self.area=numpy.concatenate((self.area,grid2.area),axis=0)
+    self.angle_dx=numpy.concatenate((self.angle_dx,numpy.take(grid2.angle_dx,[0],axis=0)),axis=0)    
+    self.angle_dx=numpy.concatenate((self.angle_dx,grid2.angle_dx),axis=0)
     self.grid_y=self.y[:,0]
     self.dict['nytot']=self.grid_y.shape[0]-1
 
@@ -704,23 +702,23 @@ class supergrid(object):
 
 
     Re = self.dict['radius']
-    ymid_j = 0.5*(self.y+np.roll(self.y,shift=-1,axis=0))
-    ymid_i = 0.5*(self.y+np.roll(self.y,shift=-1,axis=1))      
-    dy_j = np.roll(self.y,shift=-1,axis=0) - self.y
-    dy_i = np.roll(self.y,shift=-1,axis=1) - self.y
-    dx_i = mdist(np.roll(self.x,shift=-1,axis=1),self.x)
-    dx_j = mdist(np.roll(self.x,shift=-1,axis=0),self.x)
-    self.dx = metric*metric*(dy_i*dy_i + dx_i*dx_i*np.cos(ymid_i*PI_180)*np.cos(ymid_i*PI_180))
-    self.dx = np.sqrt(self.dx)
-    self.dy = metric*metric*(dy_j*dy_j + dx_j*dx_j*np.cos(ymid_j*PI_180)*np.cos(ymid_j*PI_180))
-    self.dy = np.sqrt(self.dy)
+    ymid_j = 0.5*(self.y+numpy.roll(self.y,shift=-1,axis=0))
+    ymid_i = 0.5*(self.y+numpy.roll(self.y,shift=-1,axis=1))      
+    dy_j = numpy.roll(self.y,shift=-1,axis=0) - self.y
+    dy_i = numpy.roll(self.y,shift=-1,axis=1) - self.y
+    dx_i = mdist(numpy.roll(self.x,shift=-1,axis=1),self.x)
+    dx_j = mdist(numpy.roll(self.x,shift=-1,axis=0),self.x)
+    self.dx = metric*metric*(dy_i*dy_i + dx_i*dx_i*numpy.cos(ymid_i*PI_180)*numpy.cos(ymid_i*PI_180))
+    self.dx = numpy.sqrt(self.dx)
+    self.dy = metric*metric*(dy_j*dy_j + dx_j*dx_j*numpy.cos(ymid_j*PI_180)*numpy.cos(ymid_j*PI_180))
+    self.dy = numpy.sqrt(self.dy)
     self.dx=self.dx[:,:-1]
     self.dy=self.dy[:-1,:]
 
     self.area=self.dx[:-1,:]*self.dy[:,:-1]
-    self.angle_dx=np.zeros((nytot,nxtot))
+    self.angle_dx=numpy.zeros((nytot,nxtot))
 
-    self.angle_dx = np.arctan2(dy_i,dx_i)*180.0/np.pi
+    self.angle_dx = numpy.arctan2(dy_i,dx_i)*180.0/numpy.pi
       
     self.have_metrics = True
 
@@ -732,7 +730,7 @@ class supergrid(object):
     defne other masked arrays using mask_where, for instance.
     """
     if path is not None:
-      f=nc.Dataset(path)
+      f=netCDF4.Dataset(path)
             
     if field in f.variables:
       self.mask = f.variables[field][:]
@@ -759,7 +757,7 @@ class supergrid(object):
     if fnam is None:
       fnam='supergrid.nc'
 
-    f=nc.Dataset(fnam,'w',format=format)
+    f=netCDF4.Dataset(fnam,'w',format=format)
 
     dims=[]
     vars=[]

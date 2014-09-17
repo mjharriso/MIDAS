@@ -12,9 +12,9 @@
 """
 
 
-import numpy as np
+import numpy
 from netCDF4 import num2date
-from  datetime import *
+import  datetime 
 import string
 import copy
 import types
@@ -25,9 +25,9 @@ DEBUG = 0
 
 def sq(arr):
     """
-    Shorthand for np.squeeze()
+    Shorthand for numpy.squeeze()
     """
-    res=np.squeeze(arr)
+    res=numpy.squeeze(arr)
 
     return res
   
@@ -46,9 +46,9 @@ def image_from_array(arr):
     print "PIL is not installed."
     return None
 
-  arr_min=np.min(arr)
+  arr_min=numpy.min(arr)
   arr=arr+arr_min
-  arr_max=np.max(arr)
+  arr_max=numpy.max(arr)
   arr=255*arr/arr_max
   arr=arr.astype('uint8')
 
@@ -242,7 +242,7 @@ def instance_to_datetime(dates_in):
 #def instance_to_datetime(date_in):
 #    
 #    mon=int(date_in.strftime()[5:7])
-#    year=np.maximum(int(date_in.strftime()[0:4]),1)
+#    year=numpy.maximum(int(date_in.strftime()[0:4]),1)
 #    day=int(date_in.strftime()[8:10])
 #    hr=int(date_in.strftime()[11:13])
 #    mn=int(date_in.strftime()[14:16])
@@ -259,16 +259,16 @@ def find_date_bounds(dates_in,tmin,tmax):
 
   
   ts=-1;te=-1
-  for i in np.arange(0,np.maximum(1,len(dates)-1)):
-      if ts == -1 and tmin <= dates[i+1] and tmin > dates[i]:
-          ts = i+1
-      if ts > -1 and tmax < dates[i+1]:
+  for i in numpy.arange(0,numpy.maximum(1,len(dates)-1)):
+      if ts == -1 and tmin <= dates[i+1] and tmin >= dates[i]:
+          ts = i
+      if ts > -1 and tmax <= dates[i+1]:
           te = i+1
           break
 
 
   if DEBUG == 1:
-      print tmin,tmax,dates[i],dates[te]
+      print tmin,tmax,dates[ts],dates[te],ts,te
   
   return ts,te
 
@@ -296,9 +296,9 @@ def time_interp_weights(dates_in,target_in):
             target=target_in
             
     if nt > 1:
-        t1=np.zeros(nt,dtype=np.int); t2=np.zeros(nt,dtype=np.int)
-        w1=np.zeros(nt); w2=np.zeros(nt)        
-        for i in np.arange(0,nt):
+        t1=numpy.zeros(nt,dtype=numpy.int); t2=numpy.zeros(nt,dtype=numpy.int)
+        w1=numpy.zeros(nt); w2=numpy.zeros(nt)        
+        for i in numpy.arange(0,nt):
             t1[i],t2[i]=find_date_bounds(dates,target[i],target[i])
             date1=dates[t1[i]]
             date2=dates[t2[i]]
@@ -326,12 +326,12 @@ def time_interp_weights(dates_in,target_in):
 def get_months(dates_in):
   # if type(dates_in[0]) is not datetime:
   #   months = []
-  #   for i in np.arange(0,len(dates_in)):
+  #   for i in numpy.arange(0,len(dates_in)):
   #     mon=int(dates_in[i].strftime()[5:7])
   #     months.append(mon)
   # else:
     months = []
-    for i in np.arange(0,len(dates_in)):
+    for i in numpy.arange(0,len(dates_in)):
       months.append(dates_in[i].month)
 
     return months
@@ -339,15 +339,15 @@ def get_months(dates_in):
 
 def make_monthly_axis(year=1900):
     dates=[];delta=[]
-    for i in np.arange(1,13):
-        dates.append(datetime(year,i,1))
+    for i in numpy.arange(1,13):
+        dates.append(datetime.datetime(year,i,1))
 
-    dates.append(datetime(year+1,1,1))
+    dates.append(datetime.datetime(year+1,1,1))
     
-    for i in np.arange(0,12):
+    for i in numpy.arange(0,12):
         delta.append((dates[i+1]-dates[i])/2)
 
-    for i in np.arange(0,12):
+    for i in numpy.arange(0,12):
         dates[i]=dates[i]+delta[i]
 
     return dates[0:12]

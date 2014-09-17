@@ -11,10 +11,10 @@
 ===============================
 """
 
-import numpy as np
 
+import numpy
 
-PI_180 = np.pi/180.
+PI_180 = numpy.pi/180.
 R_earth = 6371.e3
 
 def min_resolution(grid=None,x=None,y=None):
@@ -30,16 +30,16 @@ def min_resolution(grid=None,x=None,y=None):
   """
 
   if grid is not None:
-    dx = grid.lonh-np.roll(grid.lonh,1)
-    dy = grid.lath-np.roll(grid.lath,1)
-    return np.min(dx[1:]),np.min(dy[1:])
-  elif np.logical_or(x is None,y is None):
+    dx = grid.lonh-numpy.roll(grid.lonh,1)
+    dy = grid.lath-numpy.roll(grid.lath,1)
+    return numpy.min(dx[1:]),numpy.min(dy[1:])
+  elif numpy.logical_or(x is None,y is None):
     if x is not None:
-      dx = x-np.roll(x,1)
-      return np.min(dx[1:]),None
+      dx = x-numpy.roll(x,1)
+      return numpy.min(dx[1:]),None
     else:
-      dy = y-np.roll(y,1)
-      return None,np.min(dy[1:])
+      dy = y-numpy.roll(y,1)
+      return None,numpy.min(dy[1:])
   else:
     print """
       Either x or y or grid must exist in call to min_resolution"""
@@ -58,16 +58,16 @@ def max_resolution(grid=None,x=None,y=None):
   """
 
   if grid is not None:
-    dx = grid.lonh-np.roll(grid.lonh,1)
-    dy = grid.lath-np.roll(grid.lath,1)
-    return np.max(dx[1:]),np.max(dy[1:])
-  elif np.logical_or(x is None,y is None):
+    dx = grid.lonh-numpy.roll(grid.lonh,1)
+    dy = grid.lath-numpy.roll(grid.lath,1)
+    return numpy.max(dx[1:]),numpy.max(dy[1:])
+  elif numpy.logical_or(x is None,y is None):
     if x is not None:
-      dx = x-np.roll(x,1)
-      return np.max(dx[1:]),None
+      dx = x-numpy.roll(x,1)
+      return numpy.max(dx[1:]),None
     else:
-      dy = y-np.roll(y,1)
-      return None,np.max(dy[1:])
+      dy = y-numpy.roll(y,1)
+      return None,numpy.max(dy[1:])
   else:
     print """
       Either x or y or grid must exist in call to min_resolution"""
@@ -82,10 +82,10 @@ def find_axis_bounds(axis,x=None,modulo_360=False):
 
   >>> import rectgrid_utils
   >>> import numpy as np
-  >>> axis=np.arange(0.,10.,1.)
+  >>> axis=numpy.arange(0.,10.,1.)
   >>> xs,xe=rectgrid_utils.find_axis_bounds(axis,x=[3.,5.])
-  >>> print xs,xe
-  3 4
+  >>> print axis[xs],axis[xe]
+  3.0 5.0
   """
 
   [max_dx,junk] = max_resolution(x=axis)  
@@ -94,13 +94,13 @@ def find_axis_bounds(axis,x=None,modulo_360=False):
   if x is not None:
     xmin=x[0];xmax=x[1]
     if modulo_360:
-      if x[0]<axis[0]:
+      if xmin<axis[0]:
         xmin=xmin+360.
-      if x[1]>axis[-1]:
+      if xmax>axis[-1]:
         xmax=xmax-360.
-    res = np.nonzero(np.abs(axis - xmin) < max_dx)
+    res = numpy.nonzero(numpy.abs(axis - xmin) < max_dx)
     xs = res[0][0]
-    res = np.nonzero(np.abs(axis - xmax) <= max_dx)
+    res = numpy.nonzero(numpy.abs(axis - xmax) < max_dx)
     xe = res[0][0]
 
 
@@ -119,7 +119,7 @@ def cartesian_dist(x1,y1,x2,y2,metric):
     1.41421356237
     """
     
-    dist = metric*np.sqrt((x1-x2)**2.0 + (y1-y2)**2.0)
+    dist = metric*numpy.sqrt((x1-x2)**2.0 + (y1-y2)**2.0)
     
     return dist
 
@@ -139,9 +139,9 @@ def spherical_dist_latlon(x1,y1,x2,y2,metric):
 
     
     if y1-y2 != 0.:
-        dist = metric*np.abs(y1-y2)
+        dist = metric*numpy.abs(y1-y2)
     elif x1-x2 != 0.:
-        dist = metric*np.cos(y1*PI_180)*np.abs(x1-x2)
+        dist = metric*numpy.cos(y1*PI_180)*numpy.abs(x1-x2)
     else:
         print """
           This is not a spherical grid"""
@@ -161,10 +161,10 @@ def mdist(x1,x2):
   """
 
     
-  a=np.mod(x1-x2+720.,360.)
-  b=np.mod(x2-x1+720.,360.)
+  a=numpy.mod(x1-x2+720.,360.)
+  b=numpy.mod(x2-x1+720.,360.)
 
-  d=np.minimum(a,b)
+  d=numpy.minimum(a,b)
 
   return d
 
@@ -200,7 +200,7 @@ def shiftgrid(lon0,datain,lonsin,start=True,cyclic=360.0):
 
     returns ``dataout,lonsout`` (data and longitudes on shifted grid).
     """
-    if np.fabs(lonsin[-1]-lonsin[0]-cyclic) > 1.e-4:
+    if numpy.fabs(lonsin[-1]-lonsin[0]-cyclic) > 1.e-4:
         # Use all data instead of raise ValueError, 'cyclic point not included'
         start_idx = 0
     else:
@@ -209,16 +209,16 @@ def shiftgrid(lon0,datain,lonsin,start=True,cyclic=360.0):
     if lon0 < lonsin[0] or lon0 > lonsin[-1]:
         msg = 'lon0 outside of range of lonsin %(l0)4.1f %(st)4.1f %(ed)4.1f'%{'l0':lon0,'st':lonsin[0],'ed':lonsin[-1]}
         raise ValueError(msg)
-    i0 = np.argmin(np.fabs(lonsin-lon0))
+    i0 = numpy.argmin(numpy.fabs(lonsin-lon0))
     i0_shift = len(lonsin)-i0
     if ma.isMA(datain):
         dataout  = ma.zeros(datain.shape,datain.dtype)
     else:
-        dataout  = np.zeros(datain.shape,datain.dtype)
+        dataout  = numpy.zeros(datain.shape,datain.dtype)
     if ma.isMA(lonsin):
         lonsout = ma.zeros(lonsin.shape,lonsin.dtype)
     else:
-        lonsout = np.zeros(lonsin.shape,lonsin.dtype)
+        lonsout = numpy.zeros(lonsin.shape,lonsin.dtype)
     if start:
         lonsout[0:i0_shift] = lonsin[i0:]
     else:
@@ -241,13 +241,13 @@ def addcyclic(arrin,lonsin):
     if ma.isMA(arrin):
         arrout  = ma.zeros((nlats,nlons+1),arrin.dtype)
     else:
-        arrout  = np.zeros((nlats,nlons+1),arrin.dtype)
+        arrout  = numpy.zeros((nlats,nlons+1),arrin.dtype)
     arrout[:,0:nlons] = arrin[:,:]
     arrout[:,nlons] = arrin[:,0]
     if ma.isMA(lonsin):
         lonsout = ma.zeros(nlons+1,lonsin.dtype)
     else:
-        lonsout = np.zeros(nlons+1,lonsin.dtype)
+        lonsout = numpy.zeros(nlons+1,lonsin.dtype)
     lonsout[0:nlons] = lonsin[:]
     lonsout[nlons]  = lonsin[-1] + lonsin[1]-lonsin[0]
     return arrout,lonsout

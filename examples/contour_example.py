@@ -1,7 +1,8 @@
 from midas.rectgrid import *
 import matplotlib.pyplot as plt
-# This is a simple plot routine. I spent about 5 minutes 
-# making this... 
+import numpy as np
+
+# This is a simple plot routine.
 
 
 k_plt = 10

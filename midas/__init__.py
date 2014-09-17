@@ -1,11 +1,12 @@
 """
- MIDAS (Modular Isosurface Data Analysis System) was first developed by 
- Matthew Harrison 2011-2012 as an employee of NOAA in the 
- GFDL Oceans and Climate Group. The goal of this project is to produce a
- class for handling finite volume representations of numerical model output
- produced by GOLD and later MOM6. The resulting class instances can be spatially
- and temporally processed and saved for additional analysis and visualization.
+ MIDAS (Modular Isolayer Data Analysis System)
 
+ matthew.harrison@noaa.gov (2011-)
+
+ MIDAS is primarily designed to read self-documenting
+ files per the CF convention (http://cfconventions.org/)
+ describing scalar and vector fields on quadrilateral grid
+ meshes in generalized vertical coordinates.
 
  This work is licensed under the Creative Commons
  Attribution-NonCommercial-ShareAlike 3.0 Unported License.
@@ -24,10 +25,17 @@
  *http://www.scipy.org/
 """
 
+
+import profiles 
+import wright_eos
+import utils
 import rectgrid
 import rectgrid_gen
-import profiles
-import wright_eos
+import rectgrid_utils
+
+
+
+# end optional packages
 
 if __name__ == "__main__":
     import doctest

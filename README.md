@@ -1,28 +1,15 @@
 DESCRIPTION
 ===========
 
- MIDAS is a Python package primarily for processing
+ MIDAS (MIDAS Isolayer Data Analysis Software)
+ is a Python package primarily for processing
  gridded data stored in CF-compliant NetCDF format
- (http://cfconventions.org). Accompanying
- metadata information pertaining to variable attributes
- (units, standard name, ...) as well as the quadrilateral horizontal
- grid mesh on which the data reside and optional vertical cell boundaries
- between adjacent layers are stored (in a dictionary) for each field.
- The goal of this project is to produce a convenient and internally consistent 
- environment for gridded output from numerical models. 
- 
- To the extent possible, MIDAS follows CF conventions, however, the 
- encoding of grid cell and variable attributes is specific to this 
- application. The grid and field variable dictionaries are visible and malleable
- which is not without its disadvantages. It is entirely possible that
- this package will evolve to a more CF-like convention for class 
- methods. For example, instead of the current field.dict['units'] syntax
- a method-based approach, i.e. field.get_units(), would be desirable.
- 
+ (http://cfconventions.org). 
 
- A handful of functions have been employed which make use of 
- the stored information. For example: spatial interpolation between quad meshes 
- (FMS) and temporal interpolation between calendar dates (Datetime); spatial
+ A handful of functions have been employed as class methods.
+ For example: spatial interpolation between quadrilateral meshes 
+ (FMS) and temporal interpolation between calendar dates (Datetime); conservative
+ re-mapping in the vertical dimension (MOM6/ALE); spatial
  integration in one to three cartesian directions, e.g. 'X','XY' or 'XYZ'; 
  and temporal averaging (Datetime).
  
@@ -91,7 +78,7 @@ EXAMPLES
  		       		  # cell average bathymetry and roughness. Example along the Eastern US 
 
 	
-USAGE
+HOW TO OBTAIN DOCUMENTATION
 =====
 	
 	# STRONGLY RECOMMEND using the Ipython interpreter.
@@ -105,9 +92,11 @@ USAGE
 				    # Can be read from a file or provided as
 				    # 2-d lat/lon position arrays.
 	>>> rectgrid.state?  # Description of state instance
-	>>> state.state.[Tab] # available methods for state objects
+	>>> rectgrid.state.state.[Tab] # available methods for state objects
 	>>> rectgrid.state.volume_integral?  # integrate scalars over the domain
-				     # in 'X','Y','Z','XY','XZ',...
+				     # in 'X','Y','Z','XY' or 'XYZ'
+	>>> rectgrid.state?? # View the code
+				     
 	                                      
 	                                      
 
