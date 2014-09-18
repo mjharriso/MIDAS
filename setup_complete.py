@@ -15,16 +15,15 @@
 
 ===============================
 """
+from numpy.distutils.core import setup,Extension
 
 doclines = __doc__.split("\n")
 
 
-from numpy.distutils.core import setup,Extension
-
-remap_sfc_fluxes = Extension(name = 'midas.remap_sfc_fluxes',
+remap_sfc_fluxes = Extension(name = 'remap_sfc_fluxes',
                 sources = ['remap_sfc_fluxes/remap_sfc_fluxes.f90'])
 
-hinterp = Extension(name = 'midas.hinterp',
+hinterp = Extension(name = 'fms_hinterp',
                 include_dirs = ['fms_build'],
                 library_dirs = ['fms_build'],
                 libraries = ['fms','netcdf','netcdff'],
@@ -33,11 +32,11 @@ hinterp = Extension(name = 'midas.hinterp',
 
 
 
-vertmap_GOLD = Extension(name = 'midas.vertmap_GOLD',
+vertmap_GOLD = Extension(name = 'vertmap_GOLD',
                 sources = ['vertmap_GOLD/vertmap_GOLD.F90']
                 )
 
-vertmap_ALE = Extension(name = 'midas.vertmap_ALE',
+vertmap_ALE = Extension(name = 'vertmap_ALE',
                 include_dirs = ['MOM6_ALE/build_ale'],
                 library_dirs = ['MOM6_ALE/build_ale'],
                 libraries = ['ale'],                        

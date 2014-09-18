@@ -1488,7 +1488,7 @@ class state(object):
     """
 
     FVal_=-1.e34
-    from midas import vertmap_GOLD
+    import vertmap_GOLD
 
     if memstats:
         print 'Memory usage fill_miss (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
@@ -2409,7 +2409,7 @@ class state(object):
     
     """
 
-    from midas import vertmap 
+    import vertmap_GOLD 
 
     if self.var_dict[temp_name]['Ztype'] is not 'Fixed':
       print """
@@ -2465,21 +2465,21 @@ class state(object):
         rho=self.sigma[n,:].T
         zi_n = zi[:,n]
         print '...Finding interface positions '
-        zi_n=vertmap.midas_vertmap.find_interfaces(rho,zax,Rb,depth,nlevs,nkml,nkbl,hml)
+        zi_n=vertmap_GOLD.vertmap_gold_mod.find_interfaces(rho,zax,Rb,depth,nlevs,nkml,nkbl,hml)
         zi_n[:,:,1:][zi_n[:,:,1:]>-hml]=-hml
         ptemp=vars(self)[temp_name][n,:].T
         salinity=vars(self)[salt_name][n,:].T
         print '...Remapping temperature '
-        temp_n=vertmap.midas_vertmap.tracer_z_init(ptemp,-zbax,zi_n,nkml,nkbl,land_fill,wet_,len(R),nlevs)
+        temp_n=vertmap_GOLD.vertmap_gold_mod.tracer_z_init(ptemp,-zbax,zi_n,nkml,nkbl,land_fill,wet_,len(R),nlevs)
         temp_n=temp_n.astype('float64')
         print '...Remapping salinity '
-        salt_n=vertmap.midas_vertmap.tracer_z_init(salinity,-zbax,zi_n,nkml,nkbl,land_fill,wet_,len(R),nlevs)
+        salt_n=vertmap_GOLD.vertmap_gold_mod.tracer_z_init(salinity,-zbax,zi_n,nkml,nkbl,land_fill,wet_,len(R),nlevs)
         salt_n=salt_n.astype('float64')        
         h_n=zi_n-numpy.roll(zi_n,axis=2,shift=-1)
         h_n=h_n.astype('float64')        
         if fit_target:
             print '...Adjusting temp/salt to fit target densities '
-            vertmap.midas_vertmap.determine_temperature(temp_n,salt_n,R,p_ref,10,land_fill,h_n,nkml+nkbl+1)
+            vertmap_GOLD.vertmap_gold_mod.determine_temperature(temp_n,salt_n,R,p_ref,10,land_fill,h_n,nkml+nkbl+1)
         zi[:,:,:,n]=zi_n
         temp[:,:,:,n]=temp_n
         salt[:,:,:,n]=salt_n
@@ -2491,7 +2491,7 @@ class state(object):
 #        for fld in fields:
 #            expr = fld+'=vars(self)[\''+fld+'\'].T'
 #            exec(expr)
-#            expr=fld+'_remap=vertmap.midas_vertmap.tracer_z_init('+fld+',-zbax,zi,nkml,nkbl,land_fill,wet_,len(R),nlevs)'
+#            expr=fld+'_remap=vertmap_GOLD.vertmap_gold_mod.tracer_z_init('+fld+',-zbax,zi,nkml,nkbl,land_fill,wet_,len(R),nlevs)'
 #            exec(expr)
 #            expr=fld+'_remap='+fld+'_remap.astype(\'float64\')'
 #            exec(expr)
@@ -2812,7 +2812,7 @@ class state(object):
       algorithm (the default) or \"conservative\" area-weighted.
     """
     
-    from midas import hinterp
+    import fms_hinterp as hinterp
 
     print 'Memory usage hinterp (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     
