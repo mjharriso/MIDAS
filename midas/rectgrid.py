@@ -486,12 +486,12 @@ class quadmesh(object):
      xs,xe,ys,ye = self.find_geo_bounds(x=x,y=y)
 
      
-     section['y']=numpy.arange(ys,ye)
+     section['y']=numpy.arange(ys,max(ye,ys+1))
      section['yax_data']= self.lath[section['y']]
 
 
      if xe>=xs:
-         section['x']=numpy.arange(xs,xe)
+         section['x']=numpy.arange(xs,max(xe,xs+1))
          section['x_read']=section['x']
          section['xax_data']=self.lonh[section['x']]
      else:
@@ -982,7 +982,8 @@ class state(object):
           if Tb is not None:
               if f.variables[Tb].ndim == 2:
                   var_dict['tbax_data'] = f.variables[Tb][:,0]
-                  tb_last = f.variables[Tb][-1,1]
+                  tb =  f.variables[Tb][:]
+                  tb_last = tb[-1,1]
                   var_dict['tbax_data'] = numpy.hstack((var_dict['tbax_data'],[tb_last]))
 
                   
@@ -1611,7 +1612,7 @@ class state(object):
     """
 
     sout=vars(self)[field]
-    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent 
+    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent variable
     im=self.grid.im;jm=self.grid.jm
     nt=vars(self)[field].shape[0]
     nz=vars(self)[field].shape[1]
