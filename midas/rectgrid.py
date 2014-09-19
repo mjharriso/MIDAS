@@ -845,21 +845,41 @@ class state(object):
 
          if not interfaces_exist:
 
+             ivar_dict = {}
+
              slice_read = var_dict['slice_read']
              shape_read = var_dict['shape_read']
+#             if not numpy.isscalar(slice_read[1]):
              slice_read[1]=numpy.hstack((slice_read[1],slice_read[1][-1]))
+#             else
+#                 slice_read[1]=numpy.hstack((slice_read[1],slice_read[1]+1))
              shape_read[1]=shape_read[1]+1
              
              if type(interfaces) == str:
                  if path_interfaces is not None:
                      f_interfaces = netCDF4.Dataset(path_interfaces)
-                     data_int_read = numpy.reshape(numpy.array(f_interfaces.variables[interfaces][slice_read]),(shape_read))
+                     self.vdict_init(interfaces,'00',z_orientation,time_indices,z_indices)             
+                     data_int_read = numpy.reshape(numpy.ma.masked_array(f_interfaces.variables[interfaces][slice_read]),(shape_read))
+                     data_int_read = numpy.array(numpy.ma.filled(data_int_read,0.))
+                     data_int_read = numpy.ma.filled(data_int_read,0.)
                  elif MFpath_interfaces is not None:
                      f_interfaces = netCDF4.MFDataset(MFpath_interfaces)
-                     data_int_read = numpy.reshape(numpy.array(f_interfaces.variables[interfaces][slice_read]),(shape_read))
+                     data_int_read = numpy.reshape(numpy.ma.masked_array(f_interfaces.variables[interfaces][slice_read]),(shape_read))
+                     data_int_read = numpy.array(numpy.ma.filled(data_int_read,0.))
                      path_interfaces = MFpath_interfaces
                  else:
-                     data_int_read = numpy.reshape(numpy.array(self.rootgrp.variables[interfaces][slice_read]),(shape_read))
+                     if z_indices is not None:
+                         zi_indices=numpy.concatenate((z_indices,z_indices[-1]+1))
+                     else:
+                         zi_indices = None
+                     self.vdict_init(interfaces,'00',z_orientation,time_indices,zi_indices,self.rootgrp)
+                     ivar_dict=self.var_dict[interfaces]
+                     slice_read = ivar_dict['slice_read']
+                     shape_read = ivar_dict['shape_read']
+                     print 'slice_read=',slice_read
+                     print 'shape_read=',shape_read
+                     data_int_read = numpy.reshape(numpy.ma.masked_array(self.rootgrp.variables[interfaces][slice_read]),(shape_read))
+                     data_int_read = numpy.array(numpy.ma.filled(data_int_read,0.))
                      path_interfaces = self.path
            
                  vars(self)[interfaces] = data_int_read
@@ -904,8 +924,9 @@ class state(object):
           var_dict['rootgrp']=rootgrp
 
       f=var_dict['rootgrp']
-          
-      for n in range(0,self.variables[v].ndim):
+
+                           
+      for n in range(0,f.variables[v].ndim):
 
 # For each dimension , determine its Cartesian attribute
 # This is a critical step! Things may appear to work successfully
@@ -913,12 +934,12 @@ class state(object):
 # data stored is not associated.
 
 
-         dimnam = self.variables[v].dimensions[n]
+         dimnam = f.variables[v].dimensions[n]
          dim = f.variables[dimnam]
          cart = get_axis_cart(dim,dimnam)
 
          if cart is not None:
-           var_dict[cart]=self.variables[v].dimensions[n]
+           var_dict[cart]=f.variables[v].dimensions[n]
            
          if cart == 'Z':
            var_dict['Zdir'] = get_axis_direction(dim)
@@ -945,7 +966,7 @@ class state(object):
                var_dict['tunits'] = 'none'
                
            try:
-             var_dict['calendar'] = string.lower(self.rootgrp.variables[var_dict['T']].calendar)
+             var_dict['calendar'] = string.lower(f.variables[var_dict['T']].calendar)
            except:
              if self.default_calendar is not None:
                var_dict['calendar']=self.default_calendar
@@ -1035,14 +1056,14 @@ class state(object):
 
 
           try:
-              time_avg_info = getattr(self.rootgrp.variables[v],'time_avg_info')
+              time_avg_info = getattr(f.variables[v],'time_avg_info')
           except:
               time_avg_info = ""
          
           if 'average_DT' in time_avg_info:
               try:
-                  dt = self.rootgrp.variables['average_DT'][var_dict['t_indices']]
-                  units = self.rootgrp.variables['average_DT'].units
+                  dt = f.variables['average_DT'][var_dict['t_indices']]
+                  units = f.variables['average_DT'].units
               except:
                   dt = numpy.ones((len(var_dict['t_indices'])))
                   units = None
@@ -1618,22 +1639,23 @@ class state(object):
     nz=vars(self)[field].shape[1]
 
     if self.var_dict[field]['Z'] is not None:
-        if hasattr(self.var_dict[field],'dz'):
+        if 'dz' in self.var_dict[field].keys():
             dz=self.var_dict[field]['dz'][:]
         else:
-            dz = numpy.ones((sout.shape[1],self.grid.jm,self.grid.im))      
+            dz = numpy.ones((sout.shape[0],sout.shape[1],self.grid.jm,self.grid.im))      
 
         if self.var_dict[field]['masked']:
           mask_out = numpy.any(sout.mask,axis=0)
           dz=numpy.ma.masked_array(dz)
           dz.mask = mask_out
-          
+
+        
     else:
-      dz = numpy.ones((sout.shape[1],self.grid.jm,self.grid.im))      
-      if self.var_dict[field]['masked']:
-          mask_out = numpy.any(sout.mask,axis=0)
-          dz=numpy.ma.masked_array(dz)
-          dz.mask=mask_out
+        dz = numpy.ones((sout.shape[1],self.grid.jm,self.grid.im))      
+        if self.var_dict[field]['masked']:
+            mask_out = numpy.any(sout.mask,axis=0)
+            dz=numpy.ma.masked_array(dz)
+            dz.mask=mask_out
 
     dy=self.grid.dyh
     dx=self.grid.dxh
@@ -1655,12 +1677,13 @@ class state(object):
           result=numpy.reshape(result,(nt,1,jm,im))
           name = field+'_zav'
       else:
-          result = numpy.sum(sout*dz,axis=1)
+          result=sout*dz
+          result=numpy.reshape(result,(nt,nz,jm,im))          
+          result = numpy.sum(result,axis=1)
           result=numpy.reshape(result,(nt,1,jm,im))
           name = field+'_zint'
           
-      vars(self)[name]=result
-
+      vars(self)[name]=result.copy()
       
       var_dict['rootgrp']=None
             
@@ -2954,8 +2977,8 @@ class state(object):
             mask=numpy.ones((varin_x.shape))
 
         nk=varin_x.shape[1];nt=varin_x.shape[0]
-        varin_x[numpy.abs(varin_x-missing)<1.e-3*numpy.abs(varin_x)]=missing
-        varin_y[numpy.abs(varin_y-missing)<1.e-3*numpy.abs(varin_y)]=missing        
+        varin_x[numpy.abs(varin_x-missing)<1.e-3*numpy.abs(missing)]=missing
+        varin_y[numpy.abs(varin_y-missing)<1.e-3*numpy.abs(missing)]=missing        
     else:
         if self.var_dict[field]['missing_value'] is not None:
             missing = numpy.float64(self.var_dict[field]['missing_value'])
@@ -2972,7 +2995,7 @@ class state(object):
         else:
             mask=numpy.ones((varin.shape))
             
-        varin[numpy.abs(varin-missing)<1.e-3*numpy.abs(varin)]=missing            
+        varin[numpy.abs(varin-missing)<1.e-3*numpy.abs(missing)]=missing            
 
         nk=varin.shape[1];nt=varin.shape[0]
     
