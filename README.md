@@ -51,6 +51,15 @@ PYTHON INSTALL
 
 	cd MIDAS
 
+	# This will install the package under the current directory
+	# subsequently, if you want to use in a session, the PYTHONPATH
+	# environment variable must be set prior to invoking python, or,
+	# alternatively , scripts must contain the following:
+	# import sys; sys.path.append('foo_dir/local/lib/python')
+	# where foo_dir is the MIDAS directory
+	
+	setenv PYTHONPATH `pwd`/local/lib/python
+	
 	# simple install. Pure Python.
 
 	make   

@@ -1071,9 +1071,8 @@ class state(object):
               dt = dt*86400. # convert to seconds
           elif units == 'hours':
               dt = dt*3600. # convert to seconds
-          else:
-              dt = numpy.ones((len(var_dict['t_indices'])))
-
+      else:
+          dt = var_dict['tbax_data'][1:]-var_dict['tbax_data'][0:-1]
           var_dict['dt'] = dt
 
        
@@ -1614,6 +1613,7 @@ class state(object):
         print 'Memory usage fill_miss (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     
     return None
+
 
     
   def volume_integral(self,field=None,axis=None,normalize=True):
@@ -2722,7 +2722,9 @@ class state(object):
             fld_out[n,:]=data2
 
         fnam=fld+'_remap'
+
         self.add_field_from_array(fld_out,fnam,var_dict=vdict)
+
 
 #        vertmap_ALE.pyale_mod.pyale_grid_destroy()
 
@@ -4064,8 +4066,7 @@ class state(object):
             
                     
             if  self.var_dict[ifield]['Ztype'] != 'Fixed':
-                if self.var_dict[ifield]['T'] is not None:
-                    dims.append(str(self.var_dict[ifield]['T']))
+                dims.append(str(self.var_dict[ifield]['T']))
             if self.var_dict[ifield]['Z'] is not None:
                 dims.append('interfaces')        
             if self.var_dict[ifield]['Y'] is not None:
@@ -4099,9 +4100,10 @@ class state(object):
 
                 tv[n]=tdat[n-tstart]
 
-                if write_interfaces and self.var_dict[field]['Ztype'] is not 'Fixed' and p == 0:
+                if write_interfaces and self.var_dict[field]['Ztype'] is 'Fixed' and p == 0:
+                    outv[-1][:]=sq(zi[:])
+                elif write_interfaces and self.var_dict[field]['Ztype'] is not 'Fixed':
                     outv[-1][n,:]=sq(zi[n-tstart,:])
-
 
                 tv[n]=tdat[n-tstart]
                 m=m+1
