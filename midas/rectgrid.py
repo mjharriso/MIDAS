@@ -845,60 +845,54 @@ class state(object):
 
          if not interfaces_exist:
 
-             ivar_dict = {}
+             if z_indices is not  None:
+                 if len(z_indices)==1:
+                     zi_indices=numpy.array([z_indices[0],z_indices[0]+1])
+                 else:
+                     zi_indices=numpy.concatenate((z_indices,[z_indices[-1]+1]))
+             else:
+                 zi_indices = None
 
-             slice_read = var_dict['slice_read']
-             shape_read = var_dict['shape_read']
-#             if not numpy.isscalar(slice_read[1]):
-             slice_read[1]=numpy.hstack((slice_read[1],slice_read[1][-1]))
-#             else
-#                 slice_read[1]=numpy.hstack((slice_read[1],slice_read[1]+1))
-             shape_read[1]=shape_read[1]+1
-             
              if type(interfaces) == str:
                  if path_interfaces is not None:
                      f_interfaces = netCDF4.Dataset(path_interfaces)
-                     self.vdict_init(interfaces,'00',z_orientation,time_indices,z_indices)             
-                     data_int_read = numpy.reshape(numpy.ma.masked_array(f_interfaces.variables[interfaces][slice_read]),(shape_read))
-                     data_int_read = numpy.array(numpy.ma.filled(data_int_read,0.))
-                     data_int_read = numpy.ma.filled(data_int_read,0.)
                  elif MFpath_interfaces is not None:
                      f_interfaces = netCDF4.MFDataset(MFpath_interfaces)
-                     data_int_read = numpy.reshape(numpy.ma.masked_array(f_interfaces.variables[interfaces][slice_read]),(shape_read))
-                     data_int_read = numpy.array(numpy.ma.filled(data_int_read,0.))
-                     path_interfaces = MFpath_interfaces
-                 else:
-                     if z_indices is not None:
-                         zi_indices=numpy.concatenate((z_indices,z_indices[-1]+1))
-                     else:
-                         zi_indices = None
-                     self.vdict_init(interfaces,'00',z_orientation,time_indices,zi_indices,self.rootgrp)
-                     ivar_dict=self.var_dict[interfaces]
-                     slice_read = ivar_dict['slice_read']
-                     shape_read = ivar_dict['shape_read']
-                     print 'slice_read=',slice_read
-                     print 'shape_read=',shape_read
-                     data_int_read = numpy.reshape(numpy.ma.masked_array(self.rootgrp.variables[interfaces][slice_read]),(shape_read))
-                     data_int_read = numpy.array(numpy.ma.filled(data_int_read,0.))
-                     path_interfaces = self.path
-           
-                 vars(self)[interfaces] = data_int_read
-
-                 if DEBUG == 1 or verbose == True:
-                     print " Successfully extracted interface data named %(nam)s from %(fil)s "%{'nam':interfaces,'fil':path_interfaces}
-                     print " Resulting shape = ",vars(self)[interfaces].shape
-                     print " Max/Min = ",numpy.max(vars(self)[interfaces]),numpy.min(vars(self)[interfaces])
-
-                 self.interfaces=interfaces
                  
-             else:
-                 zint=numpy.take(numpy.take(numpy.take(numpy.take(interfaces,slice_read[3],axis=3),slice_read[2],axis=2),slice_read[1],axis=1),slice_read[0],axis=0)
-                 data_int_read = numpy.reshape(zint,(shape_read))
+                 self.vdict_init(interfaces,'00',z_orientation,time_indices,zi_indices,rootgrp=f_interfaces)
+                 
+                 ivar_dict=self.var_dict[interfaces]
+             
+                 slice_read = ivar_dict['slice_read']
+                 shape_read = ivar_dict['shape_read']
 
-                 interfaces_name='e'
+                 data_int_read = numpy.ma.masked_array(f_interfaces.variables[interfaces][slice_read])
+                 data_int_read = numpy.reshape(data_int_read,(shape_read))
+                 data_int_read = numpy.array(numpy.ma.filled(data_int_read,0.))
+                 data_int_read = numpy.ma.filled(data_int_read,0.)
+
+                 vars(self)[interfaces] = data_int_read
+                 self.interfaces=interfaces
+             else:
+
+                 zint=numpy.take(numpy.take(numpy.take(numpy.take(interfaces,slice_read[3],axis=3),slice_read[2],axis=2),slice_read[1],axis=1),slice_read[0],axis=0)
+                 data_int_read = numpy.reshape(zint,interfaces.shape)
+
+                 interfaces_name='eta'
                  vars(self)[interfaces_name] = data_int_read
 
                  self.interfaces=interfaces_name
+           
+
+
+             if DEBUG == 1 or verbose == True:
+                 print " Successfully extracted interface data named %(nam)s from %(fil)s "%{'nam':interfaces,'fil':path_interfaces}
+                 print " Resulting shape = ",vars(self)[interfaces].shape
+                 print " Max/Min = ",numpy.max(vars(self)[interfaces]),numpy.min(vars(self)[interfaces])
+
+
+                 
+
            
        self.vdict_Z_init(var_dict)
        
@@ -1054,24 +1048,29 @@ class state(object):
               t_indices=numpy.arange(0,nt)
               var_dict['t_indices'] = t_indices
 
+      else:
+          t_indices=None
 
-          try:
-              time_avg_info = getattr(f.variables[v],'time_avg_info')
-          except:
-              time_avg_info = ""
+          
+
+
+      try:
+          time_avg_info = getattr(f.variables[v],'time_avg_info')
+      except:
+          time_avg_info = ""
          
-          if 'average_DT' in time_avg_info:
-              try:
-                  dt = f.variables['average_DT'][var_dict['t_indices']]
-                  units = f.variables['average_DT'].units
-              except:
-                  dt = numpy.ones((len(var_dict['t_indices'])))
-                  units = None
+      if 'average_DT' in time_avg_info:
+          try:
+              dt = f.variables['average_DT'][var_dict['t_indices']]
+              units = f.variables['average_DT'].units
+          except:
+              dt = numpy.ones((len(var_dict['t_indices'])))
+              units = None
 
-              if units == 'days':
-                  dt = dt*86400. # convert to seconds
-              elif units == 'hours':
-                  dt = dt*3600. # convert to seconds
+          if units == 'days':
+              dt = dt*86400. # convert to seconds
+          elif units == 'hours':
+              dt = dt*3600. # convert to seconds
           else:
               dt = numpy.ones((len(var_dict['t_indices'])))
 
@@ -1086,18 +1085,21 @@ class state(object):
                var_dict['zunits'] =   f.variables[var_dict['Z']].units
            except:
                var_dict['zunits'] = 'none'
-               
+
+           
            if z_indices is not None:
-               tmp = numpy.array([z_indices[-1]+1])
-               z_interfaces = numpy.hstack((z_indices,tmp))
+               if numpy.isscalar(z_indices):
+                   z_indices=numpy.array([z_indices,z_indices+1])
+                       
                nz = len(z_indices)
            else:
                nz = len(f.variables[var_dict['Z']][:])
-               z_indices=numpy.arange(0,nz)
-               if len(z_indices) == 0:
-                   z_indices = 0
-               z_interfaces = numpy.arange(0,nz+1)
-
+               if nz<=1:
+                   z_indices=numpy.arange(0,1)
+               else:
+                  z_indices=numpy.arange(0,nz)
+               
+                  
            var_dict['zax_data']= f.variables[var_dict['Z']][z_indices]
 
            zdat=f.variables[var_dict['Z']][z_indices]
@@ -1126,14 +1128,15 @@ class state(object):
                    else:
                        var_dict['zbax_data']=None
 
-           
-      else:
-          z_indices = None
-          z_interfaces = None
+           else:
+               z_interfaces = None
+               
 
-      var_dict['z_indices']=z_indices
-      var_dict['zb_indices']=z_interfaces
+           var_dict['z_indices']=z_indices
+           var_dict['zb_indices']=z_interfaces
 
+
+      
       x_indices = numpy.arange(0,self.grid.im)
       x_indices_read = numpy.arange(0,self.grid.im)
       y_indices = numpy.arange(0,self.grid.jm)
@@ -1174,9 +1177,10 @@ class state(object):
           if s is not None:
               if len(s) == 1:  # This seems necessary due to a NETCDF4. bug
                   slice_read.append(s[0])
+                  shape_read.append(1)                  
               else:
                   slice_read.append(s)
-              shape_read.append(s.shape[0])
+                  shape_read.append(s.shape[0])
           else:
 #              slice_read.append(numpy.arange(0,1))
               shape_read.append(1)
@@ -1290,9 +1294,6 @@ class state(object):
 
     if memstats:
         print 'Memory usage in state add_field (01): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss    
-        print var_dict.keys()
-        print 'slice_read= ',var_dict['slice_read']        
-        print 'shape_read= ',var_dict['shape_read']
         
     data_read = numpy.array(f.variables[field][var_dict['slice_read']])
     shape_read=var_dict['shape_read']
@@ -1541,8 +1542,10 @@ class state(object):
         self.var_dict[field]['missing_value'] = FVal_                
 
 
-    val = vars(self)[field].copy()
-    val.set_fill_value(FillValue)
+#    val = vars(self)[field].copy()
+    
+#    val.set_fill_value(FillValue)
+    val = numpy.ma.masked_where(numpy.abs(vars(self)[field] - FillValue) < numpy.abs(FillValue*.01),vars(self)[field])             
 
     val_prev = numpy.zeros([val.shape[2],val.shape[3]])
     
@@ -1633,17 +1636,19 @@ class state(object):
     """
 
     sout=vars(self)[field]
-    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent variable
     im=self.grid.im;jm=self.grid.jm
     nt=vars(self)[field].shape[0]
     nz=vars(self)[field].shape[1]
 
+    var_dict=self.var_dict[field].copy()
+    
     if self.var_dict[field]['Z'] is not None:
         if 'dz' in self.var_dict[field].keys():
             dz=self.var_dict[field]['dz'][:]
         else:
             dz = numpy.ones((sout.shape[0],sout.shape[1],self.grid.jm,self.grid.im))      
 
+        
         if self.var_dict[field]['masked']:
           mask_out = numpy.any(sout.mask,axis=0)
           dz=numpy.ma.masked_array(dz)
@@ -1665,7 +1670,7 @@ class state(object):
 
     if axis.upper() == 'Z':
 
-      if var_dict['Z'] is None:
+      if self.var_dict[field]['Z'] is None:
           print "WARNING: Vertical Integral for a field with no axis. No calculations were done."
           return
 
@@ -1678,7 +1683,7 @@ class state(object):
           name = field+'_zav'
       else:
           result=sout*dz
-          result=numpy.reshape(result,(nt,nz,jm,im))          
+          result=numpy.reshape(result,(nt,nz,jm,im))
           result = numpy.sum(result,axis=1)
           result=numpy.reshape(result,(nt,1,jm,im))
           name = field+'_zint'
@@ -1723,7 +1728,7 @@ class state(object):
 
       
 
-      self.var_dict[name]=var_dict
+      self.var_dict[name]=var_dict.copy()
       self.variables[name]=name
 
 
@@ -1768,15 +1773,13 @@ class state(object):
             var_dict['z']=0.5*(var_dict['z_interfaces'][:,:-1,:] + var_dict['z_interfaces'][:,1:,:])
 
         
-      var_dict['rootgrp']=None
-      var_dict['Y']=None
-      var_dict['yax_data']=[numpy.mean(var_dict['yax_data'])]
+        var_dict['rootgrp']=None
+        var_dict['Y']=None
+        var_dict['yax_data']=[numpy.mean(var_dict['yax_data'])]
       
 
-      self.var_dict[name]=var_dict
-      self.variables[name]=name
-      self.var_dict[name]=var_dict
-      self.variables[name]=name
+        self.var_dict[name]=var_dict.copy()
+        self.variables[name]=name
       
         
     if axis.upper() == 'X':
@@ -1825,11 +1828,7 @@ class state(object):
       var_dict['xax_data']=[numpy.mean(var_dict['xax_data'])]
       
 
-      self.var_dict[name]=var_dict
-      self.variables[name]=name
-      
-
-      self.var_dict[name]=var_dict
+      self.var_dict[name]=var_dict.copy()
       self.variables[name]=name
       
 
@@ -1882,7 +1881,7 @@ class state(object):
       var_dict['yax_data']=[numpy.mean(var_dict['yax_data'])]
       
 
-      self.var_dict[name]=var_dict
+      self.var_dict[name]=var_dict.copy()
       self.variables[name]=name
 
       
@@ -1898,7 +1897,7 @@ class state(object):
 
     if axis.upper() == 'XYZ':
 
-      if var_dict['Z'] is None or var_dict['Y'] is None or var_dict['X'] is None:
+      if self.var_dict[field]['Z'] is None or self.var_dict[field]['Y'] is None or self.var_dict[field]['X'] is None:
         return None      
 
       if normalize:
@@ -1921,7 +1920,7 @@ class state(object):
       var_dict['rootgrp']=None
       
 
-      self.var_dict[name]=var_dict
+      self.var_dict[name]=var_dict.copy()
       self.variables[name]=name
 
   def time_avg(self,field=None,vol_weight=True,target=None):
@@ -2624,7 +2623,8 @@ class state(object):
 
         vdict['z_interfaces']=z_bounds.copy()
 
-
+        vdict['Ztype']=ztype
+        
         if ztype == 'Fixed':
             vdict['dz']=numpy.zeros((nx2,nj,ni))            
             vdict['z']=numpy.zeros((nx2,nj,ni))
@@ -3946,6 +3946,7 @@ class state(object):
                     tv.units= self.var_dict[field]['tunits']
                 if self.var_dict[field].has_key('calendar'):              
                     tv.calendar= self.var_dict[field]['calendar']
+
                 nt=len(tdat)
                 tstart = 0
                 tv.cartesian_axis = 'T'          
@@ -3962,17 +3963,19 @@ class state(object):
                 if self.var_dict[field]['Zdir'] == -1:
                     xv.positive='down'
                     
-                if self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal','Fixed'] and write_interfaces is False:
-                      if 'z_interfaces' in self.var_dict[field].keys():
-                          if self.var_dict[field]['z_interfaces'] is not None:
-                            if  self.var_dict[field]['Ztype'] == 'Fixed' and write_interface_positions == True:
-                                write_interfaces = True
-                            elif self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal']:
-                                write_interfaces = True
-                            if write_interfaces == True:
-                                ifield=field
-                                zi=self.var_dict[field]['z_interfaces'][:]
-                                ziax=self.var_dict[field]['zbax_data'][:]
+            if self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal','Fixed'] and write_interfaces is False:
+                if 'z_interfaces' in self.var_dict[field].keys():
+                    if self.var_dict[field]['z_interfaces'] is not None:
+                        if  self.var_dict[field]['Ztype'] == 'Fixed' and write_interface_positions == True:
+                            write_interfaces = True
+                        elif self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal']:
+                            write_interfaces = True
+                            
+                        if write_interfaces == True:
+                            ifield=self.interfaces
+                            zi=self.var_dict[field]['z_interfaces'][:]
+                            ziax=self.var_dict[field]['zbax_data'][:]
+
             dim_nam=str(self.var_dict[field]['Y'])
             if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
                 dims.append(dim_nam)
@@ -3982,6 +3985,7 @@ class state(object):
                 xv.units =   self.var_dict[field]['yunits']
                 xv[:]=xdat
                 xv.cartesian_axis='Y'
+                
             dim_nam=str(self.var_dict[field]['X'])
             if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
                 dims.append(dim_nam)
@@ -4001,6 +4005,9 @@ class state(object):
             dims.append(dim_nam)
             xdim=f.createDimension(dim_nam,len(ziax))
             xv=f.createVariable(dim_nam,'f8',(dim_nam,))
+            xv.units =   self.var_dict[self.interfaces]['zunits']
+            xv.cartesian_axis = 'Z'
+            xv.orientation = self.var_dict[self.interfaces]['Zdir']
             xv[:]=ziax
 
       
@@ -4019,15 +4026,20 @@ class state(object):
                 print 'field=',field,'dims= ',dims
 
             FillValue=None
-            if self.var_dict[field]['_FillValue'] is not None:
-                FillValue = self.var_dict[field]['_FillValue']          
+            if self.var_dict[field]['_FillValue'] is not None and self.var_dict[field]['missing_value'] is not None:
+                FillValue = self.var_dict[field]['missing_value']
                 var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
+
+            elif self.var_dict[field]['_FillValue'] is not None :
+                FillValue = self.var_dict[field]['_FillValue']                
+                var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
+            elif self.var_dict[field]['missing_value'] is not None :
+                MissingValue = self.var_dict[field]['missing_value']                
+                var=f.createVariable(field,'f4',dimensions=dims,fill_value=MissingValue)                      
             else:
-                if self.var_dict[field]['missing_value'] is not None:
-                    FillValue = self.var_dict[field]['missing_value']
-                    var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)      
-                else:
-                    var=f.createVariable(field,'f4',dimensions=dims)      
+                var=f.createVariable(field,'f4',dimensions=dims)
+
+                
             if self.var_dict[field]['missing_value'] is not None:
                 var.missing_value = self.var_dict[field]['missing_value']
 
@@ -4042,7 +4054,16 @@ class state(object):
 
         if write_interfaces:
             dims=[]
-            if  self.var_dict[field]['Ztype'] != 'Fixed':
+            for field in fields:
+                if  self.var_dict[field]['stagger'] is '00' and self.var_dict[field]['Z'] is not None:
+                    self.var_dict[ifield]['X']=self.var_dict[field]['X']
+                    self.var_dict[ifield]['Y']=self.var_dict[field]['Y']
+                    self.var_dict[ifield]['Zdir']=self.var_dict[field]['Zdir']
+                    self.var_dict[ifield]['units']=self.var_dict[field]['zunits']                    
+                    break
+            
+                    
+            if  self.var_dict[ifield]['Ztype'] != 'Fixed':
                 if self.var_dict[ifield]['T'] is not None:
                     dims.append(str(self.var_dict[ifield]['T']))
             if self.var_dict[ifield]['Z'] is not None:
@@ -4054,16 +4075,17 @@ class state(object):
 
             if FillValue is None:
                 FillValue=-1.e34
-#            var=f.createVariable('eta','f4',dims,fill_value=FillValue)
-            var=f.createVariable('eta','f4',dims)                
+
+            
+            var=f.createVariable('eta','f4',dims,fill_value=FillValue)                
             outv.append(var)
-      
 
         m=0
         for field in fields:
             if self.var_dict[field]['T'] is  None:
                 outv[m][:]=sq(self.__dict__[field][:])
             m=m+1
+
 
     m=0;p=0
     for field in fields:
@@ -4074,16 +4096,18 @@ class state(object):
                 else:
                     outv[m][n,:]=sq(self.__dict__[field][n-tstart,:])
 
-                if write_interfaces and m==0:
-                    if  self.var_dict[field]['Ztype'] == 'Fixed':
-                        outv[-1][:]=sq(zi[:])
-                    else:
-                        outv[-1][n,:]=sq(zi[n-tstart,:])
 
                 tv[n]=tdat[n-tstart]
-                
-            m=m+1
-        
+
+                if write_interfaces and self.var_dict[field]['Ztype'] is not 'Fixed' and p == 0:
+                    outv[-1][n,:]=sq(zi[n-tstart,:])
+
+
+                tv[n]=tdat[n-tstart]
+                m=m+1
+                p=p+1
+
+            
     
     f.sync()
     f.close()
@@ -4209,3 +4233,4 @@ class state(object):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+
