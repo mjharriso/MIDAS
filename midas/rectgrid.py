@@ -866,7 +866,11 @@ class state(object):
                  slice_read = ivar_dict['slice_read']
                  shape_read = ivar_dict['shape_read']
 
+#                 print 'shape_read= ',shape_read
+#                 print slice_read
+                 
                  data_int_read = numpy.ma.masked_array(f_interfaces.variables[interfaces][slice_read])
+#                 print data_int_read.shape
                  data_int_read = numpy.reshape(data_int_read,(shape_read))
                  data_int_read = numpy.array(numpy.ma.filled(data_int_read,0.))
                  data_int_read = numpy.ma.filled(data_int_read,0.)
@@ -934,7 +938,11 @@ class state(object):
 
          if cart is not None:
            var_dict[cart]=f.variables[v].dimensions[n]
-           
+
+         if cart is None and dimnam == 'interfaces':  # Special case 
+             var_dict['Z']=f.variables[v].dimensions[n]
+             var_dict['Zb']=None
+             
          if cart == 'Z':
            var_dict['Zdir'] = get_axis_direction(dim)
            if z_orientation is not None:
@@ -980,7 +988,6 @@ class state(object):
                
            if var_dict['calendar'] is not None:
              var_dict['dates'] = netCDF4.num2date(var_dict['tax_data'],var_dict['tunits'],var_dict['calendar'])
-
 
 
       if var_dict['T'] is not None:
@@ -1071,7 +1078,8 @@ class state(object):
               dt = dt*86400. # convert to seconds
           elif units == 'hours':
               dt = dt*3600. # convert to seconds
-      else:
+      elif var_dict['T'] is not None:
+          
           dt = var_dict['tbax_data'][1:]-var_dict['tbax_data'][0:-1]
           var_dict['dt'] = dt
 
