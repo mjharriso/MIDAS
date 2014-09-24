@@ -1078,6 +1078,9 @@ class state(object):
               dt = dt*86400. # convert to seconds
           elif units == 'hours':
               dt = dt*3600. # convert to seconds
+
+          var_dict['dt']=dt
+          
       elif var_dict['T'] is not None:
           
           dt = var_dict['tbax_data'][1:]-var_dict['tbax_data'][0:-1]

@@ -232,10 +232,10 @@ def instance_to_datetime(dates_in):
         y='%(y)04i'%{'y':int(yr)}
         d=str(d)
         d=y+d[4:]
-        dates.append(datetime.strptime(str(d),fmt))
+        dates.append(datetime.datetime.strptime(str(d),fmt))
 
         
-#    dates=[datetime.strptime(str(d),fmt) for d in dates_in]
+#    dates=[datetime.datetime.strptime(str(d),fmt) for d in dates_in]
 
     return dates
 
