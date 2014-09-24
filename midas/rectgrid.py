@@ -778,7 +778,8 @@ class state(object):
         else:
             print 'Invalid shape for interface variable'
             return None
-               
+
+        
     else:
         self.vertical_coordinate = 'Fixed'
 
@@ -802,6 +803,7 @@ class state(object):
 
        var_dict=self.var_dict[v]
 
+                                     
        data_read = numpy.array(self.rootgrp.variables[v][var_dict['slice_read']])
        data_read = numpy.reshape(data_read,(var_dict['shape_read']))
 
@@ -858,19 +860,15 @@ class state(object):
                      f_interfaces = netCDF4.Dataset(path_interfaces)
                  elif MFpath_interfaces is not None:
                      f_interfaces = netCDF4.MFDataset(MFpath_interfaces)
-                 
-                 self.vdict_init(interfaces,'00',z_orientation,time_indices,zi_indices,rootgrp=f_interfaces)
+
+                 self.vdict_init(interfaces,'00',z_orientation,time_indices,zi_indices,rootgrp=f_interfaces,is_interface=True)
                  
                  ivar_dict=self.var_dict[interfaces]
              
                  slice_read = ivar_dict['slice_read']
                  shape_read = ivar_dict['shape_read']
 
-#                 print 'shape_read= ',shape_read
-#                 print slice_read
-                 
                  data_int_read = numpy.ma.masked_array(f_interfaces.variables[interfaces][slice_read])
-#                 print data_int_read.shape
                  data_int_read = numpy.reshape(data_int_read,(shape_read))
                  data_int_read = numpy.array(numpy.ma.filled(data_int_read,0.))
                  data_int_read = numpy.ma.filled(data_int_read,0.)
@@ -905,7 +903,7 @@ class state(object):
           
 
 
-  def vdict_init(self,v,stagger='00',z_orientation=None,time_indices=None,z_indices=None,rootgrp=None):
+  def vdict_init(self,v,stagger='00',z_orientation=None,time_indices=None,z_indices=None,rootgrp=None,is_interface=False):
       
       var_dict = {}
       
@@ -990,6 +988,7 @@ class state(object):
              var_dict['dates'] = netCDF4.num2date(var_dict['tax_data'],var_dict['tunits'],var_dict['calendar'])
 
 
+
       if var_dict['T'] is not None:
           if time_indices is not None and self.date_bounds is not None:
               print """
@@ -1058,8 +1057,6 @@ class state(object):
       else:
           t_indices=None
 
-          
-
 
       try:
           time_avg_info = getattr(f.variables[v],'time_avg_info')
@@ -1082,9 +1079,12 @@ class state(object):
           var_dict['dt']=dt
           
       elif var_dict['T'] is not None:
-          
-          dt = var_dict['tbax_data'][1:]-var_dict['tbax_data'][0:-1]
-          var_dict['dt'] = dt
+
+          if var_dict['tbax_data'] is not None:
+              dt = var_dict['tbax_data'][1:]-var_dict['tbax_data'][0:-1]
+              var_dict['dt'] = dt
+          else:
+              var_dict['dt']=None
 
        
       if var_dict['Z'] is not None:
@@ -1128,7 +1128,7 @@ class state(object):
                    if f.variables[var_dict['Zb']].ndim == 2:
                        zb_last = f.variables[var_dict['Zb']][-1,1]
                        var_dict['zbax_data']=var_dict['zbax_data'][:,0]
-                       var_dict['zbax_data'] = numpy.hstack((var_dict['zbax_data'],[zb_last]))                     
+                       var_dict['zbax_data'] = numpy.hstack((var_dict['zbax_data'],[zb_last]))
                else:
                    zdat=var_dict['zax_data']
                    if len(zdat) > 1:
@@ -1137,7 +1137,10 @@ class state(object):
                        var_dict['zbax_data']=zint
                    else:
                        var_dict['zbax_data']=None
-
+                       
+               z_interfaces=numpy.arange(0,nz+1)
+               var_dict['zbax_data']=var_dict['zbax_data'][z_interfaces]
+               
            else:
                z_interfaces = None
                
@@ -1192,8 +1195,8 @@ class state(object):
                   slice_read.append(s)
                   shape_read.append(s.shape[0])
           else:
-#              slice_read.append(numpy.arange(0,1))
-              shape_read.append(1)
+              if not is_interface:
+                  shape_read.append(1)
 
 
 
@@ -1230,7 +1233,6 @@ class state(object):
                var_dict['Ztype'] = 'Fixed'                
        else:
            var_dict['Ztype']='Fixed'
-
 
        if var_dict['Z'] is not None and var_dict['Ztype'] is 'Fixed' and self.interfaces is None:
 
@@ -2563,7 +2565,7 @@ class state(object):
     self.add_field_from_array(salt,'salt_remap',var_dict=var_dict)            
 
 
-  def remap_ALE(self,fields=None,z_bounds=None,zbax_data=None,method='pcm',bndy_extrapolation=False):
+  def remap_ALE(self,fields=None,z_bounds=None,zbax_data=None,method='pcm',bndy_extrapolation=False,memstats=False):
 
 
     """
@@ -2625,10 +2627,12 @@ class state(object):
             vdict['zbax_data']=zbax_data
             zax_data=0.5*(zbax_data+numpy.roll(zbax_data,shift=-1))
             zax_data=zax_data[0:-1]
-            vdict['zax_data']=zax_data            
+            vdict['zax_data']=zax_data
+            vdict['Zb']='level_bounds'
         else:
             vdict['zbax_data']=None
             vdict['zax_data']=None
+            vdict['Zb']=None            
 
         vdict['z_indices']=numpy.arange(0,nx2+1)
 
@@ -2711,9 +2715,11 @@ class state(object):
             xb1= -xb1.T
             xb2= -sq(xb2).T
 
-            print 'Memory usage vertmap_ALE (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss                        
+            if memstats:
+                print 'Memory usage vertmap_ALE (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss                        
             vertmap_ALE.pyale_mod.remap(data,data2,xb1,xb2,method,bndy_extrapolation=bndy_extrapolation,missing=missing_value)
-            print 'Memory usage vertmap_ALE (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss            
+            if memstats:
+                print 'Memory usage vertmap_ALE (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss            
             data2=data2.T
             xb2=-xb2.T
 
@@ -3975,6 +3981,17 @@ class state(object):
                 xv.cartesian_axis = 'Z'
                 if self.var_dict[field]['Zdir'] == -1:
                     xv.positive='down'
+                if self.var_dict[field]['Zb'] is not None:
+                    dimb_nam=str(self.var_dict[field]['Zb'])
+                    xbdat=self.var_dict[field]['zbax_data'][:]
+                    xdimb=f.createDimension(dimb_nam,len(xbdat))
+                    xvb=f.createVariable(dimb_nam,'f8',(dimb_nam,))
+                    xvb[:]=xbdat
+                    xvb.units=self.var_dict[field]['zunits']
+                    xvb.cartesian_axis = 'Z'
+                    if self.var_dict[field]['Zdir'] == -1:
+                        xvb.positive='down'
+                    xv.bounds=dimb_nam
                     
             if self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal','Fixed'] and write_interfaces is False:
                 if 'z_interfaces' in self.var_dict[field].keys():
