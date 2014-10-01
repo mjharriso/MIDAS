@@ -449,8 +449,8 @@ class quadmesh(object):
       """
 
 
-      xs=0; xe=self.im-1
-      ys=0; ye=self.jm-1
+      xs=0; xe=self.im
+      ys=0; ye=self.jm
 
       if x is not None:
           [xs,xe]=find_axis_bounds(self.lonq,x=x,modulo_360=self.cyclic_x)
@@ -4134,8 +4134,8 @@ class state(object):
                     outv[-1][n,:]=sq(zi[n-tstart,:])
 
                 tv[n]=tdat[n-tstart]
-                m=m+1
-                p=p+1
+        m=m+1
+        p=p+1
 
             
     

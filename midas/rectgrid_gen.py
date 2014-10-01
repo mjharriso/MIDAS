@@ -16,7 +16,7 @@
 import copy
 import netCDF4
 import numpy    
-from midas.rectgrid_utils import *
+from rectgrid_utils import *
 
 PI_180 = numpy.pi/180.
 
