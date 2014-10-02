@@ -3992,19 +3992,20 @@ class state(object):
                     if self.var_dict[field]['Zdir'] == -1:
                         xvb.positive='down'
                     xv.bounds=dimb_nam
-                    
-            if self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal','Fixed'] and write_interfaces is False:
-                if 'z_interfaces' in self.var_dict[field].keys():
-                    if self.var_dict[field]['z_interfaces'] is not None:
-                        if  self.var_dict[field]['Ztype'] == 'Fixed' and write_interface_positions == True:
-                            write_interfaces = True
-                        elif self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal']:
-                            write_interfaces = True
+
+            if self.var_dict[field]['Z'] is not None:
+                if self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal','Fixed'] and write_interfaces is False:
+                    if 'z_interfaces' in self.var_dict[field].keys():
+                        if self.var_dict[field]['z_interfaces'] is not None:
+                            if  self.var_dict[field]['Ztype'] == 'Fixed' and write_interface_positions == True:
+                                write_interfaces = True
+                            elif self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal']:
+                                write_interfaces = True
                             
-                        if write_interfaces == True:
-                            ifield=self.interfaces
-                            zi=self.var_dict[field]['z_interfaces'][:]
-                            ziax=self.var_dict[field]['zbax_data'][:]
+                            if write_interfaces == True:
+                                ifield=self.interfaces
+                                zi=self.var_dict[field]['z_interfaces'][:]
+                                ziax=self.var_dict[field]['zbax_data'][:]
 
             dim_nam=str(self.var_dict[field]['Y'])
             if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
