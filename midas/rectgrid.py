@@ -803,7 +803,6 @@ class state(object):
 
        var_dict=self.var_dict[v]
 
-                                     
        data_read = numpy.array(self.rootgrp.variables[v][var_dict['slice_read']])
        data_read = numpy.reshape(data_read,(var_dict['shape_read']))
 
@@ -2739,14 +2738,8 @@ class state(object):
             fld_out[n,:]=data2
 
         fnam=fld+'_remap'
-
         self.add_field_from_array(fld_out,fnam,var_dict=vdict)
 
-
-#        vertmap_ALE.pyale_mod.pyale_grid_destroy()
-
-
-        
 
 
     
@@ -3248,6 +3241,7 @@ class state(object):
     
     
         S.var_dict[field]=var_dict
+        S.interfaces=None
 
         if S.var_dict[field]['masked']:
             vars(S)[field] = numpy.ma.masked_where(numpy.abs(varout - missing) < numpy.abs(missing)*1.e-3,varout)
@@ -4002,10 +3996,17 @@ class state(object):
                             elif self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal']:
                                 write_interfaces = True
                             
-                            if write_interfaces == True:
-                                ifield=self.interfaces
-                                zi=self.var_dict[field]['z_interfaces'][:]
-                                ziax=self.var_dict[field]['zbax_data'][:]
+                if write_interfaces == True:
+                    if self.interfaces is not None:
+                        ifield=self.interfaces
+                    else:
+                        ifield='interfaces'
+                        self.interfaces=ifield
+                        self.var_dict[ifield]={}
+                        self.var_dict[ifield]['Z']='interfaces'
+                        
+                    zi=self.var_dict[field]['z_interfaces'][:]
+                    ziax=self.var_dict[field]['zbax_data'][:]
 
             dim_nam=str(self.var_dict[field]['Y'])
             if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
@@ -4036,9 +4037,11 @@ class state(object):
             dims.append(dim_nam)
             xdim=f.createDimension(dim_nam,len(ziax))
             xv=f.createVariable(dim_nam,'f8',(dim_nam,))
-            xv.units =   self.var_dict[self.interfaces]['zunits']
+            if self.var_dict[self.interfaces].has_key('zunits'):
+                xv.units =   self.var_dict[self.interfaces]['zunits']
             xv.cartesian_axis = 'Z'
-            xv.orientation = self.var_dict[self.interfaces]['Zdir']
+            if self.var_dict[self.interfaces].has_key('Zdir'):            
+                xv.orientation = self.var_dict[self.interfaces]['Zdir']
             xv[:]=ziax
 
       
@@ -4087,9 +4090,14 @@ class state(object):
             dims=[]
             for field in fields:
                 if  self.var_dict[field]['stagger'] is '00' and self.var_dict[field]['Z'] is not None:
+                    self.var_dict[ifield]['T']=self.var_dict[field]['T']                    
                     self.var_dict[ifield]['X']=self.var_dict[field]['X']
                     self.var_dict[ifield]['Y']=self.var_dict[field]['Y']
                     self.var_dict[ifield]['Zdir']=self.var_dict[field]['Zdir']
+                    if zi.ndim == 4:
+                        self.var_dict[ifield]['Ztype']='Generalized'
+                    else:
+                        self.var_dict[ifield]['Ztype']='Fixed'                        
                     self.var_dict[ifield]['units']=self.var_dict[field]['zunits']                    
                     break
             
@@ -4112,6 +4120,7 @@ class state(object):
 
         m=0
         for field in fields:
+            # Write static fields
             if self.var_dict[field]['T'] is  None:
                 outv[m][:]=sq(self.__dict__[field][:])
             m=m+1
@@ -4119,6 +4128,7 @@ class state(object):
 
     m=0;p=0
     for field in fields:
+        # Non-static fields
         if self.var_dict[field]['T'] is not None:
             for n in numpy.arange(tstart,nt+tstart):
                 if self.var_dict[field]['X'] is None and self.var_dict[field]['Y'] is None and self.var_dict[field]['Z'] is None:
