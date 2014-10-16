@@ -742,7 +742,12 @@ class state(object):
 
     if grid is None:
         if path is not None:
-            grid = quadmesh(path,var=fields[0])
+            try:
+                grid = quadmesh(path,var=fields[0])
+            except:
+                print 'No X-Y grid detected, proceeding with no grid information'
+                grid=None
+                pass
         else:
             grid = quadmesh(self.rootgrp,var=fields[0])
 
@@ -1148,10 +1153,10 @@ class state(object):
            var_dict['zb_indices']=z_interfaces
 
 
-      
-      x_indices = numpy.arange(0,self.grid.im)
-      x_indices_read = numpy.arange(0,self.grid.im)
-      y_indices = numpy.arange(0,self.grid.jm)
+      if self.grid is not None:
+          x_indices = numpy.arange(0,self.grid.im)
+          x_indices_read = numpy.arange(0,self.grid.im)
+          y_indices = numpy.arange(0,self.grid.jm)
        
       if var_dict['Y'] is not None and var_dict['X'] is not None:
           try:
@@ -1172,10 +1177,11 @@ class state(object):
               if self.grid.yDir == -1:
                   var_dict['yax_data']=var_dict['yax_data'][::-1]
           else:
-              var_dict['yax_data'] = self.grid.lath
-              var_dict['xax_data'] = self.grid.lonh
-              if self.grid.yDir == -1:
-                  var_dict['yax_data']=var_dict['yax_data'][::-1]
+              if self.grid is not None:
+                  var_dict['yax_data'] = self.grid.lath
+                  var_dict['xax_data'] = self.grid.lonh
+                  if self.grid.yDir == -1:
+                      var_dict['yax_data']=var_dict['yax_data'][::-1]
 
       if var_dict['X'] is None:
           x_indices = None
@@ -1243,8 +1249,11 @@ class state(object):
              ny = len(self.geo_region['y'])
              nx = len(self.geo_region['x'])
            else:
-             ny = len(self.rootgrp.variables[var_dict['Y']][:])
-             nx = len(self.rootgrp.variables[var_dict['X']][:])
+               if self.grid is not None:
+                   ny = len(self.rootgrp.variables[var_dict['Y']][:])
+                   nx = len(self.rootgrp.variables[var_dict['X']][:])
+               else:
+                   ny = 1;nx = 1
 
            var_dict['z_interfaces']  = var_dict['Zdir']*numpy.tile(tmp,(1,ny,nx))
            tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))             
