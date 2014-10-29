@@ -20,7 +20,6 @@ MIDAS:	fms_build/libfms.a MOM6_ALE/build_ale/libale.a
 fms_build/libfms.a:
 	(cd fms;tar xvf fms_tikal_201312.tar)
 	(cd fms; /bin/rm -rf coupler;git clone git@gitlab.gfdl.noaa.gov:fms/coupler.git)
-	(cd fms; cvs co -r tikal atmos_null atmos_param ice_param ice_sis land_null ocean_null)
 	(cd fms_build;./build_fms.csh)
 
 MOM6_ALE/build_ale/libale.a: 
