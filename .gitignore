@@ -3,6 +3,10 @@ build/
 fms/
 tmp/
 
+# Files created during a build
+MOM6_ALE/build_ale/Makefile
+fms_build/Makefile
+
 # Additional
 .*
 path_names*
