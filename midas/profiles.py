@@ -15,8 +15,10 @@ import numpy as numpy
 import netCDF4 as netCDF4 
 import datetime as datetime
 import copy
+from numpy import squeeze as sq
 from dateutil import parser
 from wright_eos import *
+import string
 
 HAVE_GSW = False
 try:
@@ -54,15 +56,15 @@ class profile_index(object):
         dict={}
         line=fo.readline()
         line=line.split(',')
-        if len(line) >= 11: 
+        if len(line) > 14: 
           dict['id']=line[0]
           dict['path']=line[2]
-          dict['date_string']=line[3]
+          dict['date_string']=line[4]
           dict['ncDateTime']=parser.parse(dict['date_string'])
-          dict['lat']=numpy.float(line[5])
-          dict['lon']=numpy.float(line[7])
-          dict['depth_min']=line[9]
-          dict['depth_max']=line[10]          
+          dict['lat']=numpy.float(line[7])
+          dict['lon']=numpy.float(line[8])
+          dict['depth_min']=line[13]
+          dict['depth_max']=line[14]          
 
 
           passed=0;failed=0
@@ -155,7 +157,7 @@ class profile_list(object):
               reft = pr.data['ref_dateTime']
               reft = 'days since '+reft[0:4]+'-'+reft[4:6]+'-'+reft[6:9]
               pr.data['ncDateTime_indx']=parser.parse(date_string)
-              pr.data['ncDateTime']=num2date(pr.data['time'],reft)
+              pr.data['ncDateTime']=netCDF4.num2date(pr.data['time'],reft)
               pr.data['wmoid']=f.variables['platform_number'][:].tostring()
               pr.data['cycle_number']=f.variables['cycle_number'][:][0]
               pr.data['direction']=f.variables['direction'][:].tostring()
@@ -163,25 +165,25 @@ class profile_list(object):
               pr.data['latitude']=f.variables['latitude'][:][0]
               pr.data['longitude']=f.variables['longitude'][:][0]
 
-              pr.data['pressure']=sq(f.variables['pres'][:] )
+              pr.data['pressure']=sq(f.variables['pressure'][:] )
               try:
                 pr.data['pressure_adj']=sq(f.variables['pres_adjusted'][:])              
               except:
                 pr.data['pressure_adj']=None
                 
-              pr.data['temp']=sq(f.variables['temp'][:])
+              pr.data['temp']=sq(f.variables['temperature'][:])
               try:
-                pr.data['temp_adj']=sq(f.variables['temp_adjusted'][:])
+                pr.data['temp_adj']=sq(f.variables['temperature_adjusted'][:])
               except:
                 pr.data['temp_adj']=None
                 
               try:
-                pr.data['salt']=sq(f.variables['psal'][:])
+                pr.data['salt']=sq(f.variables['salinity'][:])
               except:
                 pr.data['salt']=None
 
               try:
-                pr.data['salt_adj']=sq(f.variables['psal_adjusted'][:])
+                pr.data['salt_adj']=sq(f.variables['salinity_adjusted'][:])
               except:
                 pr.data['salt_adj']=None                
 
