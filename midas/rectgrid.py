@@ -26,6 +26,8 @@ import datetime as datetime
 from utils import *
 from rectgrid_utils import *
 from rectgrid_gen import *
+from  wright_eos import *
+    
 # Optional packages
 
 try:
@@ -749,7 +751,12 @@ class state(object):
                 grid=None
                 pass
         else:
-            grid = quadmesh(self.rootgrp,var=fields[0])
+            try:
+                grid = quadmesh(self.rootgrp,var=fields[0])
+            except:
+                print 'No X-Y grid detected, proceeding with no grid information'
+                grid=None
+                pass
 
         if geo_region is not None:
             new_grid=grid.extract(geo_region)
@@ -1291,13 +1298,16 @@ class state(object):
     elif path is not None:
       f=netCDF4.Dataset(path)
     elif MFpath is not None:
-      f=netCDF4.MFDataset(MFpath)      
+      f=netCDF4.MFDataset(MFvars(path))
       
+    for v in self.variables:
+        t_indices=self.var_dict[str(v)]['t_indices']
+        exit
 
     if field in f.variables:
       nam = string.join(['self',field],sep='.')
       self.variables[field] = f.variables[field]  # netCDF4 variable object
-      self.vdict_init(field,stagger='00',rootgrp=f)
+      self.vdict_init(field,stagger='00',rootgrp=f,time_indices=t_indices)
       var_dict=self.var_dict[field]
     else:
       print ' Field ',field,' is not present in file ',path
@@ -1812,7 +1822,7 @@ class state(object):
           if self.var_dict[field]['Ztype']=='Fixed':
               result = numpy.sum(sout*dx*dy*dz,axis=3)/numpy.sum(dx*dy*dz,axis=2)
           else:
-              result = numpy.sum(sout*dx*dy*dz,axis=3)/numpy.sum(dz,axis=2)
+              result = numpy.sum(sout*dx*dy*dz,axis=3)/numpy.sum(dz,axis=3)
           result=numpy.reshape(result,(nt,nz,jm,1))
           name = field+'_xav'
       else:
@@ -2659,7 +2669,7 @@ class state(object):
 
             # Convention is x is monotonic and increasing.
             # i.e. x(k+1)>x(k)
-            # Midas convention is x(k)>x(k+1).
+            # Midas convention is x(k)>x(k+1) for ocean data.
             # Output grid is further adjusted so that the
             # outer edges of x1,x2 are aligned. The modified
             # edges are stored in a temporary copy of the
@@ -2674,12 +2684,8 @@ class state(object):
                     xb2=numpy.take(z_bounds,[n],axis=0)
             else:
                 xb1 = self.var_dict[fld]['z_interfaces'][:]
-                if ztype == 'Fixed':
-                    xb2=z_bounds.copy() # Force an array copy since we will be adjusting these
+                xb2=z_bounds.copy() # Force an array copy since we will be adjusting these
                                         # coordinates to match the outer edges of x1
-                else:
-                    xb2=numpy.take(z_bounds,[n],axis=0)
-
 
             nx1=xb1.shape[0]-1
             xb2=sq(xb2)
@@ -2780,6 +2786,9 @@ class state(object):
             zb=self.var_dict[field]['z_interfaces'].copy()
             zb[zb>ztop]=ztop[zb>ztop]
             zb[zb<-D]=-D[zb<-D]
+            zbot=sq(zb[-1,:])
+            zbot[zbot>-self.grid.D]=-self.grid.D[zbot>-self.grid.D]
+            zb[-1,:]=zbot
             dz = zb[:-1]-zb[1:]
             
             ztop=ztop[0,:]
@@ -2791,6 +2800,10 @@ class state(object):
             zb=self.var_dict[field]['z_interfaces'].copy()
             zb[zb<ztop]=ztop[zb<ztop]
             zb[zb>D]=D[zb>D]
+            zbot=sq(zb[-1,:])
+            zbot[zbot<self.grid.D]=self.grid.D[zbot<self.grid.D]
+            zb[-1,:]=zbot
+            
             dz = zb[1:]-zb[:-1]
             
             ztop=ztop[0,:]
@@ -2825,6 +2838,10 @@ class state(object):
             zb=self.var_dict[field]['z_interfaces'].copy()
             zb[zb>ztop]=ztop[zb>ztop]
             zb[zb<-D]=-D[zb<-D]
+            zbot=sq(zb[0,-1,:])
+            zbot[zbot>-self.grid.D]=-self.grid.D[zbot>-self.grid.D]
+            zb[:,-1,:]=zbot
+            
             dz = zb[:,:-1]-zb[:,1:]
             
             ztop=ztop[:,0,:]
@@ -2836,6 +2853,10 @@ class state(object):
             zb=self.var_dict[field]['z_interfaces'].copy()
             zb[zb<ztop]=ztop[zb<ztop]
             zb[zb>D]=D[zb>D]
+            zbot=sq(zb[0,-1,:])
+            zbot[zbot<self.grid.D]=self.grid.D[zbot<self.grid.D]
+            zb[:,-1,:]=zbot
+            
             dz = zb[:,1:]-zb[:,:-1]
             
             ztop=ztop[:,0,:]
@@ -3866,7 +3887,7 @@ class state(object):
       return None
 
 
-  def write_nc(self,filename=None,fields=None,format='NETCDF3_CLASSIC',append=False,write_interface_positions=False):
+  def write_nc(self,filename=None,fields=None,format='NETCDF3_CLASSIC',append=False,write_interface_positions=False,verbose=False):
 
     import os.path      
     """
@@ -3874,8 +3895,8 @@ class state(object):
     Write (fields) to an NetCDF file. 
 
     """
-
-    print 'Memory usage write_nc(pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    if verbose:
+        print 'Memory usage write_nc(pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     
     if fields is None:
       return None
@@ -3890,7 +3911,8 @@ class state(object):
     
     if append == True:
         if os.path.exists(filename):
-            print '%s exists, appending ' %(filename)
+            if verbose:
+                print '%s exists, appending ' %(filename)
             file_exists = True
             f=netCDF4.Dataset(filename,'a',format=format)
             dimlist = f.dimensions
@@ -3947,8 +3969,31 @@ class state(object):
 
 #               print "adjusted time stamps = ",tdat
             outv.append(f.variables[field])
-           
-        
+
+            if  self.var_dict[field]['Ztype'] == 'Fixed' and write_interface_positions == True:
+                write_interfaces = True
+            elif self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal']:
+                write_interfaces = True
+
+
+            if write_interfaces == True:
+                if self.interfaces is not None:
+                    ifield=self.interfaces
+                else:
+                    ifield='interfaces'
+                    self.interfaces=ifield
+                    self.var_dict[ifield]={}
+                    self.var_dict[ifield]['Z']='interfaces'
+                        
+                zi=self.var_dict[field]['z_interfaces'][:]
+                ziax=self.var_dict[field]['zbax_data'][:]
+
+
+                for v in varlist:
+                    if v == 'eta':
+                        outv.append(f.variables[v])
+
+                
         nt=len(tdat)
         tstart=len(tv[:])
     else:    
@@ -4146,8 +4191,6 @@ class state(object):
                     outv[m][n,:]=sq(self.__dict__[field][n-tstart,:])
 
 
-                tv[n]=tdat[n-tstart]
-
                 if write_interfaces and self.var_dict[field]['Ztype'] is 'Fixed' and p == 0:
                     outv[-1][:]=sq(zi[:])
                 elif write_interfaces and self.var_dict[field]['Ztype'] is not 'Fixed':
@@ -4162,7 +4205,8 @@ class state(object):
     f.sync()
     f.close()
 
-    print 'Memory usage write_nc(post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    if verbose:
+        print 'Memory usage write_nc(post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     
   def fill_nearest(self,field):
 

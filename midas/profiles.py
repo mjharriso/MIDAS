@@ -15,9 +15,9 @@ import numpy as numpy
 import netCDF4 as netCDF4 
 import datetime as datetime
 import copy
-from numpy import squeeze as sq
 from dateutil import parser
 from wright_eos import *
+from numpy import squeeze as sq
 import string
 
 HAVE_GSW = False
@@ -29,80 +29,101 @@ except:
 
 class profile_index(object):
 
-  def __init__(self,index_file=None,lon_bounds=None,lat_bounds=None,year_bounds=None,months=None,index_file_format='nodc'):
+  def __init__(self,index_root=None,lon_bounds=None,lat_bounds=None,year_bounds=None,months=None,index_file_format='nodc'):
 
     import os
 
-    if index_file is None:
+    if index_root is None:
       return None
 
     f_list = []
+    full_list = None
+    
+    try:
+      full_list = os.listdir(index_root)
+    except:
+      pass
 
-    full_list = os.listdir(index_file)
-    for f in full_list:
-      if f.find('.txt') > 0:
-        f_list.append(f)
+    if full_list is not None:
+      for f in full_list:
+        if f.find('.txt') > 0:
+          f_list.append(f)
 
-    f_list.sort()
+      f_list.sort()
+    else:
+      f_list=[index_root]
 
     self.f_list = f_list
 
+    self.index_root = index_root
     self.dict = []
 
     for f in f_list:
-      fo=open(f)
-      line=fo.readline()
-      while True:
-        dict={}
+      fo=open(index_root+'/'+f)
+      if index_file_format == 'nodc':
         line=fo.readline()
+      while True:
+        line=fo.readline()
+        dict={}
+        line=line.strip()
         line=line.split(',')
-        if len(line) > 14: 
+          
+        if len(line) >= 11  and index_file_format == 'nodc': 
           dict['id']=line[0]
           dict['path']=line[2]
-          dict['date_string']=line[4]
+          dict['date_string']=line[3]
           dict['ncDateTime']=parser.parse(dict['date_string'])
-          dict['lat']=numpy.float(line[7])
-          dict['lon']=numpy.float(line[8])
-          dict['depth_min']=line[13]
-          dict['depth_max']=line[14]          
-
-
-          passed=0;failed=0
-
-          if lon_bounds is not None or lat_bounds is not None:
-            if lon_bounds is not None:
-              if numpy.logical_and((dict['lon']>=lon_bounds[0]),(dict['lon']<=lon_bounds[1])):
-                passed=passed+1
-              else:
-                failed=failed+1
-            if lat_bounds is not None:
-              is_n = dict['lat'] >= lat_bounds[0]
-              is_s = lat_bounds[1] >= dict['lat'] 
-
-              if numpy.logical_and(is_n,is_s):
-                passed=passed+1
-              else:
-                failed=failed+1
-
-          if months is not None:
-            m=dict['ncDateTime'].month - 1
-            if m in months:
-              passed=passed+1
-            else:
-              failed=failed+1
-
-          if year_bounds is not None:
-            yr=dict['ncDateTime'].year
-            if yr>= year_bounds[0] and yr<=year_bounds[1]:
-              passed=passed+1
-            else:
-              failed=failed+1
-              
-          if numpy.logical_and(passed>=0,failed==0):              
-            self.dict.append(dict)
+          dict['lat']=numpy.float(line[5])
+          dict['lon']=numpy.float(line[7])
+          dict['depth_min']=line[9]
+          dict['depth_max']=line[10]          
+        elif len(line) >= 10 and index_file_format == 'pangea':
+          dict['id']=line[0]
+          dict['path']=str(line[0])+'.txt'
+          dict['date_string']=line[3]
+          dict['ncDateTime']=parser.parse(dict['date_string'])
+          dict['lat']=numpy.float(line[6])
+          dict['lon']=numpy.float(line[5])
+          dict['depth_max']=line[9]
+          dict['depth_min']=-999.
         else:
           break
-          
+
+
+        passed=0;failed=0
+        
+        if lon_bounds is not None or lat_bounds is not None:
+          if lon_bounds is not None:
+            if numpy.logical_and((dict['lon']>=lon_bounds[0]),(dict['lon']<=lon_bounds[1])):
+              passed=passed+1
+            else:
+              failed=failed+1
+          if lat_bounds is not None:
+            is_n = dict['lat'] >= lat_bounds[0]
+            is_s = lat_bounds[1] >= dict['lat'] 
+
+            if numpy.logical_and(is_n,is_s):
+              passed=passed+1
+            else:
+              failed=failed+1
+
+        if months is not None:
+          m=dict['ncDateTime'].month - 1
+          if m in months:
+            passed=passed+1
+          else:
+            failed=failed+1
+
+        if year_bounds is not None:
+          yr=dict['ncDateTime'].year
+          if yr>= year_bounds[0] and yr<=year_bounds[1]:
+            passed=passed+1
+          else:
+            failed=failed+1
+              
+        if numpy.logical_and(passed>=0,failed==0):              
+          self.dict.append(dict)
+    
 
         
         
@@ -131,7 +152,7 @@ class profile(object):
 
 class profile_list(object):
 
-  def __init__(self,path=None,format='nodc'):
+  def __init__(self,path=None,root='./',format='nodc',verbose=True):
 
     self.pr=[]
 
@@ -142,14 +163,15 @@ class profile_list(object):
 
           flist=[];prof_dict={}
           for file in path:
-            try:
-              f=netCDF4.Dataset(file['path'])
-            except:
-              continue
-
-            date_string = file['date_string']
-            i=0
             if format == 'nodc':
+              try:
+                f=netCDF4.Dataset(root+file['path'])
+              except:
+                if verbose:
+                  print "Unable to open "+root+file['path']
+                continue
+              
+              date_string = file['date_string']
               pr.data={}
               pr.data['DataType']=f.variables['data_type'][:].tostring()
               pr.data['ref_dateTime']=f.variables['reference_date_time'][:].tostring()
@@ -165,25 +187,25 @@ class profile_list(object):
               pr.data['latitude']=f.variables['latitude'][:][0]
               pr.data['longitude']=f.variables['longitude'][:][0]
 
-              pr.data['pressure']=sq(f.variables['pressure'][:] )
+              pr.data['pressure']=sq(f.variables['pres'][:] )
               try:
                 pr.data['pressure_adj']=sq(f.variables['pres_adjusted'][:])              
               except:
                 pr.data['pressure_adj']=None
                 
-              pr.data['temp']=sq(f.variables['temperature'][:])
+              pr.data['temp']=sq(f.variables['temp'][:])
               try:
-                pr.data['temp_adj']=sq(f.variables['temperature_adjusted'][:])
+                pr.data['temp_adj']=sq(f.variables['temp_adjusted'][:])
               except:
                 pr.data['temp_adj']=None
                 
               try:
-                pr.data['salt']=sq(f.variables['salinity'][:])
+                pr.data['salt']=sq(f.variables['psal'][:])
               except:
                 pr.data['salt']=None
 
               try:
-                pr.data['salt_adj']=sq(f.variables['salinity_adjusted'][:])
+                pr.data['salt_adj']=sq(f.variables['psal_adjusted'][:])
               except:
                 pr.data['salt_adj']=None                
 
@@ -199,8 +221,11 @@ class profile_list(object):
 
 
                 # Avoid confusion with direction attribute
-              dp = numpy.roll(pr.data['pressure'],shift=-1)-pr.data['pressure']
-
+              try:
+                dp = numpy.roll(pr.data['pressure'],shift=-1)-pr.data['pressure']
+              except:
+                dp = [0]
+                
               if numpy.isscalar(dp):
                 dp=[dp]
 
@@ -221,6 +246,13 @@ class profile_list(object):
               pr_new = copy.copy(pr)
               
               self.pr.append(pr_new)
+            elif format == 'pangea':
+              f=open(file['path'])              
+              pr.data={}
+              
+              pr.data['DataType']=None
+              pr.data['ref_dateTime']=None
+              pr.data['ncDateTime']=file['ncDateTime']
 
       
 

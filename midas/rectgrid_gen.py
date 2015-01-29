@@ -99,8 +99,8 @@ class supergrid(object):
           vdict['doughnut']=doughnut
           vdict['radius']=radius          
           
-          jind=numpy.arange(vdict['nytot']);iind=numpy.arange(vdict['nxtot'])
-          jindp=numpy.arange(vdict['nytot']+1);iindp=numpy.arange(vdict['nxtot']+1)                  
+          jind=numpy.arange(vdict['nytot']-1);iind=numpy.arange(vdict['nxtot']-1)
+          jindp=numpy.arange(vdict['nytot']);iindp=numpy.arange(vdict['nxtot'])                  
           self.grid_y=vdict['ystart']+jindp*vdict['leny']/vdict['nytot']
           self.grid_x=vdict['xstart']+iindp*vdict['lenx']/vdict['nxtot']          
 
