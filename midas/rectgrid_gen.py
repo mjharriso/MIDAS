@@ -107,6 +107,7 @@ class supergrid(object):
           self.x=xdat
           self.y=ydat
 
+          
           if displace_pole:
             r,phi = self.displaced_pole(r0_pole,lon0_pole,excluded_fraction=doughnut)
             print 'phi.shape=',phi.shape
@@ -128,6 +129,14 @@ class supergrid(object):
             self.is_latlon = True
 
           self.dict=dict.copy(vdict)
+
+          if tripolar_n:
+            self.lon_bpnp=self.grid_x[0]
+            self.join_lat=self.grid_y[0]
+            self.rp=numpy.tan(0.5*(0.5*numpy.pi - (self.grid_y[0])*PI_180))            
+            lon,lat=self.tp_trans()
+            self.x=lon
+            self.y=lat
           
           self.have_metrics = False
           
