@@ -3970,8 +3970,8 @@ class state(object):
 #               print "adjusted time stamps = ",tdat
             outv.append(f.variables[field])
 
-            if  self.var_dict[field]['Ztype'] == 'Fixed' and write_interface_positions == True:
-                write_interfaces = True
+            if  self.var_dict[field]['Ztype'] == 'Fixed' :
+                write_interfaces = False
             elif self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal']:
                 write_interfaces = True
 
