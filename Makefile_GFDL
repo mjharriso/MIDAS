@@ -18,7 +18,8 @@ MIDAS:	fms_build/libfms.a MOM6_ALE/build_ale/libale.a
 	(python setup_complete.py install --home=$(INSTALL_PATH))
 
 fms_build/libfms.a:
-	(cd fms;tar xvf fms_tikal_201312.tar)
+	(cd fms;tar xvf fms_env.tar) 
+	(cd fms;git clone https://github.com/MJHarrison-GFDL/NOAA-GFDL-FMS.git shared)
 	(cd fms_build;./build_fms.csh)
 
 MOM6_ALE/build_ale/libale.a: 
