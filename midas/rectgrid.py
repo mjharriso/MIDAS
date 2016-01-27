@@ -1248,10 +1248,13 @@ class state(object):
 
        if var_dict['Z'] is not None and var_dict['Ztype'] is 'Fixed' and self.interfaces is None:
 
-         if var_dict['zbax_data'] is not None:  # Construct interface positions using mid-points between levels
+         if var_dict['zbax_data'] is not None:  # Construct interface positions using existing 1-d interface positions
            zind=var_dict['slice_read'][1];nz=len(zind)
-           ziind = numpy.hstack((zind,zind[-1]+1))
-           tmp = numpy.reshape(var_dict['zbax_data'][ziind],(nz+1,1,1))
+#           print 'nz= ',nz
+#           print 'zind= ',zind
+#           ziind = numpy.hstack((zind,zind[-1]+1))
+#           print 'zbax_data.shape= ',var_dict['zbax_data'].shape
+           tmp = numpy.reshape(var_dict['zbax_data'],(nz+1,1,1))
            if self.geo_region is not None:
              ny = len(self.geo_region['y'])
              nx = len(self.geo_region['x'])
