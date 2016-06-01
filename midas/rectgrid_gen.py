@@ -781,23 +781,26 @@ class supergrid(object):
     xv=f.createVariable('x','f8',('nyp','nxp'))    
     yv.units=self.dict['axis_units']
     xv.units=self.dict['axis_units']    
-    yv[:]=self.y
-    xv[:]=self.x
 
     if self.have_metrics:
       dyv=f.createVariable('dy','f8',('ny','nxp'))
       dyv.units='meters'
-      dyv[:]=self.dy
       dxv=f.createVariable('dx','f8',('nyp','nx'))
       dxv.units='meters'
-      dxv[:]=self.dx
       areav=f.createVariable('area','f8',('ny','nx'))
       areav.units='m2'
-      areav[:]=self.area
       anglev=f.createVariable('angle_dx','f8',('nyp','nxp'))
       anglev.units='degrees'
-      anglev[:]=self.angle_dx            
 
+    yv[:]=self.y
+    xv[:]=self.x
+
+    if self.have_metrics:
+      dyv[:]=self.dy      
+      dxv[:]=self.dx      
+      areav[:]=self.area
+      anglev[:]=self.angle_dx            
+      
     f.sync()
     f.close()
       
