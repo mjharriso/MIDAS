@@ -2,20 +2,25 @@
 
 package:
   name: midas
-  version: "1.1"
+  version: "1.2"
 
 build:
-  number: 1
+  number: 0
   binary_relocation: true
+  preserve_egg_dir: True
 
 source:
-  # git_url: git://github.com/mjharriso/MIDAS.git
-  fn: master.zip
-  url: https://github.com/mjharriso/MIDAS/archive/master.zip
+  git_url: https://github.com/mjharriso/MIDAS.git
+  git_rev: dc41431819f4b001b5909b344cac9a79547c52ed
+
+#  fn: testing.zip
+#  url: https://github.com/mjharriso/MIDAS/archive/dev/testing.zip
 
 requirements:
   build:
     - python
+    - libnetcdf
+    - numpy 1.10.4
   run:
     - python
     - numpy

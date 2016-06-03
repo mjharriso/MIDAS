@@ -1,3 +1,5 @@
 #!/bin/bash
 
-$PYTHON setup.py install
+
+make -f Makefile_gfortran
+#$PYTHON setup_complete.py install
