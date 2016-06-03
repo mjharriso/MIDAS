@@ -18,13 +18,13 @@ fms_build/libfms.a:
 	(cd fms_build;cp build_fms.csh tmp;\
 	  sed -e 's/#set platform = linux/set platform = linux/' < tmp > tmp2;\
 	  sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_fms.csh;\
-	  ./build_fms.csh)
+	  chmod +x ./build_fms.csh;./build_fms.csh)
 
 MOM6_ALE/build_ale/libale.a: 
 	(cd MOM6_ALE/build_ale;cp build_ale.csh tmp;\
  	  sed -e 's/#set platform = linux/set platform = linux/' < tmp > tmp2;\
 	  sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_ale.csh;\
-	  ./build_ale.csh)
+	  chmod +x ./build_ale.csh;./build_ale.csh)
 
 
 
