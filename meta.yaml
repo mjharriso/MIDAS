@@ -11,7 +11,7 @@ build:
 
 source:
   git_url: https://github.com/mjharriso/MIDAS.git
-  git_rev: dc41431819f4b001b5909b344cac9a79547c52ed
+  git_rev: e6e7d479f69ef2ea9cfbfc926bff4b5986b3f74f
 
 #  fn: testing.zip
 #  url: https://github.com/mjharriso/MIDAS/archive/dev/testing.zip
