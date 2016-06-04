@@ -11,7 +11,7 @@ build:
 
 source:
   git_url: https://github.com/mjharriso/MIDAS.git
-  git_rev: e6e7d479f69ef2ea9cfbfc926bff4b5986b3f74f
+  git_rev: dev/testing
 
 #  fn: testing.zip
 #  url: https://github.com/mjharriso/MIDAS/archive/dev/testing.zip
@@ -20,17 +20,19 @@ requirements:
   build:
     - python
     - libnetcdf
-    - numpy 1.10.4
+    - netcdf-fortran
+    - numpy 
   run:
     - python
-    - numpy
+    - numpy 
+    - libnetcdf
     - scipy
     - netcdf4
     - basemap
     - dateutil
 test:
   imports:
-    - midas.rectgrid
+
   commands:
     - echo "Testing from the meta.yaml"
     - echo "This is Windows" # [win]
