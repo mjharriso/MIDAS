@@ -6,7 +6,7 @@ package:
 
 build:
   number: 0
-  binary_relocation: true
+  binary_relocation: False
   preserve_egg_dir: True
 
 source:
@@ -21,7 +21,6 @@ requirements:
     - python
     - libnetcdf
     - netcdf-fortran
-    - numpy 
   run:
     - python
     - numpy 
@@ -32,7 +31,7 @@ requirements:
     - dateutil
 test:
   imports:
-
+    - midas.rectgrid
   commands:
     - echo "Testing from the meta.yaml"
     - echo "This is Windows" # [win]
