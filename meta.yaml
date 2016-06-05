@@ -6,7 +6,7 @@ package:
 
 build:
   number: 0
-  binary_relocation: False
+  binary_relocation: True
   preserve_egg_dir: True
 
 source:
@@ -18,7 +18,7 @@ source:
 
 requirements:
   build:
-    - python
+    - python=1.10.4
     - libnetcdf
     - netcdf-fortran
   run:
