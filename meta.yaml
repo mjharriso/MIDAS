@@ -18,9 +18,10 @@ source:
 
 requirements:
   build:
-    - python=1.10.4
+    - python 
     - libnetcdf
     - netcdf-fortran
+    - numpy 1.10.4
   run:
     - python
     - numpy 
@@ -31,7 +32,7 @@ requirements:
     - dateutil
 test:
   imports:
-    - midas.rectgrid
+
   commands:
     - echo "Testing from the meta.yaml"
     - echo "This is Windows" # [win]
