@@ -26,6 +26,7 @@ requirements:
     - python
     - numpy 
     - libnetcdf
+    - netcdf-fortran
     - scipy
     - netcdf4
     - basemap

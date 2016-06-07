@@ -2519,7 +2519,7 @@ class state(object):
     
     for n in numpy.arange(nt):
         rho=self.sigma[n,:].T
-        zi_n = zi[:,n]
+        zi_n = zi[:,:,:,n]
         print '...Finding interface positions '
         zi_n=vertmap_GOLD.vertmap_gold_mod.find_interfaces(rho,zax,Rb,depth,nlevs,nkml,nkbl,hml)
         zi_n[:,:,1:][zi_n[:,:,1:]>-hml]=-hml
