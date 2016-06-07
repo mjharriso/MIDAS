@@ -32,7 +32,7 @@ requirements:
     - dateutil
 test:
   imports:
-
+    - midas.rectgrid
   commands:
     - echo "Testing from the meta.yaml"
     - echo "This is Windows" # [win]
