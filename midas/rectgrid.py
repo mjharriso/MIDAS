@@ -2681,17 +2681,17 @@ class state(object):
 
             if self.var_dict[fld]['Ztype'] in ['Isopycnal','Generalized','Sigma']:
                 xb1 = self.var_dict[fld]['z_interfaces'][n,:]
-                if ztype == 'Fixed':
-                    xb2=z_bounds
-                else:
-                    xb2=numpy.take(z_bounds,[n],axis=0)
             else:
                 xb1 = self.var_dict[fld]['z_interfaces'][:]
-                xb2=z_bounds.copy() # Force an array copy since we will be adjusting these
-                                        # coordinates to match the outer edges of x1
 
+            if ztype == 'Fixed':
+                xb2=z_bounds
+            else:
+#                xb2=numpy.take(z_bounds,[n],axis=0)
+                xb2 = z_bounds[n,:]
+                
             nx1=xb1.shape[0]-1
-            xb2=sq(xb2)
+#            xb2=sq(xb2)
 
             print xb1.shape
             print xb2.shape
@@ -2705,12 +2705,9 @@ class state(object):
 #                xb2[k,:,:]=numpy.minimum(xb2[k-1,:,:]-1.e-9,xb2[k,:,:]) # avoid zero thicknesses 
 
 
-            if ztype == 'Fixed':            
-                h2=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=0)-xb2)
-                h2=h2[:-1,:]
-            else:
-                h2=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=1)-xb2)
-                h2=h2[:,:-1,:]
+            h2=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=0)-xb2)
+            h2=h2[:-1,:]
+
 
             if ztype == 'Fixed':
                 vdict['z_interfaces'][:]=xb2
