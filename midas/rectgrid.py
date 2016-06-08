@@ -2687,6 +2687,7 @@ class state(object):
                     xb2=numpy.take(z_bounds,[n],axis=0)
             else:
                 xb1 = self.var_dict[fld]['z_interfaces'][:]
+                xb1 = xb1[numpy.newaxis,:]
                 xb2=z_bounds.copy() # Force an array copy since we will be adjusting these
                                         # coordinates to match the outer edges of x1
 
