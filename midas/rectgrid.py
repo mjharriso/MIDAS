@@ -2687,13 +2687,15 @@ class state(object):
                     xb2=numpy.take(z_bounds,[n],axis=0)
             else:
                 xb1 = self.var_dict[fld]['z_interfaces'][:]
-                xb1 = xb1[numpy.newaxis,:]
                 xb2=z_bounds.copy() # Force an array copy since we will be adjusting these
                                         # coordinates to match the outer edges of x1
 
             nx1=xb1.shape[0]-1
             xb2=sq(xb2)
 
+            print xb1.shape
+            print xb2.shape
+            
             xb1[0,:,:]=xb2[0,:,:] # reset top interface to xb1[0]
             for k in numpy.arange(1,xb1.shape[0]):
                 xb1[k,:,:]=numpy.minimum(xb1[k-1,:,:]-1.e-9,xb1[k,:,:]) # avoid zero thicknesses
