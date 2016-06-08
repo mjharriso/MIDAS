@@ -2712,12 +2712,12 @@ class state(object):
             if ztype == 'Fixed':
                 vdict['z_interfaces'][:]=xb2
                 zout=0.5*(xb2+numpy.roll(xb2,shift=-1,axis=0))
-                vdict['z']=zout[:-1,:]
+                vdict['z']=zout[:-1,:,:]
                 vdict['dz'][:]=h2                
             else:
                 vdict['z_interfaces'][n,:]=xb2
-                zout=0.5*(xb2+numpy.roll(xb2,shift=-1,axis=1))
-                vdict['z'][n,:]=zout[:,:-1,:]                
+                zout=0.5*(xb2+numpy.roll(xb2,shift=-1,axis=0))
+                vdict['z'][n,:]=zout[:-1,:,:]                
                 vdict['dz'][n,:]=h2
                 
             data=numpy.take(vars(self)[fld],[n],axis=0)
