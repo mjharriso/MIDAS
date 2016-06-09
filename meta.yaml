@@ -18,17 +18,17 @@ source:
 
 requirements:
   build:
-    - python 
-    - libnetcdf
-    - netcdf-fortran
+    - python 2.7.11 
+    - libnetcdf 4.3.3.1
+    - netcdf-fortran 4.2.2
     - numpy 1.10.4
   run:
-    - python
-    - numpy 
-    - libnetcdf
-    - netcdf-fortran
+    - python 2.7.11 
+    - libnetcdf 4.3.3.1
+    - netcdf-fortran 4.2.2
+    - numpy 1.10.4
     - scipy
-    - netcdf4
+    - netcdf4 1.2.4
     - basemap
     - dateutil
 test:
