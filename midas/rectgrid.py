@@ -694,7 +694,7 @@ class state(object):
 
   """
   
-  def __init__(self,path=None,grid=None,geo_region=None,time_indices=None,date_bounds=None,z_indices=None,fields=None,default_calendar=None,MFpath=None,interfaces=None,path_interfaces=None,MFpath_interfaces=None,stagger=None,verbose=True,z_orientation=None,memstats=False):
+  def __init__(self,path=None,grid=None,geo_region=None,time_indices=None,date_bounds=None,z_indices=None,z_bounds=None,fields=None,default_calendar=None,MFpath=None,interfaces=None,path_interfaces=None,MFpath_interfaces=None,stagger=None,verbose=True,z_orientation=None,memstats=False):
     """
     >>> from midas import *
     >>> import hashlib
@@ -814,7 +814,7 @@ class state(object):
          Aborting ... """%{'v':v,'path':self.path}
          raise
 
-       self.vdict_init(v,stagger[v],z_orientation,time_indices,z_indices)
+       self.vdict_init(v,stagger[v],z_orientation,time_indices,z_indices,z_bounds)
 
        var_dict=self.var_dict[v]
 
@@ -917,7 +917,7 @@ class state(object):
           
 
 
-  def vdict_init(self,v,stagger='00',z_orientation=None,time_indices=None,z_indices=None,rootgrp=None,is_interface=False):
+  def vdict_init(self,v,stagger='00',z_orientation=None,time_indices=None,z_indices=None,z_bounds=None,rootgrp=None,is_interface=False):
       
       var_dict = {}
       
@@ -1110,7 +1110,14 @@ class state(object):
            except:
                var_dict['zunits'] = 'none'
 
+           if z_bounds is not None and z_indices is not None:
+               print 'z_indices and z_bounds incompatible'
+               raise()
            
+           if z_bounds is not None:
+               zdat = f.variables[var_dict['Z']][:]
+               z_indices=numpy.where(numpy.logical_and(zdat>=z_bounds[0],zdat<=z_bounds[1]))[0]
+               
            if z_indices is not None:
                if numpy.isscalar(z_indices):
                    z_indices=numpy.array([z_indices,z_indices+1])
@@ -2609,9 +2616,11 @@ class state(object):
     
     for n in numpy.arange(nt):
         rho=self.sigma[n,:].T
-        zi_n = zi[:,n]
+#        print n,zi.shape
+        zi_n = zi[:,:,:,n]
         print '...Finding interface positions '
         zi_n=vertmap_GOLD.vertmap_gold_mod.find_interfaces(rho,zax,Rb,depth,nlevs,nkml,nkbl,hml)
+#        print zi_n.shape
         zi_n[:,:,1:][zi_n[:,:,1:]>-hml]=-hml
         ptemp=vars(self)[temp_name][n,:].T
         salinity=vars(self)[salt_name][n,:].T
@@ -2837,12 +2846,12 @@ class state(object):
                 dz=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=1)-xb2)
                 dz=dz[:,:-1,:]
                 
-#            mask=dz.copy()
-#            mask[mask>1.e-9]=1.0
-#            mask[mask<=1.e-9]=0.0
+            mask=dz.copy()
+            mask[mask>1.e-9]=1.0
+            mask[mask<=1.e-9]=0.0
 
-#            data2=numpy.ma.masked_where(mask==0.0,data2)
-#            data2=numpy.ma.filled(data2,vdict['missing_value'])
+            data2=numpy.ma.masked_where(mask==0.0,data2)
+            data2=numpy.ma.filled(data2,vdict['missing_value'])
             fld_out[n,:]=data2
 
         fnam=fld+'_remap'
