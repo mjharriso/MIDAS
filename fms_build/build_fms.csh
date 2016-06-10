@@ -26,7 +26,7 @@ cd $workdir
 \rm *.{o,mod}
 $MKMF -m Makefile -a $root  -t $mkmfTemplate -p libfms.a -c "$cppDefs"  $root/path_names  $includedir $mppincludedir 
 
-make DEBUG=1 NETCDF=3 libfms.a
+make DEBUG=0 NETCDF=3 libfms.a
 
 
 

@@ -32,7 +32,7 @@ $LISTPATHS $maledir
 
 $MKMF -m Makefile -a $workdir  -t $mkmfTemplate -p libale.a -c "$cppDefs"  path_names 
 
-make DEBUG=1 libale.a
+make DEBUG=0 libale.a
 
 
 if ( $status ) then

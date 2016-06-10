@@ -18,15 +18,15 @@ source:
 
 requirements:
   build:
-    - python 2.7.11 
-    - libnetcdf 4.3.3.1
-    - netcdf-fortran 4.4.2
-    - numpy 1.10.4
+    - python 2.7.10 
+    - libnetcdf 4.4.0
+    - netcdf-fortran 4.4.3
+    - numpy 
   run:
-    - python 2.7.11 
-    - libnetcdf 4.3.3.1
-    - netcdf-fortran 4.4.2
-    - numpy 1.10.4
+    - python 2.7.10
+    - libnetcdf 4.4.0
+    - netcdf-fortran 4.4.3
+    - numpy 
     - scipy
     - netcdf4 1.2.4
     - basemap
