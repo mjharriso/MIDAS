@@ -29,7 +29,7 @@ requirements:
     - netcdf-fortran 4.4.3
     - libgfortran 3.0.0    
     - numpy 1.10.4
-    - netCDF4
+    - netcdf4
     - scipy 
     - basemap 1.0.8.dev0
     - dateutil 2.4.1
