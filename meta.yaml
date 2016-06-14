@@ -7,7 +7,7 @@ package:
 build:
   number: 0
   binary_relocation: True
-  preserve_egg_dir: True
+  preserve_egg_dir: False
 
 source:
   git_url: https://github.com/mjharriso/MIDAS.git
@@ -18,22 +18,25 @@ source:
 
 requirements:
   build:
-    - python 2.7.10 
+    - python 2.7.11 
     - libnetcdf 4.4.0
+    - libgfortran 3.0.0
     - netcdf-fortran 4.4.3
-    - numpy 
+    - numpy 1.10.4
   run:
-    - python 2.7.10
+    - python 2.7.11
     - libnetcdf 4.4.0
     - netcdf-fortran 4.4.3
-    - numpy 
-    - scipy
-    - netcdf4 1.2.4
-    - basemap
-    - dateutil
+    - libgfortran 3.0.0    
+    - numpy 1.10.4
+    - scipy 0.17.0
+    - netcdf4 
+    - basemap 1.0.8.dev0
+    - dateutil 2.4.1
 test:
   imports:
     - midas.rectgrid
+    - import fms_hinterp
   commands:
     - echo "Testing from the meta.yaml"
     - echo "This is Windows" # [win]
