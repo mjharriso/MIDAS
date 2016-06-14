@@ -36,7 +36,7 @@ requirements:
 test:
   imports:
     - midas.rectgrid
-    - import fms_hinterp
+    - fms_hinterp
   commands:
     - echo "Testing from the meta.yaml"
     - echo "This is Windows" # [win]
