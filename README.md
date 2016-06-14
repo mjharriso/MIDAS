@@ -1,22 +1,23 @@
 DESCRIPTION
 ===========
 
- MIDAS (MIDAS Isolayer Data Analysis Software)
+ MIDAS (MIDAS Iso-surface Data Analysis Software)
  is a Python package primarily for processing
- gridded data stored in CF-compliant NetCDF format
+ gridded data stored in CF-compliant NetCDF/HDF5 format
  (http://cfconventions.org). 
 
  A handful of functions have been employed as class methods.
- For example: spatial interpolation between quadrilateral meshes 
- (FMS) and temporal interpolation between calendar dates (Datetime); conservative
- re-mapping in the vertical dimension (MOM6/ALE); spatial
+ For example: spatial interpolation between quadrilateral meshes using 
+ the FMS code developed at NOAA/GFDL; temporal interpolation between calendar
+ dates (datetime); conservative re-mapping in the vertical dimension using
+ MOM6/ALE developed at Princeton and NOAA/GFDL; spatial
  integration in one to three cartesian directions, e.g. 'X','XY' or 'XYZ'; 
  and temporal averaging (Datetime).
  
  
  MIDAS (Modular Isosurface Data Analysis System) was first developed by 
  Matthew Harrison 2011-2012 as an employee of NOAA in the 
- GFDL Oceans and Climate Group.    
+ GFDL Oceans and Sea Ice Processes Group.    
  
 
  This work is licensed under the Creative Commons
@@ -33,46 +34,52 @@ CONDA INSTALL
 
 
 
-	For Anaconda users (Python only, no extensions) 
+	STRONGLY RECOMMEND Anaconda 
 	
-	conda install -c https://conda.binstar.org/matthewharrison midas
+	conda install -c matthewharrison midas=1.2
+	
+        IMPORTANT - You also need to be working in a compatible environment
+	in order to satisfy dependencies with Fortran libraries. There is more
+	than one way to skin this cat, but recommend the following:
+
+	Requirements:
+	- bash
+	- already installed anaconda (https://anaconda.org) and it is in your path.
 	
 	
-PYTHON INSTALL 
-==============
+	1. Cut and paste the following into a custom environment MIDAS.yml configuration file:
 
+	name: MIDAS
+	dependencies:
+	- python>=2.7.11
+	- libgfortran=3.0.0
+	- basemap=1.0.8.dev0
+	- numpy=1.10.4
+	- scipy=0.17.0
+	- netcdf4=1.2.4
+	- dateutil=2.4.1
+	- midas=1.2
 
-	cd /home/$USER/$install_dir
+	2. Create the enviromnent:
 
-	git clone https://github.com/mjharriso/MIDAS.git
+	conda env create -f MIDAS.yml
 
-	# Alternatively using ssh
-	# git clone git@github.com:mjharriso/MIDAS.git
-
-	cd MIDAS
-
-	# This will install the package under the current directory
-	# subsequently, if you want to use in a session, the PYTHONPATH
-	# environment variable must be set prior to invoking python, or,
-	# alternatively , scripts must contain the following:
-	# import sys; sys.path.append('foo_dir/local/lib/python')
-	# where foo_dir is the MIDAS directory
+	3. Activate the enviroment to use MIDAS scripts
 	
-	setenv PYTHONPATH `pwd`/local/lib/python
-	
-	# simple install. Pure Python.
+	source activate MIDAS
 
-	make   
+	4. Deactivate MIDAS environment
 
-	# OR With F90 external modules using gFortran
-	
-	make -f Makefile_gfortran
+	source deactivate
 
-	# OR On GFDL HPCS using Intel
-	module load python
-	module load netcdf/4.2
-	module load intel_compilers
-	make -f Makefile_GFDL
+TROUBLESHOOTING
+===============
+
+	This is a temporary workaround to a problem with a NetCDF shared library. Do this, in case you get
+	an error complaining about missing libnetcdf.so.7 
+
+	ln -s <your_conda_path>/lib/libnetcdf.so <your_conda_path>/lib/libnetcdf.so.7
+
 	
 
 EXAMPLES
@@ -88,11 +95,8 @@ EXAMPLES
 
 	
 HOW TO OBTAIN DOCUMENTATION
-=====
+===========================
 	
-	# STRONGLY RECOMMEND using the Ipython interpreter.
-	# If you are having trouble, submit a help desk ticket
-	# or contact your system administrator.
 	
 	ipython
 	>>> import midas.rectgrid as rectgrid
