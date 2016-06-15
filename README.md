@@ -80,6 +80,11 @@ TROUBLESHOOTING
 
 	ln -s <your_conda_path>/lib/libnetcdf.so <your_conda_path>/lib/libnetcdf.so.7
 
+	libmkl missing:
+
+	conda install nomkl numpy scipy scikit-learn numexpr
+	conda remove mkl mkl-service
+	
 	
 
 EXAMPLES
