@@ -75,12 +75,12 @@ CONDA INSTALL
 TROUBLESHOOTING
 ===============
 
-	This is a temporary workaround to a problem with a NetCDF shared library. Do this, in case you get
+	There is a temporary workaround to a problem with a NetCDF shared library. Do this, in case you get
 	an error complaining about missing libnetcdf.so.7 
 
 	ln -s <your_conda_path>/lib/libnetcdf.so <your_conda_path>/lib/libnetcdf.so.7
 
-	libmkl missing:
+	or if you have a problem with libmkl missing:
 
 	conda install nomkl numpy scipy scikit-learn numexpr
 	conda remove mkl mkl-service
