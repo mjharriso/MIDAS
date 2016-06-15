@@ -1,6 +1,5 @@
 # Build and Release Folders
 build/
-fms/
 tmp/
 
 # Files created during a build
