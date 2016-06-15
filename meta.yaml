@@ -2,30 +2,42 @@
 
 package:
   name: midas
-  version: "1.1"
+  version: "1.2"
 
 build:
-  number: 1
-  binary_relocation: true
+  number: 0
+  binary_relocation: True
+  preserve_egg_dir: False
 
 source:
-  # git_url: git://github.com/mjharriso/MIDAS.git
-  fn: master.zip
-  url: https://github.com/mjharriso/MIDAS/archive/master.zip
+  git_url: https://github.com/mjharriso/MIDAS.git
+  git_rev: dev/testing
+
+#  fn: testing.zip
+#  url: https://github.com/mjharriso/MIDAS/archive/dev/testing.zip
 
 requirements:
   build:
-    - python
+    - python 2.7.11 
+    - libnetcdf 4.4.0
+    - libgfortran 3.0.0
+    - netcdf-fortran 4.4.3
+    - numpy 1.10.4
   run:
-    - python
-    - numpy
-    - scipy
+    - python 2.7.11
+    - libnetcdf 4.4.0
+    - netcdf-fortran 4.4.3
+    - libgfortran 3.0.0    
+    - numpy 1.10.4
     - netcdf4
-    - basemap
-    - dateutil
+    - scipy 
+    - basemap 1.0.8.dev0
+    - dateutil 2.4.1
 test:
   imports:
     - midas.rectgrid
+    - fms_hinterp
+    - vertmap_ALE
   commands:
     - echo "Testing from the meta.yaml"
     - echo "This is Windows" # [win]
