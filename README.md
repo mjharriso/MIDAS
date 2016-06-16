@@ -51,13 +51,16 @@ CONDA INSTALL
 
 	name: MIDAS
 	dependencies:
-	- python>=2.7.11
+	- python=2.7.11
 	- libgfortran=3.0.0
+	- libnetcdf=4.4.0
+	- libnetcdff=4.4.4
 	- basemap=1.0.8.dev0
 	- numpy=1.10.4
 	- scipy=0.17.0
 	- netcdf4=1.2.4
 	- dateutil=2.4.1
+	- jupyter
 	- midas=1.2
 
 	2. Create the enviromnent:
@@ -75,12 +78,8 @@ CONDA INSTALL
 TROUBLESHOOTING
 ===============
 
-	There is a temporary workaround to a problem with a NetCDF shared library. Do this, in case you get
-	an error complaining about missing libnetcdf.so.7 
 
-	ln -s <your_conda_path>/lib/libnetcdf.so <your_conda_path>/lib/libnetcdf.so.7
-
-	or if you have a problem with libmkl missing:
+	if you have a problem with libmkl missing:
 
 	conda install nomkl numpy scipy scikit-learn numexpr
 	conda remove mkl mkl-service
