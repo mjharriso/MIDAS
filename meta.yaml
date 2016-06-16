@@ -20,13 +20,13 @@ requirements:
   build:
     - python 2.7.11 
     - libnetcdf 4.4.0
+    - libnetcdff 4.4.4
     - libgfortran 3.0.0
-    - netcdf-fortran 4.4.3
     - numpy 1.10.4
   run:
     - python 2.7.11
     - libnetcdf 4.4.0
-    - netcdf-fortran 4.4.3
+    - libnetcdff 4.4.4
     - libgfortran 3.0.0    
     - numpy 1.10.4
     - netcdf4
