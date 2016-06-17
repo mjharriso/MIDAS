@@ -14,8 +14,8 @@ all: MIDAS
 
 MIDAS:	fms_build/libfms.a MOM6_ALE/build_ale/libale.a
 	rm -rf build/*
-	(python setup_complete.py config_fc --f90flags="-nowarn -i4 -r8 -DPY_SOLO" --fcompiler=intelem build >& /dev/null)
-	(python setup_complete.py install --home=$(INSTALL_PATH))
+	(python setup.py config_fc --f90flags="-nowarn -i4 -r8 -DPY_SOLO" --fcompiler=intelem build >& /dev/null)
+	(python setup.py install --home=$(INSTALL_PATH))
 
 fms_build/libfms.a:
 	(cd fms;tar xvf fms_env.tar) 
