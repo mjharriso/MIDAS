@@ -1,6 +1,9 @@
 # Build and Release Folders
 build/
 tmp/
+fms/bin/
+fms/shared
+fms/site
 
 # Files created during a build
 MOM6_ALE/build_ale/Makefile
