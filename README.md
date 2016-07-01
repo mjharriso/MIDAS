@@ -1,23 +1,21 @@
 DESCRIPTION
 ===========
 
- MIDAS (MIDAS Iso-surface Data Analysis Software)
- is a Python package primarily for processing
+ MIDAS (MIDAS IsoSurface Data Analysis Software)
+ is a Python package for Analyzing 
  gridded data stored in CF-compliant NetCDF/HDF5 format
  (http://cfconventions.org). 
 
- A handful of functions have been employed as class methods.
+ Several functions of use for climate applications have been employed as class methods.
  For example: spatial interpolation between quadrilateral meshes using 
- the FMS code developed at NOAA/GFDL; temporal interpolation between calendar
+ NOAA/GFDL FMS libraries; temporal interpolation between calendar
  dates (datetime); conservative re-mapping in the vertical dimension using
  MOM6/ALE developed at Princeton and NOAA/GFDL; spatial
  integration in one to three cartesian directions, e.g. 'X','XY' or 'XYZ'; 
- and temporal averaging (Datetime).
+ and temporal averaging (datetime).
  
  
- MIDAS (Modular Isosurface Data Analysis System) was first developed by 
- Matthew Harrison 2011-2012 as an employee of NOAA in the 
- GFDL Oceans and Sea Ice Processes Group.    
+ Originated by Matthew Harrison (2011) matthew.harrison@noaa.gov 
  
 
  This work is licensed under the Creative Commons
@@ -33,20 +31,21 @@ CONDA INSTALL
 =============
 
 
-
-	STRONGLY RECOMMEND Anaconda 
 	
-	conda install -c matthewharrison midas=1.2
 	
-        IMPORTANT - You also need to be working in a compatible environment
-	in order to satisfy dependencies with Fortran libraries. There is more
-	than one way to skin this cat, but recommend the following:
-
 	Requirements:
 	- bash
 	- already installed anaconda (https://anaconda.org) and it is in your path.
 	
-	
+	0. Configure Conda channels (~/.condarc):
+
+	channels:
+	- matthewharrison
+	- ioos	
+	- scitools
+	- conda-forge
+	- defaults
+
 	1. Cut and paste the following into a custom environment MIDAS.yml configuration file:
 
 	name: MIDAS
@@ -71,7 +70,7 @@ CONDA INSTALL
 	
 	source activate MIDAS
 
-	4. Deactivate MIDAS environment
+	4. Deactivate MIDAS environment when finished
 
 	source deactivate
 
@@ -90,13 +89,14 @@ EXAMPLES
 ========
 
 	cd examples
+	source activate MIDAS
 	python contour_example.py # Fetches OpenDAP URL from NODC and plots with Matplotlib
 	python hinterp_example.py # fms/horiz_interp does bi-linear interpolation from the original
 	                          # 1-deg to a 5-deg grid with masking
 	python hist.py            # volume-weighted histogram of salinity in the Indian Ocean
 	python subtile.py         # use subtiling algorithm to calculate un-weighted
  		       		  # cell average bathymetry and roughness. Example along the Eastern US 
-
+	source deactivate
 	
 HOW TO OBTAIN DOCUMENTATION
 ===========================
