@@ -1,7 +1,7 @@
 DESCRIPTION
 ===========
 
- MIDAS (MIDAS Midas Data Analysis Software)
+ MIDAS (MIDAS Midas is Data Analysis Software)
  is a Python package primarily for processing
  gridded data stored in CF-compliant NetCDF/HDF5 format
  (http://cfconventions.org).
