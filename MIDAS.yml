@@ -3,7 +3,7 @@ dependencies:
 - python=2.7.11
 - libgfortran=3.0.0
 - libnetcdf=4.4.0
-- netcdf-fortran=4.4.3
+- netcdf-fortran=4.4.4
 - basemap=1.0.8.dev0
 - numpy=1.10.4
 - scipy=0.17.0
