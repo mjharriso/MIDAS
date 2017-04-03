@@ -9,7 +9,7 @@ install:
  - export PATH="$HOME/miniconda/bin:$PATH"
  - hash -r
  - conda config --set always_yes yes --set changeps1 no
- - conda config --add channels matthewharrison
+ - conda config --add channels matthewharrison ioos
  - conda install midas=1.2
 
 # command to run tests
