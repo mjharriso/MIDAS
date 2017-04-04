@@ -1,3 +1,5 @@
+https://travis-ci.org/mjharriso/MIDAS.svg?branch=master
+
 DESCRIPTION
 ===========
 
