@@ -4,10 +4,9 @@ dependencies:
 - libgfortran=3.0.0
 - libnetcdf=4.4.0
 - libnetcdff=4.4.4
-- basemap=1.0.4
+- basemap=1.0.7
 - numpy=1.12.1
 - scipy=0.17.0
 - netcdf4
 - dateutil=2.4.1
 - jupyter
-- midas=1.2
