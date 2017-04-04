@@ -2,7 +2,7 @@
 
 package:
   name: midas
-  version: "1.2"
+  version: "1.2.1"
 
 build:
   number: 0
