@@ -22,13 +22,13 @@ requirements:
     - libnetcdf 4.4.0
     - libgfortran 3.0.0
     - libnetcdff 4.4.4
-    - numpy 1.10.4
+    - numpy 1.12.1
   run:
     - python 2.7.11
     - libnetcdf 4.4.0
     - libnetcdff 4.4.4
     - libgfortran 3.0.0
-    - numpy 1.10.4
+    - numpy 1.12.1
     - netcdf4
     - scipy
     - basemap 1.0.7
