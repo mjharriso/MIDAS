@@ -15,4 +15,4 @@ install:
 
 # command to run tests
 script:
- - python examples/contour_example.py
+ - python examples/hello.py
