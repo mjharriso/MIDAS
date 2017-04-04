@@ -11,7 +11,7 @@ install:
  - conda config --set always_yes yes --set changeps1 no
  - conda config --add channels matthewharrison
  - conda config --add channels ioos
- - conda install midas=1.2
+ - conda install midas=1.2.1
 
 # command to run tests
 # script: pytest
