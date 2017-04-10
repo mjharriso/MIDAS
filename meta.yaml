@@ -2,7 +2,7 @@
 
 package:
   name: midas
-  version: "1.2.1"
+  version: "1.2.2"
 
 build:
   number: 0
@@ -37,7 +37,6 @@ test:
   imports:
     - midas.rectgrid
     - fms_hinterp
-    - vertmap_ALE
   commands:
     - echo "Testing from the meta.yaml"
     - echo "This is Windows" # [win]

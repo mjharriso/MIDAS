@@ -5,6 +5,7 @@ dependencies:
 - libnetcdf=4.4.0
 - libnetcdff=4.4.4
 - basemap=1.0.7
+- hdf4>=4.2.12
 - numpy>=1.10.4
 - scipy=0.17.0
 - netcdf4
