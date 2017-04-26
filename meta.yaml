@@ -23,15 +23,19 @@ requirements:
     - libgfortran 3.0.0
     - libnetcdff 4.4.4
     - hdf5 1.8.17
+    - hdf4 4.2.12
+    - jpeg 9b
     - numpy >=1.10.4
   run:
     - python 2.7.11
     - libnetcdf 4.4.1
     - libnetcdff 4.4.4
     - libgfortran 3.0.0
+    - hdf4 4.2.12
+    - hdf5 1.8.17
+    - jpeg 9b
     - numpy >=1.10.4
     - netcdf4 1.2.7
-    - hdf5 1.8.17
     - scipy 0.17.0
     - basemap 1.0.7
     - dateutil 2.4.1
