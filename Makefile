@@ -1,5 +1,4 @@
 SHELL=bash
-INSTALL_PATH = "/home/$(USER)/local"
 
 all: MIDAS
 
