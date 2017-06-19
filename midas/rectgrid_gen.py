@@ -728,8 +728,15 @@ class supergrid(object):
     self.area=self.dx[:-1,:]*self.dy[:,:-1]
     self.angle_dx=numpy.zeros((nytot,nxtot))
 
-    self.angle_dx = numpy.arctan2(dy_i,dx_i)*180.0/numpy.pi
-      
+#    self.angle_dx = numpy.arctan2(dy_i,dx_i)*180.0/numpy.pi
+
+    # The commented out code above was incorrect for non-Cartesian grids
+    # The corrected version, in addition to including spherical metrics, is centered in the interior and one-sided at the grid edges
+    self.angle_dx[:,1:-1] = numpy.arctan2(self.y[:,2:]-self.y[:,:-2],(self.x[:,2:]-self.x[:,:-2])*numpy.cos(numpy.deg2rad(self.y[:,1:-1])))
+    self.angle_dx[:,0] = numpy.arctan2(self.y[:,1]-self.y[:,0],(self.x[:,1]-self.x[:,0])*numpy.cos(numpy.deg2rad(self.y[:,0])))
+    self.angle_dx[:,-1] = numpy.arctan2(self.y[:,-1]-self.y[:,-2],(self.x[:,-1]-self.x[:,-2])*numpy.cos(numpy.deg2rad(self.y[:,-1])))        
+    self.angle_dx = self.angle_dz * 180.0/numpy.pi
+    
     self.have_metrics = True
 
   def grid_metrics_sphere(self):
