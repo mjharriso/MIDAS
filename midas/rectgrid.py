@@ -2701,6 +2701,7 @@ class state(object):
 
     try:
         import vertmap_ALE
+#        from remapping import mom_remapping
     except:
         print """ ALE/vertmap not installed """
         return
@@ -4437,4 +4438,3 @@ class state(object):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-

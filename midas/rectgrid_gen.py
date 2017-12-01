@@ -739,7 +739,6 @@ class supergrid(object):
     self.angle_dx[:,0] = numpy.arctan2(self.y[:,1]-self.y[:,0],(self.x[:,1]-self.x[:,0])*numpy.cos(numpy.deg2rad(self.y[:,0])))
     self.angle_dx[:,-1] = numpy.arctan2(self.y[:,-1]-self.y[:,-2],(self.x[:,-1]-self.x[:,-2])*numpy.cos(numpy.deg2rad(self.y[:,-1])))
     self.angle_dx = self.angle_dx * 180.0/numpy.pi
-
     self.have_metrics = True
 
   def grid_metrics_sphere(self):
@@ -777,12 +776,10 @@ class supergrid(object):
       qx = v1[1]*v3[2] - v1[2]*v3[1]
       qy = v1[2]*v3[0] - v1[0]*v3[2]
       qz = v1[0]*v3[1] - v1[1]*v3[0]
-
       ddd = (px*px+py*py+pz*pz)*(qx*qx+qy*qy+qz*qz)
       ddd = (px*qx+py*qy+pz*qz) / numpy.sqrt(ddd)
       angle = numpy.arccos( ddd );
       return angle
-
 
     d2r = numpy.deg2rad(1.)
     lon = self.x; lat = self.y

@@ -16,17 +16,23 @@ set cppDefs      = ("-Duse_netCDF -Duse_netCDF3 -DMAXXGRID=2.e7" )
 set LISTPATHS    = $root/fms/bin/list_paths
 
 
+if ($platform == 'gfdl_hpcs') then
+  module load netcdf/4.2
+  module load intel_compilers
+endif
+
 cd $root
 \rm path_names*
 $LISTPATHS $sharedir
 mv -f path_names pt_orig
-egrep -v "atmos_ocean_fluxes|coupler_types|coupler_util|drifters|oda_tools" pt_orig > path_names
+#egrep -v "atmos_ocean_fluxes|coupler_types|coupler_util|drifters|oda_tools" pt_orig > path_names
+egrep "shared/fms|shared/mpp|shared/horiz_interp|shared/platform|shared/constants|shared/memutils|shared/mosaic" pt_orig > path_names
 
 cd $workdir
 \rm *.{o,mod}
 $MKMF -m Makefile -a $root  -t $mkmfTemplate -p libfms.a -c "$cppDefs"  $root/path_names  $includedir $mppincludedir 
 
-make DEBUG=1 NETCDF=3 libfms.a
+make NETCDF=3  libfms.a
 
 
 

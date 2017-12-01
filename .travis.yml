@@ -1,0 +1,23 @@
+language: python
+python:
+ - "2.7"
+
+# command to install dependencies
+install:
+ - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
+ - bash miniconda.sh -b -p $HOME/miniconda
+ - export PATH="$HOME/miniconda/bin:$PATH"
+ - hash -r
+ - conda config --add channels conda-forge
+ - conda install f90wrap
+ - git clone https://github.com/angus-g/mom6-coordinate.git
+ - (cd mom6-coordinate;git submodule init;git submodule update;cd remapping;./build.sh)
+ - conda config --set always_yes yes --set changeps1 no
+ - conda config --add channels matthewharrison
+ - conda config --add channels ioos
+ - conda install hdf4=4.2.12
+ - conda install midas=1.2.2
+
+# command to run tests
+script:
+ - python examples/hello.py

@@ -3,12 +3,12 @@
 
  MIDAS (Modular Iso-surface Data Analysis System)
  was first developed by Matthew Harrison
- starting in 2011 as an employee of NOAA in the 
- GFDL Oceans and Ice Sheet Processes Group. 
+ starting in 2011 as an employee of NOAA in the
+ GFDL Oceans and Ice Sheet Processes Group.
 
  This work is licensed under the Creative Commons
  Attribution-NonCommercial-ShareAlike 3.0 Unported License.
- To view a copy of this license, visit   
+ To view a copy of this license, visit
  http://creativecommons.org/licenses/by-nc-sa/3.0/
  or send a letter to Creative Commons, 444 Castro Street,
  Suite 900, Mountain View, California, 94041, USA.
@@ -39,14 +39,14 @@ vertmap_GOLD = Extension(name = 'vertmap_GOLD',
 vertmap_ALE = Extension(name = 'vertmap_ALE',
                 include_dirs = ['MOM6_ALE/build_ale'],
                 library_dirs = ['MOM6_ALE/build_ale'],
-                libraries = ['ale'],                        
+                libraries = ['ale'],
                 sources = ['MOM6_ALE/pyale.f90'])
 
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
     setup(name = "midas",
-          version = '1.2',
+          version = '1.2.3',
           description = doclines[0],
           long_description = "\n".join(doclines[2:]),
           author = "Matthew Harrison",
@@ -57,4 +57,3 @@ if __name__ == '__main__':
           packages=['midas'],
           ext_modules = [hinterp,remap_sfc_fluxes,vertmap_GOLD,vertmap_ALE],
           )
-    

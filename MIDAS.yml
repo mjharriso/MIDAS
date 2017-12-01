@@ -2,12 +2,15 @@ name: MIDAS
 dependencies:
 - python=2.7.11
 - libgfortran=3.0.0
-- libnetcdf=4.4.0
-- netcdf-fortran=4.4.3
-- basemap=1.0.8.dev0
-- numpy=1.10.4
+- libnetcdf=4.4.1
+- libnetcdff=4.4.4
+- basemap=1.0.7
+- hdf4=4.2.12
+- hdf5=1.8.17
+- jpeg=9b
+- numpy>=1.10.4
 - scipy=0.17.0
-- netcdf4
+- netcdf4=1.2.7
 - dateutil=2.4.1
 - jupyter
-- midas=1.2
+- midas=1.2.2
