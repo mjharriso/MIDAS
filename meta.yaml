@@ -11,26 +11,26 @@ build:
 
 source:
   git_url: https://github.com/mjharriso/MIDAS.git
-  git_rev: dev/testing
+  git_rev: testing
 
 #  fn: testing.zip
 #  url: https://github.com/mjharriso/MIDAS/archive/dev/testing.zip
 
 requirements:
   build:
-    - python 2.7.11 
-    - libnetcdf 4.4.0
+    - python 2.7.11
+    - libnetcdf 4.4.1
     - libnetcdff 4.4.4
     - libgfortran 3.0.0
     - numpy 1.10.4
   run:
     - python 2.7.11
-    - libnetcdf 4.4.0
+    - libnetcdf 4.4.1
     - libnetcdff 4.4.4
-    - libgfortran 3.0.0    
+    - libgfortran 3.0.0
     - numpy 1.10.4
     - netcdf4
-    - scipy 
+    - scipy
     - basemap 1.0.8.dev0
     - dateutil 2.4.1
 test:

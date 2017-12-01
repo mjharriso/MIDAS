@@ -3,7 +3,7 @@
 
  This work is licensed under the Creative Commons
  Attribution-Noncommercial-ShareAlike 3.0 Unported License.
- To view a copy of this license, visit   
+ To view a copy of this license, visit
  http://creativecommons.org/licenses/by-nc-sa/3.0/
  or send a letter to Creative Commons, 444 Castro Street,
  Suite 900, Mountain View, California, 94041, USA.
@@ -21,13 +21,13 @@
 import pickle as pickle
 import resource as resource
 import numpy as numpy
-import netCDF4 as netCDF4 
+import netCDF4 as netCDF4
 import datetime as datetime
 from utils import *
 from rectgrid_utils import *
 from rectgrid_gen import *
 from  wright_eos import *
-    
+
 # Optional packages
 
 try:
@@ -37,7 +37,7 @@ except:
     HAVE_SCIPY=False
     pass
 
-# Constants 
+# Constants
 
 epsln = 1.e-20
 Omega=7.295e-5
@@ -48,44 +48,44 @@ R_earth = 6371.e3
 # Turn on for more verbose output
 
 DEBUG = 0
-   
+
 class quadmesh(object):
 
   """A quadmesh object is a horizontal lattice on
-  a sphere or plane. When instantiating from a file, a quadmesh 
-  is constructed by reading the lat-lon list associated 
+  a sphere or plane. When instantiating from a file, a quadmesh
+  is constructed by reading the lat-lon list associated
   with (var) from file (path) . Additionally, a grid can be
   constructed using a FMS supergrid object (see midas.rectgrid_gen).
 
-  Additional lattice points are needed to define the 
-  cell perimeters. The primary lattice of (T) cell centers, 
-  and the perimeter lattice of (Q) points are located at coordinates 
-  (y_T,x_T) and (y_T_bounds,x_T_bounds) respectively.  
+  Additional lattice points are needed to define the
+  cell perimeters. The primary lattice of (T) cell centers,
+  and the perimeter lattice of (Q) points are located at coordinates
+  (y_T,x_T) and (y_T_bounds,x_T_bounds) respectively.
 
   There are (jm,im) H cell points and (jm+1,im+1) perimeter
-  locations. 
+  locations.
                 X_T_bounds
-                   V    
+                   V
            +-------+-------+-------+
            :       :       :       :
            :       :       :       :
-           :       :       :       :           
+           :       :       :       :
            +-------+-------Q-------:
            :       :       :       :
            :       :   T   :       :< Y_T
-           :       :       :       :           
+           :       :       :       :
            +-------Q-------+-------+< Y_T_bounds
                        ^   ^
                       X_T
 
     Cell metrics are sometimes available, depending on the way in which the
-    quadmesh was constructed.                    
+    quadmesh was constructed.
 
   """
-  
+
   def __init__(self,path=None,cyclic=False,tripolar_n=False,var=None,simple_grid=False,supergrid=None,lon=None,lat=None,lonb=None,latb=None,is_latlon=True,is_cartesian=False,grid_type='generic',):
 
-      
+
     """
     >>> grid=quadmesh('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an',cyclic=True)
     >>> print grid.lonh[0],grid.lonh[-1]
@@ -122,7 +122,7 @@ class quadmesh(object):
 
     self.cyclic_x = cyclic
     self.tripolar_n = tripolar_n
-    
+
     if supergrid is not None:
         var_dict = {}
         x=supergrid.x; y=supergrid.y
@@ -137,12 +137,12 @@ class quadmesh(object):
         self.y_T_bounds=y[0::2,0::2]
 
         self.jm = self.x_T.shape[0]
-        self.im = self.x_T.shape[1]        
+        self.im = self.x_T.shape[1]
 
         self.wet = numpy.ones((self.jm,self.im))
         self.cyclic_x=supergrid.dict['cyclic_x']
         self.tripolar_n=supergrid.dict['tripolar_n']
-        
+
         if supergrid.have_metrics:
             dx=supergrid.dx
             dy=supergrid.dy
@@ -166,7 +166,7 @@ class quadmesh(object):
             f=netCDF4.Dataset(path)
 
 
-            
+
     if grid_type == 'gold_geometry':
         self.x_T = f.variables['geolon'][:]
         self.x_T_bounds = f.variables['geolonb'][:]
@@ -174,7 +174,7 @@ class quadmesh(object):
         xtb0=xtb0[:,numpy.newaxis]
         self.x_T_bounds = numpy.hstack((xtb0,self.x_T_bounds))
         xtb0=self.x_T_bounds[0,:]
-        self.x_T_bounds = numpy.vstack((xtb0,self.x_T_bounds))    
+        self.x_T_bounds = numpy.vstack((xtb0,self.x_T_bounds))
         self.y_T = f.variables['geolat'][:]
         self.y_T_bounds = f.variables['geolatb'][:]
         ytb0=2.0*self.y_T_bounds[0,:]-self.y_T_bounds[1,:]
@@ -182,7 +182,7 @@ class quadmesh(object):
         ytb0=self.y_T_bounds[:,0]
         ytb0=ytb0[:,numpy.newaxis]
         self.y_T_bounds = numpy.hstack((ytb0,self.y_T_bounds))
-        self.lonh = f.variables['lonh'][:] 
+        self.lonh = f.variables['lonh'][:]
         self.lath = f.variables['lath'][:]
         self.lonq = f.variables['lonq'][:]
         self.lonq = numpy.hstack((self.lonq[0]-(self.lonq[1]-self.lonq[0]),self.lonq))
@@ -201,7 +201,7 @@ class quadmesh(object):
         except:
             self.dyh    = f.variables['dyT'][:]
 
-            
+
         self.Ah    = f.variables['Ah'][:]
 
         self.wet    = f.variables['wet'][:]
@@ -220,7 +220,7 @@ class quadmesh(object):
         xtb0=xtb0[:,numpy.newaxis]
         self.x_T_bounds = numpy.hstack((xtb0,self.x_T_bounds))
         xtb0=self.x_T_bounds[0,:]
-        self.x_T_bounds = numpy.vstack((xtb0,self.x_T_bounds))    
+        self.x_T_bounds = numpy.vstack((xtb0,self.x_T_bounds))
         self.y_T = f.variables['geolat_t'][:]
         self.y_T_bounds = f.variables['geolat_n'][:]
         ytb0=2.0*self.y_T_bounds[0,:]-self.y_T_bounds[1,:]
@@ -228,7 +228,7 @@ class quadmesh(object):
         ytb0=self.y_T_bounds[:,0]
         ytb0=ytb0[:,numpy.newaxis]
         self.y_T_bounds = numpy.hstack((ytb0,self.y_T_bounds))
-        self.lonh = f.variables['gridlon_t'][:] 
+        self.lonh = f.variables['gridlon_t'][:]
         self.lath = f.variables['gridlat_t'][:]
         self.lonq = f.variables['gridlon_c'][:]
         self.lonq = numpy.hstack((self.lonq[0]-(self.lonq[1]-self.lonq[0]),self.lonq))
@@ -256,7 +256,7 @@ class quadmesh(object):
     f = None
     self.x_T = None; self.y_T = None; self.x_T_bounds = None; self.y_T_bounds = None
     self.lonq = None; self.latq = None
-    
+
     if lon is not None and lat is not None:
         self.x_T=lon.copy()
         self.y_T=lat.copy()
@@ -267,15 +267,15 @@ class quadmesh(object):
         self.x_T_bounds=lonb.copy()
         self.y_T_bounds=latb.copy()
         self.lonq = self.x_T_bounds[0,:]
-        self.latq = self.y_T_bounds[:,0]        
+        self.latq = self.y_T_bounds[:,0]
         self.lonh = 0.5*(self.lonq[0:-1]+self.lonq[1:])
         self.lath = 0.5*(self.latq[0:-1]+self.latq[1:])
-        
-        
+
+
     if lon is None and lat is None and lonb is None and latb is None:
         f=netCDF4.Dataset(path)
-  
-    
+
+
     if var is None and f is not None:
       print """ Need to specify a variable from which to create a
                 dummy grid since a valid grid option was not
@@ -305,14 +305,14 @@ class quadmesh(object):
               self.lonh = sq(f.variables[var_dict['X']][:])
               if dir == -1:
                   self.lonh=self.lonh[::-1]
-              
+
           elif lon is not None:
               self.lonh = sq(lon[0,:])
           else:
               self.lonh=[0.]
               print "Longitude axis not detected "
 
-          
+
           if var_dict['Y'] is not None and lat is None:
               lat_axis = f.variables[var_dict['Y']]
               dir=get_axis_direction(lat_axis)
@@ -326,7 +326,7 @@ class quadmesh(object):
               self.lath=[0.]
               print "Latitude axis not detected "
 
-      
+
 
 
       if self.lonq is None:
@@ -342,11 +342,11 @@ class quadmesh(object):
               lon0=2.0*self.lonh[0]-self.lonq[0]
           else:
               lon0 = self.lonq[0]
-      
+
           self.lonq=numpy.hstack(([lon0],self.lonq))
 
       if self.latq is None:
-          
+
           self.latq = 0.5*(self.lath + numpy.roll(self.lath,-1))
 
 
@@ -355,13 +355,13 @@ class quadmesh(object):
 
           if numpy.size(self.latq) > 2:
               self.latq[-1] = 2.0*self.lath[-1]-self.latq[-2]
-              
+
           if numpy.size(self.latq) > 1:
               lat0=2.0*self.lath[0]-self.latq[0]
           else:
               lat0 = self.latq[0]
-          
-          self.latq=numpy.concatenate(([lat0],self.latq))      
+
+          self.latq=numpy.concatenate(([lat0],self.latq))
 
       try:
           self.im = len(self.lonh)
@@ -372,9 +372,9 @@ class quadmesh(object):
       try:
           self.jm = len(self.lath)
       except:
-          self.lath = numpy.array([self.lath])          
+          self.lath = numpy.array([self.lath])
           self.jm = 1
-      
+
       if simple_grid is True:
           self.simple_grid = True
           self.cyclic_x = cyclic
@@ -385,7 +385,7 @@ class quadmesh(object):
 
       if self.x_T is None:
           self.x_T,self.y_T = numpy.meshgrid(self.lonh,self.lath)
-          
+
       if self.im > 1 and self.x_T_bounds is None:
           xtb=0.5*(self.x_T + numpy.roll(self.x_T,shift=1,axis=1))
           xtb0=2.0*xtb[:,-1]-xtb[:,-2]
@@ -395,10 +395,10 @@ class quadmesh(object):
           xtb[:,0]=xtb0
           self.x_T_bounds=xtb.copy()
           xtb0=self.x_T_bounds[-1,:]
-          self.x_T_bounds = numpy.vstack((self.x_T_bounds,xtb0))    
+          self.x_T_bounds = numpy.vstack((self.x_T_bounds,xtb0))
 
 
-      if self.jm > 1 and self.y_T_bounds is None:          
+      if self.jm > 1 and self.y_T_bounds is None:
           ytb=0.5*(self.y_T + numpy.roll(self.y_T,shift=1,axis=0))
           ytb0=2.0*ytb[-1,:]-ytb[-2,:]
           ytb0=ytb0[numpy.newaxis,:]
@@ -408,7 +408,7 @@ class quadmesh(object):
           self.y_T_bounds=ytb.copy()
           ytb0=self.y_T_bounds[:,-1]
           ytb0=ytb0[:,numpy.newaxis]
-          self.y_T_bounds = numpy.hstack((self.y_T_bounds,ytb0))                    
+          self.y_T_bounds = numpy.hstack((self.y_T_bounds,ytb0))
 
 
       if self.im> 1 and self.jm > 1:
@@ -417,29 +417,29 @@ class quadmesh(object):
           dx=dx*numpy.pi/180.
           self.dxh = dx*R_earth*numpy.cos(self.y_T*numpy.pi/180.)
           dy = (self.y_T_bounds - numpy.roll(self.y_T_bounds,axis=0,shift=1))
-          dy=0.5*(dy[1:,0:-1]+dy[1:,1:])          
+          dy=0.5*(dy[1:,0:-1]+dy[1:,1:])
           dy = dy*numpy.pi/180.
           self.dyh = dy*R_earth
           self.Ah=self.dxh*self.dyh
           self.have_metrics=True
       else:
           self.x_T=self.lonh; self.y_T=self.lath
-          
+
 
       self.cyclic_x = cyclic
 
       if self.cyclic_x:
-        self.xmod_len = self.x_T_bounds[0,-1] - self.x_T_bounds[0,0] 
+        self.xmod_len = self.x_T_bounds[0,-1] - self.x_T_bounds[0,0]
 
       self.wet = numpy.ones((self.jm,self.im))
 
 
-      
+
   def find_geo_bounds(self,x=None,y=None):
       """
-      Returns the bounds of the grid. Currently this is of limited use 
+      Returns the bounds of the grid. Currently this is of limited use
       for generalized horizontal coordinates (based on lonh/lath).
-      
+
 
       >>> from midas import *
       >>> x=numpy.linspace(0.,360,361);y=numpy.linspace(-90.,90.,181)
@@ -463,15 +463,15 @@ class quadmesh(object):
           [ys,ye]=find_axis_bounds(self.latq,x=y)
 
       return xs,xe,ys,ye
-          
+
   def geo_region(self,y=None,x=None,name=None):
 
      """
      Returns a dictionary for sampling a contiguous region
-     based on geographical boundaries. 
+     based on geographical boundaries.
 
-     Currently this is of limited use for generalized horizontal 
-     coordinates (based on lonh/lath). 
+     Currently this is of limited use for generalized horizontal
+     coordinates (based on lonh/lath).
 
      >>> from midas import *
      >>> x=numpy.linspace(0.,360.,361);y=numpy.linspace(-90.,90.,181)
@@ -484,12 +484,12 @@ class quadmesh(object):
      -9.5 9.5
      """
 
-  
+
      section={}
 
      xs,xe,ys,ye = self.find_geo_bounds(x=x,y=y)
 
-     
+
      section['y']=numpy.arange(ys,max(ye,ys+1))
      section['yax_data']= self.lath[section['y']]
 
@@ -528,9 +528,9 @@ class quadmesh(object):
   def indexed_region(self,i=None,j=None,name=None):
 
     """
-    Returns a \"section\" dictionary for sampling a contiguous region. 
+    Returns a \"section\" dictionary for sampling a contiguous region.
     based on index coordinates.
-      
+
 
     >>> from midas import *
     >>> x=numpy.linspace(0.5,359.5,360);y=numpy.linspace(-89.5,89.5,180)
@@ -542,7 +542,7 @@ class quadmesh(object):
     >>> print section['yax_data'][0],section['yax_data'][-1]
     -89.5 89.5
     """
-  
+
     section={}
 
     if j is not None:
@@ -552,7 +552,7 @@ class quadmesh(object):
     else:
       section['y']=None
       section['yax_data']= self.lath
-      
+
     if i is not None:
         xs=i[0];xe=i[1]
         if xe>=xs:
@@ -563,18 +563,18 @@ class quadmesh(object):
     else:
       section['x']=None
 
-    section['x_read']=section['x']      
+    section['x_read']=section['x']
     section['name'] = name
     section['parent_grid'] = self
 
     return section
-      
+
   def extract(self,geo_region=None):
     """
-    Returns new grid object using a \"section\" dictionary 
+    Returns new grid object using a \"section\" dictionary
     created using the \"geo_region\" or \"indexed_region\"
     method.
-      
+
 
     >>> from midas.rectgrid import *
     >>> import hashlib
@@ -600,7 +600,7 @@ class quadmesh(object):
       grid = copy.copy(self)
 
       x_section = geo_region['x']
-      y_section = geo_region['y']      
+      y_section = geo_region['y']
 
       if x_section is not None:
           xb_section = numpy.hstack((x_section,x_section[-1]+1))
@@ -634,14 +634,14 @@ class quadmesh(object):
       if hasattr(grid,'wet'):
           grid.wet = numpy.take(numpy.take(self.wet,y_section,axis=0),x_section,axis=1)
 
-          
+
       if grid.have_metrics:
           grid.dxh = numpy.take(numpy.take(self.dxh,y_section,axis=0),x_section,axis=1)
           grid.dyh = numpy.take(numpy.take(self.dyh,y_section,axis=0),x_section,axis=1)
           grid.Ah = numpy.take(numpy.take(self.Ah,y_section,axis=0),x_section,axis=1)
           if hasattr(grid,'angle_dx'):
               grid.angle_dx = numpy.take(numpy.take(self.angle_dx,y_section,axis=0),x_section,axis=1)
-          
+
       if hasattr(grid,'mask'):
           grid.mask = numpy.take(numpy.take(self.mask,y_section,axis=0),x_section,axis=1)
 
@@ -661,18 +661,18 @@ class quadmesh(object):
 
     if path is not None:
       f=netCDF4.Dataset(path)
-      
+
     if field in f.variables:
       self.mask = f.variables[field][:]
     else:
       print ' Field ',field,' is not present in file ',path
       return None
-    
+
 
     return None
 
 class state(object):
-  """Returns a model state of (fields). The default is 
+  """Returns a model state of (fields). The default is
   to extract the entire data domain at all time levels from (path). Use
   (geo_region) to store a section of the horizontal grid. Use
   (time_indices) or (date_bounds) to extract along the record dimension.
@@ -686,14 +686,14 @@ class state(object):
      22 - centered on north-east corner of tracer cell
      01 - centered on south face of tracer cell
      10 - centered on west face of tracer cell
-     00 - centered on south-west corner of tracer cell          
-     
-     
+     00 - centered on south-west corner of tracer cell
+
+
   NOTE:The layer (interfaces) variable must be stored in order to calculate
   accurate finite volume integrals.
 
   """
-  
+
   def __init__(self,path=None,grid=None,geo_region=None,time_indices=None,date_bounds=None,z_indices=None,z_bounds=None,fields=None,default_calendar=None,MFpath=None,interfaces=None,path_interfaces=None,MFpath_interfaces=None,stagger=None,verbose=True,z_orientation=None,memstats=False):
     """
     >>> from midas import *
@@ -713,7 +713,7 @@ class state(object):
     elif MFpath is not None:
       f=netCDF4.MFDataset(MFpath)
       self.path = MFpath
-      self.is_MFpath = True      
+      self.is_MFpath = True
     else:
       f=None
 
@@ -721,7 +721,7 @@ class state(object):
 
 
     self.variables = {}
-    self.var_dict = {}    
+    self.var_dict = {}
 
     if fields is None:
       if grid is not None:
@@ -789,12 +789,12 @@ class state(object):
         if f_interfaces.variables[interfaces].ndim == 3:
             self.vertical_coordinate = 'Fixed'
         elif f_interfaces.variables[interfaces].ndim == 4:
-            self.vertical_coordinate = 'Generalized'                   
+            self.vertical_coordinate = 'Generalized'
         else:
             print 'Invalid shape for interface variable'
             return None
 
-        
+
     else:
         self.vertical_coordinate = 'Fixed'
 
@@ -805,9 +805,9 @@ class state(object):
 
     if memstats:
         print 'Memory usage in state initialize (01): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        
+
     for v in fields:
-       try: 
+       try:
          self.variables[v] = self.rootgrp.variables[v]  # netCDF4 variable object
        except KeyError:
          print """ Variable named %(v)s does not exist in file named %(path)s
@@ -830,21 +830,21 @@ class state(object):
                    var_dict['missing_value']=var_dict['_FillValue']
            else:
                vars(self)[v] = numpy.ma.masked_where(numpy.abs(vars(self)[v] - var_dict['missing_value']) < numpy.abs(var_dict['missing_value']*0.01),vars(self)[v])
-               if var_dict['missing_value'] is None:             
+               if var_dict['missing_value'] is None:
                    var_dict['_FillValue']=var_dict['missing_value']
 
 
        if grid is not None:
            if self.grid.yDir == -1:
                vars(self)[v] = vars(self)[v][:,:,::-1,:]
-           
+
        if DEBUG == 1 or verbose == True:
          print " Successfully extracted data named %(nam)s from %(fil)s "%{'nam':v,'fil':self.path}
          print " Resulting shape = ",vars(self)[v].shape
          print " Dictionary keys = ", var_dict.keys()
 
        if memstats:
-           print 'Memory usage in state initialize (02): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss         
+           print 'Memory usage in state initialize (02): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
        var_dict['z_interfaces'] = None
 
@@ -852,7 +852,7 @@ class state(object):
        if interfaces is not None and var_dict['Z'] is not None:
 
          interfaces_exist=False
-         
+
          try:
            vars(self)[interfaces]
            interfaces_exist=True
@@ -876,9 +876,9 @@ class state(object):
                      f_interfaces = netCDF4.MFDataset(MFpath_interfaces)
 
                  self.vdict_init(interfaces,'00',z_orientation,time_indices,zi_indices,rootgrp=f_interfaces,is_interface=True)
-                 
+
                  ivar_dict=self.var_dict[interfaces]
-             
+
                  slice_read = ivar_dict['slice_read']
                  shape_read = ivar_dict['shape_read']
 
@@ -898,7 +898,7 @@ class state(object):
                  vars(self)[interfaces_name] = data_int_read
 
                  self.interfaces=interfaces_name
-           
+
 
 
              if DEBUG == 1 or verbose == True:
@@ -907,20 +907,19 @@ class state(object):
                  print " Max/Min = ",numpy.max(vars(self)[interfaces]),numpy.min(vars(self)[interfaces])
 
 
-                 
 
-           
+
        self.vdict_Z_init(var_dict)
-       
+
        if memstats:
-           print 'Memory usage in state initialize (03): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss         
-          
+           print 'Memory usage in state initialize (03): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
 
 
   def vdict_init(self,v,stagger='00',z_orientation=None,time_indices=None,z_indices=None,z_bounds=None,rootgrp=None,is_interface=False):
-      
+
       var_dict = {}
-      
+
 
       var_dict['X'] = None; var_dict['Y'] = None
       var_dict['Z'] = None; var_dict['T'] = None
@@ -935,7 +934,7 @@ class state(object):
 
       f=var_dict['rootgrp']
 
-                           
+
       for n in range(0,f.variables[v].ndim):
 
 # For each dimension , determine its Cartesian attribute
@@ -951,17 +950,17 @@ class state(object):
          if cart is not None:
            var_dict[cart]=f.variables[v].dimensions[n]
 
-         if cart is None and dimnam == 'interfaces':  # Special case 
+         if cart is None and dimnam == 'interfaces':  # Special case
              var_dict['Z']=f.variables[v].dimensions[n]
              var_dict['Zb']=None
-             
+
          if cart == 'Z':
            var_dict['Zdir'] = get_axis_direction(dim)
            if z_orientation is not None:
                var_dict['Zdir']=z_orientation
 
 
-               
+
            try:
              var_dict['Zb'] = getattr(f.variables[var_dict['Z']],'bounds')
            except:
@@ -971,14 +970,14 @@ class state(object):
                    var_dict['Zb'] = None
 
 
-             
+
          if cart == 'T':
            var_dict['tax_data'] = f.variables[var_dict['T']][:]
            try:
                var_dict['tunits'] = f.variables[var_dict['T']].units
            except:
                var_dict['tunits'] = 'none'
-               
+
            try:
              var_dict['calendar'] = string.lower(f.variables[var_dict['T']].calendar)
            except:
@@ -989,7 +988,7 @@ class state(object):
 
            var_dict['tunits']=var_dict['tunits'].replace('0000','0001')
 
-           
+
            if var_dict['calendar']=='365_days':
                var_dict['calendar']='365_day'
 
@@ -997,7 +996,7 @@ class state(object):
                mon_to_day=365.0/12.0
                var_dict['tunits'] = 'days'+var_dict['tunits'][6:]
                var_dict['tax_data']=var_dict['tax_data'][:]*mon_to_day
-               
+
            if var_dict['calendar'] is not None:
              var_dict['dates'] = netCDF4.num2date(var_dict['tax_data'],var_dict['tunits'],var_dict['calendar'])
 
@@ -1013,7 +1012,7 @@ class state(object):
               Tb = getattr(f.variables[var_dict['T']],'bounds')
           except:
               Tb = None
-           
+
           if Tb is not None:
               if f.variables[Tb].ndim == 2:
                   var_dict['tbax_data'] = f.variables[Tb][:,0]
@@ -1021,7 +1020,7 @@ class state(object):
                   tb_last = tb[-1,1]
                   var_dict['tbax_data'] = numpy.hstack((var_dict['tbax_data'],[tb_last]))
 
-                  
+
               else:
                   var_dict['tbax_data'] = f.variables[Tb][:]
 
@@ -1034,10 +1033,10 @@ class state(object):
               else:
                   var_dict['tbax_data']=None
 
-              
+
           if var_dict['tbax_data'] is not None and var_dict['calendar'] is not None:
               var_dict['date_bounds'] = netCDF4.num2date(var_dict['tbax_data'],var_dict['tunits'],var_dict['calendar'])
-           
+
           if time_indices is not None:
               t_indices = time_indices
               var_dict['t_indices']=t_indices
@@ -1054,11 +1053,11 @@ class state(object):
                   ts,te = find_date_bounds(var_dict['date_bounds'][:],self.date_bounds[0],self.date_bounds[1])
                   t_indices=numpy.arange(ts,te)
                   var_dict['t_indices']=t_indices
-                  tb_indices=numpy.arange(ts,te+1)             
+                  tb_indices=numpy.arange(ts,te+1)
                   var_dict['tax_data']=var_dict['tax_data'][t_indices]
-                  var_dict['tbax_data']=var_dict['tbax_data'][tb_indices]                        
+                  var_dict['tbax_data']=var_dict['tbax_data'][tb_indices]
                   var_dict['dates']=var_dict['dates'][t_indices]
-                  var_dict['date_bounds']=var_dict['date_bounds'][tb_indices]             
+                  var_dict['date_bounds']=var_dict['date_bounds'][tb_indices]
               else:
                   print """
              Calendar is inactive for %(field)s """%{'field':v}
@@ -1076,7 +1075,7 @@ class state(object):
           time_avg_info = getattr(f.variables[v],'time_avg_info')
       except:
           time_avg_info = ""
-         
+
       if 'average_DT' in time_avg_info:
           try:
               dt = f.variables['average_DT'][var_dict['t_indices']]
@@ -1091,7 +1090,7 @@ class state(object):
               dt = dt*3600. # convert to seconds
 
           var_dict['dt']=dt
-          
+
       elif var_dict['T'] is not None:
 
           if var_dict['tbax_data'] is not None:
@@ -1100,11 +1099,11 @@ class state(object):
           else:
               var_dict['dt']=None
 
-       
+
       if var_dict['Z'] is not None:
 
            var_dict['Ztype']='Fixed'
-           
+
            try:
                var_dict['zunits'] =   f.variables[var_dict['Z']].units
            except:
@@ -1113,11 +1112,11 @@ class state(object):
            if z_bounds is not None and z_indices is not None:
                print 'z_indices and z_bounds incompatible'
                raise()
-           
+
            if z_indices is not None:
                if numpy.isscalar(z_indices):
                    z_indices=numpy.array([z_indices,z_indices+1])
-                       
+
                nz = len(z_indices)
            else:
                nz = len(f.variables[var_dict['Z']][:])
@@ -1125,8 +1124,8 @@ class state(object):
                    z_indices=numpy.arange(0,1)
                else:
                   z_indices=numpy.arange(0,nz)
-               
-                  
+
+
            var_dict['zax_data']= f.variables[var_dict['Z']][z_indices]
 
            zdat=f.variables[var_dict['Z']][z_indices]
@@ -1136,9 +1135,9 @@ class state(object):
                var_dict['zbax_data']=zint
            else:
                var_dict['zbax_data']=None
-           
+
            if var_dict['Zb'] is not None:
-                 
+
                var_dict['zbax_data'] = f.variables[var_dict['Zb']][:]
 
                if var_dict['Ztype'] is 'Fixed':
@@ -1154,13 +1153,13 @@ class state(object):
                        var_dict['zbax_data']=zint
                    else:
                        var_dict['zbax_data']=None
-                       
+
                z_interfaces=numpy.arange(0,nz+1)
                var_dict['zbax_data']=var_dict['zbax_data'][z_interfaces]
-               
+
            else:
                z_interfaces = None
-               
+
 
            var_dict['z_indices']=z_indices
            var_dict['zb_indices']=z_interfaces
@@ -1170,7 +1169,7 @@ class state(object):
           x_indices = numpy.arange(0,self.grid.im)
           x_indices_read = numpy.arange(0,self.grid.im)
           y_indices = numpy.arange(0,self.grid.jm)
-       
+
       if var_dict['X'] is not None:
           try:
               var_dict['xunits'] =   f.variables[var_dict['X']].units
@@ -1187,7 +1186,7 @@ class state(object):
       else:
           x_indices=None
 
-          
+
 
       if var_dict['Y'] is not None:
           try:
@@ -1207,19 +1206,19 @@ class state(object):
                       var_dict['yax_data']=var_dict['yax_data'][::-1]
       else:
           y_indices=None
-          
+
       slice_read = [];shape_read = []
 
 #      print 't_indices=',t_indices
 #      print 'z_indices=',z_indices
 #      print 'y_indices=',y_indices
-#      print 'x_indices=',x_indices            
-      
+#      print 'x_indices=',x_indices
+
       for s in [t_indices,z_indices,y_indices,x_indices]:
           if s is not None:
               if len(s) == 1:  # This seems necessary due to a NETCDF4. bug
                   slice_read.append(s[0])
-                  shape_read.append(1)                  
+                  shape_read.append(1)
               else:
                   slice_read.append(s)
                   shape_read.append(s.shape[0])
@@ -1230,7 +1229,7 @@ class state(object):
 
 
       var_dict['slice_read'] = slice_read
-      var_dict['shape_read'] = shape_read       
+      var_dict['shape_read'] = shape_read
 
       var_dict['masked']=False
       var_dict['_FillValue'] = None
@@ -1247,26 +1246,26 @@ class state(object):
       if var_dict['_FillValue'] is not None or var_dict['missing_value']  is not None:
          var_dict['masked']=True
 
-         
+
       self.var_dict[v]=var_dict
 
 
   def vdict_Z_init(self,var_dict):
 
-      
-       var_dict['Ztype'] = 'Fixed'                            
+
+       var_dict['Ztype'] = 'Fixed'
        if self.interfaces is not None:
            if vars(self)[self.interfaces].ndim == 4:
                var_dict['Ztype'] = 'Generalized'
            else:
-               var_dict['Ztype'] = 'Fixed'                
+               var_dict['Ztype'] = 'Fixed'
        else:
            var_dict['Ztype']='Fixed'
 
        if var_dict['Z'] is not None and var_dict['Ztype'] is 'Fixed' and self.interfaces is None:
 
          if var_dict['zbax_data'] is not None:  # Construct interface positions using existing 1-d interfaces
-           zind=var_dict['slice_read'][1];nz=len(zind) 
+           zind=var_dict['slice_read'][1];nz=len(zind)
            tmp = numpy.reshape(var_dict['zbax_data'],(nz+1,1,1))
            if self.geo_region is not None:
              ny = len(self.geo_region['y'])
@@ -1276,35 +1275,35 @@ class state(object):
                    ny=1;nx=1
                    if var_dict['Y'] is not None:
                        ny = len(self.rootgrp.variables[var_dict['Y']][:])
-                   if var_dict['X'] is not None:                       
+                   if var_dict['X'] is not None:
                        nx = len(self.rootgrp.variables[var_dict['X']][:])
                else:
                    ny = 1;nx = 1
 
            var_dict['z_interfaces']  = var_dict['Zdir']*numpy.tile(tmp,(1,ny,nx))
-           tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))             
+           tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
            var_dict['z'] = tmp[0:-1,:,:]
            var_dict['dz'] = (var_dict['z_interfaces'] - numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
            var_dict['dz'] = var_dict['dz'][0:-1,:,:]
 
        if var_dict['Z'] is not None and var_dict['Ztype'] is 'Fixed' and self.interfaces is not None:
            var_dict['z_interfaces']  = vars(self)[self.interfaces]
-               
-           tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))             
+
+           tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
            var_dict['z'] = tmp[0:-1,:,:]
 
            var_dict['dz'] = (var_dict['z_interfaces'] - numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
            var_dict['dz'] = var_dict['dz'][0:-1,:,:]
-           
+
        if var_dict['Z'] is not None and var_dict['Ztype'] is 'Generalized' and self.interfaces is not None:
            var_dict['z_interfaces']  = vars(self)[self.interfaces]
-               
-           tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=1,shift=-1))             
+
+           tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=1,shift=-1))
            var_dict['z'] = tmp[:,0:-1,:,:]
            var_dict['dz'] = (var_dict['z_interfaces'] - numpy.roll(var_dict['z_interfaces'],axis=1,shift=-1))
            var_dict['dz'] = var_dict['dz'][:,0:-1,:,:]
-           
-      
+
+
   def add_field(self,field,path=None,MFpath=None,use_interfaces=False,verbose=True,memstats=False,z_indices=None):
     """
     Add a field to the existing state (e.g. more tracers).
@@ -1330,40 +1329,40 @@ class state(object):
     else:
       print ' Field ',field,' is not present in file ',path
       return
-    
+
     if MFpath is None:
       var_dict['path'] = path
     else:
       var_dict['path'] = MFpath
 
     t_indices = None
-    
+
     geo_region = self.geo_region
 
     if memstats:
-        print 'Memory usage in state add_field (01): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss    
-        
+        print 'Memory usage in state add_field (01): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
     data_read = numpy.array(f.variables[field][var_dict['slice_read']])
     shape_read=var_dict['shape_read']
-    data_read = numpy.reshape(data_read,(shape_read))    
+    data_read = numpy.reshape(data_read,(shape_read))
 
 
     if memstats:
         print 'Memory usage in state add_field (02): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        
+
     vars(self)[field] = data_read
-    
-         
+
+
     if DEBUG == 1 or verbose == True:
       print " Successfully extracted data named %(nam)s from %(fil)s "%{'nam':field,'fil':var_dict['path']}
-      print " Resulting shape = ",vars(self)[field].shape                 
+      print " Resulting shape = ",vars(self)[field].shape
 
 
     if var_dict['_FillValue'] is not None or var_dict['missing_value']  is not None:
       if var_dict['_FillValue'] is not None:
         vars(self)[field] = numpy.ma.masked_where(numpy.abs(vars(self)[field] - var_dict['_FillValue']) < numpy.abs(var_dict['_FillValue']*.01),vars(self)[field])
       else:
-        vars(self)[field] = numpy.ma.masked_where(numpy.abs(vars(self)[field] - var_dict['missing_value']) < numpy.abs(var_dict['missing_value']*.01),vars(self)[field])             
+        vars(self)[field] = numpy.ma.masked_where(numpy.abs(vars(self)[field] - var_dict['missing_value']) < numpy.abs(var_dict['missing_value']*.01),vars(self)[field])
 
     self.vdict_Z_init(var_dict)
 
@@ -1372,8 +1371,8 @@ class state(object):
     return None
 
 
-    
-    
+
+
   def create_field(self,expression,name,var_dict=None):
     """
     Define a new field and add to the existing state.
@@ -1393,7 +1392,7 @@ class state(object):
 
 
     self.var_dict[name]['history']=expression
-                  
+
     return None
 
 
@@ -1405,28 +1404,28 @@ class state(object):
     self.variables[name]=name
 
     vars(self)[name]=var
-    
+
     if var_dict is not None:
       self.var_dict[name]=dict.copy(var_dict)
     else:
       self.var_dict[name] = {}
 
 
-      
+
     self.var_dict[name]['history']=history
-                  
+
     return None
-    
+
 
   def del_field(self,field):
     """
-    Delete (field) 
+    Delete (field)
     """
-    
+
     f = self.rootgrp
     cmd = string.join(['del(self.',field,')'],sep='')
     exec(cmd)
-    
+
     self.variables.pop(field)
     self.var_dict.pop(field)
 
@@ -1434,14 +1433,14 @@ class state(object):
 
   def rename_field(self,field,field_new):
     """
-    Rename (field) 
+    Rename (field)
     """
-    
+
     f = self.rootgrp
-    cmd = string.join(['self.',field_new,'=vars(self)[\'',field,'\'].copy()'],sep='')    
+    cmd = string.join(['self.',field_new,'=vars(self)[\'',field,'\'].copy()'],sep='')
 
     exec(cmd)
-    
+
     self.variables.pop(field)
     self.variables[field_new]=field_new
     self.var_dict[field_new] = dict.copy(self.var_dict[field])
@@ -1454,7 +1453,7 @@ class state(object):
     Mask (field) where (condition)
     """
 
-    
+
     if condition is None or field is None:
       return None
     else:
@@ -1476,7 +1475,7 @@ class state(object):
         result=numpy.tile(result,(shape[0],1,1,1))
       elif len(shape_result) == 4:
         if shape_result[1] == 1:
-          result=numpy.tile(result,(1,shape[1],1,1))                
+          result=numpy.tile(result,(1,shape[1],1,1))
         elif shape_result[0] == 1 and shape_result[1] == shape[1]:
           result=numpy.tile(result,(shape[0],1,1,1))
         elif shape_result[0] == 1 and shape_result[1] == 1:
@@ -1485,7 +1484,7 @@ class state(object):
           print """
           Error expanding mask """
           return None
-        
+
       vars(self)[field] = numpy.ma.masked_where(result,vars(self)[field])
       self.var_dict[field]['masked']=True
 
@@ -1497,19 +1496,19 @@ class state(object):
     if field is None:
       return None
 
-    vars(self)[field].soften_mask() 
+    vars(self)[field].soften_mask()
     vars(self)[field].mask = False
 
-    
+
   def add_interface_bounds(self,field=None):
     """
     Add interfaces at cell boundaries (ny+1,nx+1).
 
     ***NOTE: Assumes cyclic x at this point.
     ***TODO
-    
+
     """
-    
+
     if field is None:
       return None
 
@@ -1524,8 +1523,8 @@ class state(object):
         eb = 0.5*(e+numpy.roll(e,shift=-1,axis=2))
         self.var_dict[field]['z_interfaces_ew']=numpy.concatenate((numpy.take(eb,[-1],axis=2),eb),axis=2)
         eb = 0.5*(e+numpy.roll(e,shift=-1,axis=1))
-        self.var_dict[field]['z_interfaces_ns']=numpy.concatenate((numpy.take(eb,[0],axis=1),eb),axis=1)            
-    
+        self.var_dict[field]['z_interfaces_ns']=numpy.concatenate((numpy.take(eb,[0],axis=1),eb),axis=1)
+
   def fill_interior(self,field=None,smooth=False,num_pass=10000,relax_criteria=1.e-3,memstats=False):
     """
     Fill interior above the topography .
@@ -1562,7 +1561,7 @@ class state(object):
 
     if memstats:
         print 'Memory usage fill_miss (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    
+
     if field is None:
       print """
        Please specify a field name
@@ -1575,9 +1574,9 @@ class state(object):
       """
       return None
 
-    
+
     if self.var_dict[field]['_FillValue'] is not None:
-        FillValue = self.var_dict[field]['_FillValue']          
+        FillValue = self.var_dict[field]['_FillValue']
 
     if self.var_dict[field]['missing_value'] is not None:
         FillValue = self.var_dict[field]['missing_value']
@@ -1587,16 +1586,16 @@ class state(object):
 
         FillValue = FVal_
         self.var_dict[field]['_FillValue'] = FVal_
-        self.var_dict[field]['missing_value'] = FVal_                
+        self.var_dict[field]['missing_value'] = FVal_
 
 
 #    val = vars(self)[field].copy()
-    
+
 #    val.set_fill_value(FillValue)
-    val = numpy.ma.masked_where(numpy.abs(vars(self)[field] - FillValue) < numpy.abs(FillValue*.01),vars(self)[field])             
+    val = numpy.ma.masked_where(numpy.abs(vars(self)[field] - FillValue) < numpy.abs(FillValue*.01),vars(self)[field])
 
     val_prev = numpy.zeros([val.shape[2],val.shape[3]])
-    
+
     wet = self.grid.wet
 
 
@@ -1605,7 +1604,7 @@ class state(object):
         tmp = numpy.squeeze(numpy.take(numpy.take(val,[i],axis=0),[0],axis=1))
         mask_in = numpy.ma.getmask(tmp)
         fill = numpy.zeros([tmp.shape[0],tmp.shape[1]])
-        fill[numpy.logical_and(wet == 1.0,mask_in) ]=1.0        
+        fill[numpy.logical_and(wet == 1.0,mask_in) ]=1.0
         mask_out=numpy.zeros([tmp.shape[0],tmp.shape[1]])
         mask_out[wet == 0.0]=1
         good = numpy.zeros([tmp.shape[0],tmp.shape[1]])
@@ -1618,19 +1617,19 @@ class state(object):
       else:
         for j in numpy.arange(0,val.shape[1]):
             zbot = self.var_dict[field]['z_interfaces'][j+1,:]
-            ztop = self.var_dict[field]['z_interfaces'][j,:]        
+            ztop = self.var_dict[field]['z_interfaces'][j,:]
             tmp = numpy.squeeze(numpy.ma.take(numpy.ma.take(val,[i],axis=0),[j],axis=1))
             mask_in = numpy.ma.getmask(tmp)
 
             # fill has a value of one over points
             # which are in the interior at the current depth
             # and zero otherwise
-        
+
             fill = numpy.zeros([tmp.shape[0],tmp.shape[1]])
             fill[numpy.logical_and(numpy.logical_and(wet == 1.0,-ztop < self.grid.D),mask_in) ]=1
 
             mask_out=numpy.logical_or(wet == 0.0,-ztop > self.grid.D)
-            
+
             good = numpy.zeros([tmp.shape[0],tmp.shape[1]])
             good[~mask_in]=1
 
@@ -1643,12 +1642,12 @@ class state(object):
             else:
                 v_filled=vertmap_GOLD.vertmap_gold_mod.fill_miss_2d(tmp.T,good.T,fill.T,cyclic_x=self.grid.cyclic_x,tripolar_n=self.grid.tripolar_n,smooth=smooth,num_pass=num_pass,relax_criteria=relax_criteria)
 
-        
+
             v_filled=v_filled.T
             val_prev = v_filled.copy()
 
 
-            v_filled[mask_out==1]=FillValue                
+            v_filled[mask_out==1]=FillValue
 
 
             val[i,j,:]=v_filled.copy()
@@ -1660,11 +1659,11 @@ class state(object):
 
     if memstats:
         print 'Memory usage fill_miss (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    
+
     return None
 
 
-    
+
   def volume_integral(self,field=None,axis=None,normalize=True,use_weights=True):
     """
 
@@ -1690,14 +1689,14 @@ class state(object):
     nz=vars(self)[field].shape[1]
 
     var_dict=self.var_dict[field].copy()
-    
+
     if self.var_dict[field]['Z'] is not None:
         if 'dz' in self.var_dict[field].keys():
             dz=self.var_dict[field]['dz'][:]
         else:
-            dz = numpy.ones((sout.shape[0],sout.shape[1],self.grid.jm,self.grid.im))      
+            dz = numpy.ones((sout.shape[0],sout.shape[1],self.grid.jm,self.grid.im))
 
-        
+
         if self.var_dict[field]['masked']:
           mask_out = numpy.any(sout.mask,axis=0)
           if numpy.any(mask_out):
@@ -1707,9 +1706,9 @@ class state(object):
               self.var_dict[field]['masked']=False
 
 
-        
+
     else:
-        dz = numpy.ones((sout.shape[1],self.grid.jm,self.grid.im))      
+        dz = numpy.ones((sout.shape[1],self.grid.jm,self.grid.im))
         if self.var_dict[field]['masked']:
             mask_out = numpy.any(sout.mask,axis=0)
             if numpy.any(mask_out):
@@ -1717,14 +1716,14 @@ class state(object):
                 dz.mask=mask_out
             else:
                 self.var_dict[field]['masked']=False
-              
+
     dy=self.grid.dyh
     dx=self.grid.dxh
     if self.var_dict[field]['masked']:
         dx=numpy.ma.masked_array(dx)
         dy=numpy.ma.masked_array(dy)
         dx.mask = mask_out[0,:]
-        dy.mask = mask_out[0,:]            
+        dy.mask = mask_out[0,:]
 
 
 
@@ -1745,7 +1744,7 @@ class state(object):
               result = numpy.sum(sout,axis=1)
           result=numpy.reshape(result,(nt,1,jm,im))
           name = field+'_zav'
-          
+
       else:
           if use_weights:
               result=sout*dz
@@ -1755,11 +1754,11 @@ class state(object):
           result = numpy.sum(result,axis=1)
           result=numpy.reshape(result,(nt,1,jm,im))
           name = field+'_zint'
-          
+
       vars(self)[name]=result.copy()
-      
+
       var_dict['rootgrp']=None
-            
+
       var_dict['z_indices']=[0]
 
       if var_dict['zax_data'] is not None:
@@ -1767,16 +1766,16 @@ class state(object):
           var_dict['zbax_data']=[var_dict['zbax_data'][0],var_dict['zbax_data'][-1]]
       else:
           var_dict['zax_data']=[0.0]
-          var_dict['zbax_data']=[0.0,1.0]                    
+          var_dict['zbax_data']=[0.0,1.0]
 
       var_dict['Z']=None
 
       if self.var_dict[field]['Ztype'] is 'Fixed':
-          zlow=numpy.take(var_dict['z_interfaces'],[-1],axis=0)                
+          zlow=numpy.take(var_dict['z_interfaces'],[-1],axis=0)
           zup=numpy.take(var_dict['z_interfaces'],[0],axis=0)
           var_dict['z_interfaces']=numpy.concatenate((zup,zlow),axis=0)
           result=var_dict['z_interfaces'][0,:]-var_dict['z_interfaces'][-1,:]
-          result=numpy.reshape(result,(1,jm,im))          
+          result=numpy.reshape(result,(1,jm,im))
 
           var_dict['dz']=result
           var_dict['z']=numpy.mean(var_dict['z_interfaces'],axis=0)
@@ -1784,17 +1783,17 @@ class state(object):
           var_dict['z_interfaces']=numpy.reshape(var_dict['z_interfaces'],(2,jm,im))
 
       else:
-          zlow=numpy.take(var_dict['z_interfaces'],[-1],axis=1)                
+          zlow=numpy.take(var_dict['z_interfaces'],[-1],axis=1)
           zup=numpy.take(var_dict['z_interfaces'],[0],axis=1)
           var_dict['z_interfaces']=numpy.concatenate((zup,zlow),axis=1)
           result=var_dict['z_interfaces'][:,0,:]-var_dict['z_interfaces'][:,-1,:]
-          result=numpy.reshape(result,(nt,1,jm,im))          
+          result=numpy.reshape(result,(nt,1,jm,im))
 
           var_dict['dz']=result
           var_dict['z']=numpy.mean(var_dict['z_interfaces'],axis=1)
           var_dict['z_interfaces']=numpy.reshape(var_dict['z_interfaces'],(nt,2,jm,im))
 
-      
+
 
       self.var_dict[name]=var_dict.copy()
       self.variables[name]=name
@@ -1803,7 +1802,7 @@ class state(object):
     if axis.upper() == 'Y':
 
       if var_dict['Y'] is None:
-        return 
+        return
 
       if normalize:
           if use_weights:
@@ -1820,17 +1819,17 @@ class state(object):
               result = numpy.sum(sout*dx*dy*dz,axis=2)
           else:
               result = numpy.sum(sout,axis=2)
-          
+
           result=numpy.reshape(result,(nt,nz,1,im))
           name = field+'_yint'
-          
+
       vars(self)[name]=result
 
-      
+
       if var_dict['Z'] is not None:
         if var_dict['Ztype'] is 'Fixed':
-            var_dict['dz'] = numpy.sum(dz*dz*dy*dx,axis=1)/numpy.sum(dz*dy*dx,axis=1)  
-            var_dict['dz']=numpy.reshape(var_dict['dz'],(nz,1,im))      
+            var_dict['dz'] = numpy.sum(dz*dz*dy*dx,axis=1)/numpy.sum(dz*dy*dx,axis=1)
+            var_dict['dz']=numpy.reshape(var_dict['dz'],(nz,1,im))
             z0 = numpy.take(var_dict['z_interfaces'],[0],axis=0)
             result = numpy.sum(z0*dy*dx,axis=1)/numpy.sum(dy*dx,axis=0)
             result = numpy.reshape(result,(1,1,im))
@@ -1838,8 +1837,8 @@ class state(object):
             var_dict['z_interfaces']=numpy.concatenate((result,var_dict['z_interfaces']),axis=0)
             var_dict['z']=0.5*(var_dict['z_interfaces'][:-1,:] + var_dict['z_interfaces'][1:,:])
         else:
-            var_dict['dz'] = numpy.sum(dz*dz*dy*dx,axis=2)/numpy.sum(dz*dy*dx,axis=2)  
-            var_dict['dz']=numpy.reshape(var_dict['dz'],(nt,nz,1,im))      
+            var_dict['dz'] = numpy.sum(dz*dz*dy*dx,axis=2)/numpy.sum(dz*dy*dx,axis=2)
+            var_dict['dz']=numpy.reshape(var_dict['dz'],(nt,nz,1,im))
             z0 = numpy.take(var_dict['z_interfaces'],[0],axis=1)
             result = numpy.sum(z0*dy*dx,axis=2)/numpy.sum(dy*dx,axis=0)
             result = numpy.reshape(result,(nt,1,1,im))
@@ -1847,20 +1846,20 @@ class state(object):
             var_dict['z_interfaces']=numpy.concatenate((result,var_dict['z_interfaces']),axis=1)
             var_dict['z']=0.5*(var_dict['z_interfaces'][:,:-1,:] + var_dict['z_interfaces'][:,1:,:])
 
-        
+
         var_dict['rootgrp']=None
         var_dict['Y']=None
         var_dict['yax_data']=[numpy.mean(var_dict['yax_data'])]
-      
+
 
         self.var_dict[name]=var_dict.copy()
         self.variables[name]=name
-      
-        
+
+
     if axis.upper() == 'X':
 
       if var_dict['X'] is None:
-        return 
+        return
 
       if normalize:
           if use_weights:
@@ -1879,14 +1878,14 @@ class state(object):
               result=numpy.sum(sout,axis=3)
           result=numpy.reshape(result,(nt,nz,jm,1))
           name = field+'_xint'
-          
+
       vars(self)[name]=result
 
-      
+
       if var_dict['Z'] is not None:
         if var_dict['Ztype'] is 'Fixed':
-            var_dict['dz'] = numpy.sum(dz*dz*dy*dx,axis=2)/numpy.sum(dz*dy*dx,axis=2)  
-            var_dict['dz']=numpy.reshape(var_dict['dz'],(nz,jm,1))      
+            var_dict['dz'] = numpy.sum(dz*dz*dy*dx,axis=2)/numpy.sum(dz*dy*dx,axis=2)
+            var_dict['dz']=numpy.reshape(var_dict['dz'],(nz,jm,1))
             z0 = numpy.take(var_dict['z_interfaces'],[0],axis=0)
             result = numpy.sum(z0*dy*dx,axis=2)/numpy.sum(dy*dx,axis=1)
             result = numpy.reshape(result,(1,jm,1))
@@ -1894,8 +1893,8 @@ class state(object):
             var_dict['z_interfaces']=numpy.concatenate((result,var_dict['z_interfaces']),axis=0)
             var_dict['z']=0.5*(var_dict['z_interfaces'][:-1,:] + var_dict['z_interfaces'][1:,:])
         else:
-            var_dict['dz'] = numpy.sum(dz*dz*dy*dx,axis=3)/numpy.sum(dz*dy*dx,axis=3)  
-            var_dict['dz']=numpy.reshape(var_dict['dz'],(nt,nz,jm,1))      
+            var_dict['dz'] = numpy.sum(dz*dz*dy*dx,axis=3)/numpy.sum(dz*dy*dx,axis=3)
+            var_dict['dz']=numpy.reshape(var_dict['dz'],(nt,nz,jm,1))
             z0 = numpy.take(var_dict['z_interfaces'],[0],axis=1)
             result = numpy.sum(z0*dy*dx,axis=3)/numpy.sum(dy*dx,axis=1)
             result = numpy.reshape(result,(nt,1,jm,1))
@@ -1903,21 +1902,21 @@ class state(object):
             var_dict['z_interfaces']=numpy.concatenate((result,var_dict['z_interfaces']),axis=1)
             var_dict['z']=0.5*(var_dict['z_interfaces'][:,:-1,:] + var_dict['z_interfaces'][:,1:,:])
 
-        
+
       var_dict['rootgrp']=None
       var_dict['X']=None
       var_dict['xax_data']=[numpy.mean(var_dict['xax_data'])]
-      
+
 
       self.var_dict[name]=var_dict.copy()
       self.variables[name]=name
-      
+
 
     if axis.upper() == 'XY' or axis.upper() == 'YX':
 
       if var_dict['X'] is None and var_dict['Y'] is None:
-        return 
-      
+        return
+
       if normalize:
 
           if use_weights:
@@ -1934,17 +1933,17 @@ class state(object):
           if use_weights:
               result = numpy.sum(numpy.sum(sout*dx*dy*dz,axis=3),axis=2)
           else:
-              result = numpy.sum(numpy.sum(sout,axis=3),axis=2)              
+              result = numpy.sum(numpy.sum(sout,axis=3),axis=2)
           result=numpy.reshape(result,(nt,nz,1,1))
           name = field+'_xyint'
-          
+
       vars(self)[name]=result
 
-      
+
       if var_dict['Z'] is not None:
         if var_dict['Ztype'] is 'Fixed' and var_dict['Z'] is not None:
             var_dict['dz'] = numpy.sum(numpy.sum(dz*dy*dx,axis=2),axis=1)/numpy.sum(numpy.sum(dy*dx,axis=1),axis=0)
-            var_dict['dz']=numpy.reshape(var_dict['dz'],(nz,1,1))      
+            var_dict['dz']=numpy.reshape(var_dict['dz'],(nz,1,1))
             z0 = numpy.take(var_dict['z_interfaces'],[0],axis=0)
             result = numpy.sum(numpy.sum(z0*dy*dx,axis=2),axis=1)/numpy.sum(numpy.sum(dy*dx,axis=1),axis=0)
             result = numpy.reshape(result,(1,1,1))
@@ -1952,8 +1951,8 @@ class state(object):
             var_dict['z_interfaces']=numpy.concatenate((result,var_dict['z_interfaces']),axis=0)
             var_dict['z']=0.5*(var_dict['z_interfaces'][:-1,:] + var_dict['z_interfaces'][1:,:])
         else:
-            var_dict['dz'] = numpy.sum(numpy.sum(dz*dy*dx,axis=3),axis=2)/numpy.sum(numpy.sum(dy*dx,axis=1),axis=0)  
-            var_dict['dz']=numpy.reshape(var_dict['dz'],(nt,nz,1,1))      
+            var_dict['dz'] = numpy.sum(numpy.sum(dz*dy*dx,axis=3),axis=2)/numpy.sum(numpy.sum(dy*dx,axis=1),axis=0)
+            var_dict['dz']=numpy.reshape(var_dict['dz'],(nt,nz,1,1))
             z0 = numpy.take(var_dict['z_interfaces'],[0],axis=1)
             result = numpy.sum(numpy.sum(z0*dy*dx,axis=3),axis=2)/numpy.sum(numpy.sum(dy*dx,axis=1),axis=0)
             result = numpy.reshape(result,(nt,1,1,1))
@@ -1961,18 +1960,18 @@ class state(object):
             var_dict['z_interfaces']=numpy.concatenate((result,var_dict['z_interfaces']),axis=1)
             var_dict['z']=0.5*(var_dict['z_interfaces'][:,:-1,:] + var_dict['z_interfaces'][:,1:,:])
 
-        
+
       var_dict['rootgrp']=None
       var_dict['X']=None
       var_dict['xax_data']=[numpy.mean(var_dict['xax_data'])]
       var_dict['Y']=None
       var_dict['yax_data']=[numpy.mean(var_dict['yax_data'])]
-      
+
 
       self.var_dict[name]=var_dict.copy()
       self.variables[name]=name
 
-      
+
     if axis.upper() == 'XZ' or axis.upper() == 'ZX':
 
         print 'XZ integrals not implemented '
@@ -1986,14 +1985,14 @@ class state(object):
     if axis.upper() == 'XYZ':
 
       if self.var_dict[field]['Z'] is None or self.var_dict[field]['Y'] is None or self.var_dict[field]['X'] is None:
-        return None      
+        return None
 
       if normalize:
           if use_weights:
               if self.var_dict[field]['Ztype'] is 'Fixed' and self.var_dict[field]['Z'] is not None:
                   result = numpy.sum(numpy.sum(numpy.sum(sout*dx*dy*dz,axis=3),axis=2),axis=1)/numpy.sum(numpy.sum(numpy.sum(dx*dy*dz,axis=2),axis=1),axis=0)
               else:
-                  result = numpy.sum(numpy.sum(numpy.sum(sout*dx*dy*dz,axis=3),axis=2),axis=1)/numpy.sum(numpy.sum(numpy.sum(dx*dy*dz,axis=2),axis=2),axis=1)                  
+                  result = numpy.sum(numpy.sum(numpy.sum(sout*dx*dy*dz,axis=3),axis=2),axis=1)/numpy.sum(numpy.sum(numpy.sum(dx*dy*dz,axis=2),axis=2),axis=1)
           else:
               result = numpy.sum(numpy.sum(numpy.sum(sout,axis=3),axis=2),axis=1)
           result=numpy.reshape(result,(result.shape[0],1,1,1))
@@ -2002,20 +2001,20 @@ class state(object):
           if use_weights:
               result = numpy.sum(numpy.sum(numpy.sum(sout*dx*dy*dz,axis=3),axis=2),axis=1)
           else:
-              result = numpy.sum(numpy.sum(numpy.sum(sout,axis=3),axis=2),axis=1)          
+              result = numpy.sum(numpy.sum(numpy.sum(sout,axis=3),axis=2),axis=1)
           result=numpy.reshape(result,(result.shape[0],1,1,1))
           name = field+'_xyzint'
-          
+
       vars(self)[name]=result
-      
-        
+
+
       var_dict['Z']=None
       var_dict['X']=None
       var_dict['xax_data']=[numpy.mean(var_dict['xax_data'])]
       var_dict['Y']=None
-      var_dict['yax_data']=[numpy.mean(var_dict['yax_data'])]      
+      var_dict['yax_data']=[numpy.mean(var_dict['yax_data'])]
       var_dict['rootgrp']=None
-      
+
 
       self.var_dict[name]=var_dict.copy()
       self.variables[name]=name
@@ -2025,7 +2024,7 @@ class state(object):
 
     Calculate a finite-volume-weighted average of (field)
     along the time dimension.
-    
+
     >>> from midas.rectgrid import *
     >>> grid=quadmesh('http://data.nodc.noaa.gov/thredds/dodsC/woa/WOA09/NetCDFdata/temperature_annual_1deg.nc',var='t_an',cyclic=True)
     >>> IO = grid.geo_region(x=(70,80.),y=(5.,15.))
@@ -2036,36 +2035,36 @@ class state(object):
     """
 
     missing=-1.e34
-    
+
     if self.var_dict[field]['T'] is None:
       return None
-      
+
 
     cmd = string.join(['sout=self.',field],sep='')
     exec(cmd)
 
-    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent 
+    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
 
 
     if target is not None:
         nt = len(target['tax_data'])
     else:
         nt = 1
-        
+
     if vol_weight == True:
         if self.var_dict[field]['Z'] is not None:
             if self.var_dict[field]['Ztype'] is 'Fixed':
-                
+
                 w=self.var_dict[field]['dz'][:]
                 w = numpy.tile(w,(sout.shape[0],1,1,1))
-        
+
                 if self.var_dict[field]['masked']:
                     w_masked = numpy.ma.masked_where(sout.mask,w)
                 else:
                     w_masked = w
             else:
                 w=self.var_dict[field]['dz'][:]
-          
+
                 if self.var_dict[field]['masked']:
                     w_masked = numpy.ma.masked_where(sout.mask,w)
                 else:
@@ -2076,13 +2075,13 @@ class state(object):
             if self.var_dict[field]['masked']:
                 w_masked = numpy.ma.masked_where(sout.mask,w)
     else:
-        w = numpy.ones((sout.shape))      
+        w = numpy.ones((sout.shape))
         w_masked = w
 
         if self.var_dict[field]['masked']:
-            w_masked = numpy.ma.masked_where(sout.mask,w)        
-        
-            
+            w_masked = numpy.ma.masked_where(sout.mask,w)
+
+
     dt=self.var_dict[field]['dt'][:]
 
     shape=sout.shape
@@ -2112,9 +2111,9 @@ class state(object):
       if target is not None:
           ts,te = find_date_bounds(self.var_dict[field]['dates'],target['date_bounds'][j],target['date_bounds'][j+1])
 
-          
+
           if ts != -1 and te != -1:
-              if self.var_dict[field]['masked']:              
+              if self.var_dict[field]['masked']:
                   result[j,:,:,:]=numpy.ma.sum(sout[ts:te,:,:,:]*w_masked[ts:te,:,:,:],axis=0)/numpy.ma.sum(w_masked[ts:te,:,:,:],axis=0)
               else:
                   result[j,:,:,:]=numpy.sum(sout[ts:te,:,:,:]*w_masked[ts:te,:,:,:],axis=0)/numpy.sum(w_masked[ts:te,:,:,:],axis=0)
@@ -2122,29 +2121,29 @@ class state(object):
               if var_dict['z_interfaces'] is not None:
                   if var_dict['Ztype'] is not 'Fixed':
                       if self.var_dict[field]['masked']:
-                          interfaces[j,:,:,:]=numpy.ma.sum(var_dict['z_interfaces'][ts:te,:,:,:]*dt[ts:te],axis=0)/numpy.ma.sum(dt[ts:te])                          
+                          interfaces[j,:,:,:]=numpy.ma.sum(var_dict['z_interfaces'][ts:te,:,:,:]*dt[ts:te],axis=0)/numpy.ma.sum(dt[ts:te])
                       else:
                           interfaces[j,:,:,:]=numpy.sum(var_dict['z_interfaces'][ts:te,:,:,:]*dt[ts:te],axis=0)/numpy.sum(dt[ts:te])
       else:
-          if self.var_dict[field]['masked']:          
+          if self.var_dict[field]['masked']:
               result[j,:,:,:]=numpy.ma.sum(sout*w_masked,axis=0)/numpy.ma.sum(w_masked,axis=0)
           else:
-              result[j,:,:,:]=numpy.sum(sout*w_masked,axis=0)/numpy.sum(w_masked,axis=0)              
-          
+              result[j,:,:,:]=numpy.sum(sout*w_masked,axis=0)/numpy.sum(w_masked,axis=0)
+
           result = numpy.ma.masked_where(result == missing, result)
 
           if var_dict['Z'] is not None:
               if var_dict['Ztype'] is 'Fixed':
-                  if var_dict['z_interfaces'] is not None:        
+                  if var_dict['z_interfaces'] is not None:
                       interfaces=var_dict['z_interfaces'][:]
                       dz=numpy.ma.zeros(numpy.hstack(sout.shape[1:]))
                       for k in numpy.arange(0,sout.shape[1]):
-                          dz[k,:,:]=interfaces[k,:,:]-interfaces[k+1,:,:]        
+                          dz[k,:,:]=interfaces[k,:,:]-interfaces[k+1,:,:]
               else:
                   dz = numpy.ma.zeros((numpy.hstack((nt,sout.shape[1:]))))
 
               if var_dict['z_interfaces'] is not None:
-                  if var_dict['Ztype'] is not 'Fixed':        
+                  if var_dict['Ztype'] is not 'Fixed':
                       for k in numpy.arange(0,sout.shape[1]):
                           dz[:,k,:,:]=interfaces[:,k,:,:]-interfaces[:,k+1,:,:]
                   else:
@@ -2152,19 +2151,19 @@ class state(object):
                           dz[k,:,:]=interfaces[k,:,:]-interfaces[k+1,:,:]
 
     if var_dict['Z'] is not None:
-        if var_dict['Ztype'] is not 'Fixed':        
+        if var_dict['Ztype'] is not 'Fixed':
             var_dict['z_interfaces']=interfaces
             var_dict['dz']=numpy.squeeze(dz)
             tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
             var_dict['z'] = tmp[:,0:-1,:,:]
             var_dict['z'] = numpy.reshape(var_dict['z'],(nt,shape[1],shape[2],shape[3]))
-            var_dict['dz'] = numpy.reshape(var_dict['dz'],(nt,shape[1],shape[2],shape[3]))            
+            var_dict['dz'] = numpy.reshape(var_dict['dz'],(nt,shape[1],shape[2],shape[3]))
 
         else:
             var_dict['z_interfaces']=numpy.reshape(sq(interfaces),(shape[1]+1,shape[2],shape[3]))
             dz=numpy.ma.zeros(numpy.hstack(sout.shape[1:]))
             for k in numpy.arange(0,sout.shape[1]):
-                dz[k,:,:]=interfaces[k,:,:]-interfaces[k+1,:,:]                    
+                dz[k,:,:]=interfaces[k,:,:]-interfaces[k+1,:,:]
             var_dict['dz']=dz
             tmp = 0.5*(var_dict['z_interfaces'][1:]+var_dict['z_interfaces'][0:-1])
             var_dict['z'] = tmp
@@ -2173,7 +2172,7 @@ class state(object):
 
     if target is not None:
         var_dict['tbax_data'] = target['tbax_data']
-        var_dict['tax_data'] = target['tax_data']        
+        var_dict['tax_data'] = target['tax_data']
         date_bounds = target['date_bounds']
         var_dict['dates'] = target['dates']
         var_dict['T'] = 'time'
@@ -2186,14 +2185,14 @@ class state(object):
         avg_time = numpy.sum(dt*var_dict['tax_data'])/numpy.sum(dt)
         var_dict['dates'] = netCDF4.num2date(avg_time,var_dict['tunits'],var_dict['calendar'])
         var_dict['T'] = 'time'
-        var_dict['dt']=[numpy.sum(dt)]      
-        var_dict['tax_data'] = avg_time    
-        
+        var_dict['dt']=[numpy.sum(dt)]
+        var_dict['tax_data'] = avg_time
+
 
     var_dict['rootgrp']=None
 
-    
-    
+
+
 
     name = field+'_tav'
     vars(self)[name]=result
@@ -2204,29 +2203,29 @@ class state(object):
     ntimes=ntimes[numpy.newaxis,:]
 
     var_dict['T']=None
-    var_dict['Z']=None    
-    
+    var_dict['Z']=None
+
     name = field+'_nsamp'
     vars(self)[name]=ntimes
     self.var_dict[name]=var_dict.copy()
-    self.variables[name]=name    
+    self.variables[name]=name
 
   def monthly_avg(self,field=None,vol_weight=True, year_ref=None,DEBUG=False):
     """
 
     Calculate a finite-volume-weighted average of (field)
     along the time dimension for each month.
-    
+
     """
 
     if self.var_dict[field]['T'] is None:
       return None
-      
+
 
     cmd = string.join(['sout=self.',field],sep='')
     exec(cmd)
 
-    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent 
+    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
 
     if vol_weight == True:
         #
@@ -2237,14 +2236,14 @@ class state(object):
 
                 dz=self.var_dict[field]['dz'][:]
                 w = numpy.tile(dz,(sout.shape[0],1,1,1))
-        
+
                 if self.var_dict[field]['masked']:
                     w_masked = numpy.ma.masked_where(sout.mask,w)
                 else:
                     w_masked = w
             else:
                 w=self.var_dict[field]['dz'][:]
-          
+
                 if self.var_dict[field]['masked']:
                     w_masked = numpy.ma.masked_where(sout.mask,w)
                 else:
@@ -2257,12 +2256,12 @@ class state(object):
             if self.var_dict[field]['masked']:
                 w_masked = numpy.ma.masked_where(sout.mask,w)
     else:
-        w = numpy.ones((sout.shape))      
+        w = numpy.ones((sout.shape))
         w_masked = w
 
         if self.var_dict[field]['masked']:
             w_masked = numpy.ma.masked_where(sout.mask,w)
-            
+
     dt=self.var_dict[field]['dt'][:]
 
 
@@ -2304,48 +2303,48 @@ class state(object):
     if DEBUG:
         print 'weights=',weights
         print 'result 001=',result
-        
+
     result = result / weights
 
-        
+
     if self.var_dict[field]['masked']:
         result = numpy.ma.masked_where(nsamp==0.,result)
 
     elif numpy.min(nsamp == 0.):
         result = numpy.ma.masked_where(nsap==0.,result)
-    
+
     if var_dict['Z'] is not None:
         if var_dict['Ztype'] is not 'Fixed' and var_dict['z_interfaces'] is not None:
             interfaces = interfaces/nsamp
             interfaces = numpy.ma.masked_where(nsamp==0.,interfaces)
-      
+
 
 #        print 'interfaces=',interfaces.shape
 
-    if var_dict['Z'] is not None:                
+    if var_dict['Z'] is not None:
         if var_dict['Ztype'] is not 'Fixed' and var_dict['z_interfaces'] is not None:
             dz = numpy.ma.zeros((numpy.hstack((12,sout.shape[1:]))))
 
             for i in numpy.arange(0,12):
                 for k in numpy.arange(0,sout.shape[1]):
                     dz[i,k,:,:]=interfaces[i,k,:,:]-interfaces[i,k+1,:,:]
-            
+
 #        else:
 #            dz = numpy.ma.zeros((numpy.hstack((1,sout.shape[1:]))))
 #            for k in numpy.arange(0,sout.shape[1]):
 #                dz[0,k,:,:]=interfaces[0,k,:,:]-interfaces[0,k+1,:,:]
-            
+
 
         if var_dict['Ztype'] is not 'Fixed':
             var_dict['z_interfaces']=interfaces
             var_dict['dz']=dz
-            
+
         if self.var_dict[field]['Ztype'] is 'Fixed':
             tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
             var_dict['z'] = tmp[0:-1,:,:]
         else:
             tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=1,shift=-1))
-            var_dict['z'] = tmp[:,0:-1,:,:]          
+            var_dict['z'] = tmp[:,0:-1,:,:]
 
 
     if year_ref is None:
@@ -2358,9 +2357,9 @@ class state(object):
     else:
         date_start = self.var_dict[field]['dates'][0]
         date_end = self.var_dict[field]['dates'][-1]
-        
+
     mod_yr = (date_start.year + date_end.year)/2
-    
+
     dates=make_monthly_axis(mod_yr)
     date0=datetime.datetime(year_ref,1,1)
 
@@ -2373,24 +2372,24 @@ class state(object):
 
 #        print 'tdelta days=',tdelta.days
         var_dict['tax_data'].append(tdelta.days)
-        
+
     var_dict['dates'] = dates
     var_dict['T'] = 'time'
 
     var_dict['rootgrp']=None
 
-    
+
     name = field+'_monthly'
     vars(self)[name]=result
     self.var_dict[name]=var_dict.copy()
-    self.variables[name]=name      
+    self.variables[name]=name
 
     name = field+'_monthly_nsamp'
     vars(self)[name]=nsamp
     var_dict['Z']=None
     self.var_dict[name]=var_dict
-    self.variables[name]=name      
-    
+    self.variables[name]=name
+
 
   def time_interp(self,field=None,target=None,vol_weight=True,name=None):
     """
@@ -2400,27 +2399,27 @@ class state(object):
     cell volume is interpolated as well.
 
     (target) is a midas dictionary
-    
+
     """
 
     if name is None:
         name = field+'_tinterp'
-    
+
     if self.var_dict[field]['T'] is None:
       return None
-      
+
     if target is None:
         return None
-    
+
     cmd = string.join(['sout=self.',field],sep='')
     exec(cmd)
 
-    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent 
+    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
 
     do_interfaces=False
     do_vol=False
 
-  
+
     if vol_weight == True:
         if self.var_dict[field]['Z'] is not None:
             do_vol=True
@@ -2428,7 +2427,7 @@ class state(object):
 
                 dz=self.var_dict[field]['dz'][:]
                 w = numpy.tile(dz,(sout.shape[0],1,1,1))
-        
+
                 if self.var_dict[field]['masked']:
                     w_masked = numpy.ma.masked_where(sout.mask,w)
                 else:
@@ -2436,19 +2435,19 @@ class state(object):
             else:
                 do_interfaces=True
                 w=self.var_dict[field]['dz'][:]
-          
+
                 if self.var_dict[field]['masked']:
                     w_masked = numpy.ma.masked_where(sout.mask,w)
                 else:
                     w_masked = w
         else:
-            w = numpy.ones((sout.shape))      
+            w = numpy.ones((sout.shape))
             w_masked = w
     else:
-        w = numpy.ones((sout.shape))      
+        w = numpy.ones((sout.shape))
         w_masked = w
 
-        
+
     shape=sout.shape
     nt = len(target['dates'])
 
@@ -2457,7 +2456,7 @@ class state(object):
 
     if do_interfaces:
         result2 = numpy.ma.zeros((numpy.hstack((nt,nzp,shape[2:]))))
-        
+
 
     t1,t2,w1,w2 = time_interp_weights(self.var_dict[field]['dates'],target['dates'])
 
@@ -2473,11 +2472,11 @@ class state(object):
                 result2[i,:]=-999.
             else:
                 result2[i,:,:,:]=var_dict['z_interfaces'][t1[i],:,:,:]*w1[i] + var_dict['z_interfaces'][t2[i],:,:,:]*w2[i]
-                    
+
 
 
     if do_interfaces:
-        dz = numpy.ma.zeros((numpy.hstack((nt,sout.shape[1:]))))        
+        dz = numpy.ma.zeros((numpy.hstack((nt,sout.shape[1:]))))
         for i in numpy.arange(0,nt):
             for k in numpy.arange(0,sout.shape[1]):
                 dz[i,k,:,:]=result2[i,k,:,:]-result2[i,k+1,:,:]
@@ -2485,7 +2484,7 @@ class state(object):
         var_dict['z_interfaces']=result2
         var_dict['dz']=dz
         tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=1,shift=-1))
-        var_dict['z'] = tmp[:,0:-1,:,:]          
+        var_dict['z'] = tmp[:,0:-1,:,:]
 
     var_dict['tax_data']=target['tax_data']
     var_dict['tunits']=target['tunits']
@@ -2493,25 +2492,25 @@ class state(object):
     var_dict['T'] = target['T']
 
     self.var_dict[name]=var_dict
-    self.variables[name]=name      
+    self.variables[name]=name
     vars(self)[name]=numpy.ma.masked_where(result==-999.,result)
-    
+
   def monthly_anom(self,field=None,vol_weight=True):
     """
 
-    Calculate anomaly of (field) with 
+    Calculate anomaly of (field) with
     respect to a monthly climatology for the corresponding month
-    
+
     """
 
     if self.var_dict[field]['T'] is None:
       return None
-      
+
 
     cmd = string.join(['sout=self.',field],sep='')
     exec(cmd)
 
-    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent 
+    var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
 
     clim_name = field+'_monthly'
     if clim_name not in self.var_dict.keys():
@@ -2519,24 +2518,24 @@ class state(object):
 
     cmd = string.join(['climout=self.',clim_name],sep='')
     exec(cmd)
-    
+
     shape=sout.shape
     result = numpy.ma.zeros((sout.shape))
     months=get_months(self.var_dict[field]['dates'])
-    
+
     for i in  numpy.arange(0,sout.shape[0]):
       result[i,:,:,:]=sout[i,:,:,:] - climout[months[i]-1,:,:,:]
 
 
     var_dict['rootgrp']=None
 
-    
+
     name = field+'_monthly_anom'
     vars(self)[name]=result
     self.var_dict[name]=var_dict
-    self.variables[name]=name      
+    self.variables[name]=name
 
-      
+
 
   def remap_to_isopycnals(self,temp_name='temp',salt_name='salt',R=None,p_ref=2.e7,wet=None,nkml=None,nkbl=None,hml=None,fit_target=False,smooth=False,num_pass=0):
     """
@@ -2552,11 +2551,11 @@ class state(object):
     surface layer is preferred (i.e. to initialize a model with a bulk mixed
     layer). Specifying (fit_target) adjusts remapped layer T/S to closely
     match the target density for non-vanishing layers.
-    
-    
+
+
     """
 
-    import vertmap_GOLD 
+    import vertmap_GOLD
 
     if self.var_dict[temp_name]['Ztype'] is not 'Fixed':
       print """
@@ -2565,14 +2564,14 @@ class state(object):
       return None
 
     print '...Filling interior points in z-space'
-    
+
     self.fill_interior(temp_name,smooth=smooth,num_pass=num_pass)
     self.fill_interior(salt_name,smooth=smooth,num_pass=num_pass)
 
-    
+
     self.create_field('wright_eos(vars(self)[\''+temp_name+'\'],vars(self)[\''+salt_name+'\'],'+str(p_ref)+')','sigma',var_dict=self.var_dict[temp_name])
 
-    
+
     Rb=numpy.zeros(len(R)+1)
     Rb[0]=0.0
     Rb[1:-1]=0.5*(R[0:-1]+R[1:])
@@ -2587,7 +2586,7 @@ class state(object):
 
     zax=self.var_dict[temp_name]['zax_data']
     zbax=self.var_dict[temp_name]['zbax_data']
-    
+
     nt=self.sigma.shape[0];nz=self.sigma.shape[1];ny=self.sigma.shape[2];nx=self.sigma.shape[3]
 
     if wet is not None:
@@ -2605,9 +2604,9 @@ class state(object):
     nlay=len(R)
     temp=numpy.zeros((nx,ny,nlay,nt))
     salt=numpy.zeros((nx,ny,nlay,nt))
-    zi=numpy.zeros((nx,ny,nlay+1,nt))        
+    zi=numpy.zeros((nx,ny,nlay+1,nt))
     R=R.astype('float64')
-    
+
     for n in numpy.arange(nt):
         rho=self.sigma[n,:].T
         zi_n = zi[:,:,:,n]
@@ -2621,19 +2620,19 @@ class state(object):
         temp_n=temp_n.astype('float64')
         print '...Remapping salinity '
         salt_n=vertmap_GOLD.vertmap_gold_mod.tracer_z_init(salinity,-zbax,zi_n,nkml,nkbl,land_fill,wet_,len(R),nlevs)
-        salt_n=salt_n.astype('float64')        
+        salt_n=salt_n.astype('float64')
         h_n=zi_n-numpy.roll(zi_n,axis=2,shift=-1)
-        h_n=h_n.astype('float64')        
+        h_n=h_n.astype('float64')
         if fit_target:
             print '...Adjusting temp/salt to fit target densities '
             vertmap_GOLD.vertmap_gold_mod.determine_temperature(temp_n,salt_n,R,p_ref,10,land_fill,h_n,nkml+nkbl+1)
         zi[:,:,:,n]=zi_n
         temp[:,:,:,n]=temp_n
         salt[:,:,:,n]=salt_n
-        
+
     h=zi-numpy.roll(zi,axis=2,shift=-1)
     h=h[:,:,0:-1,:]
-    
+
 #    if fields is not None:
 #        for fld in fields:
 #            expr = fld+'=vars(self)[\''+fld+'\'].T'
@@ -2643,9 +2642,9 @@ class state(object):
 #            expr=fld+'_remap='+fld+'_remap.astype(\'float64\')'
 #            exec(expr)
 
-            
 
-    
+
+
 
     temp=numpy.ma.masked_where(numpy.abs(temp-land_fill)<1.e-5,temp)
     salt=numpy.ma.masked_where(numpy.abs(salt-land_fill)<1.e-5,salt)
@@ -2655,8 +2654,8 @@ class state(object):
     h=h.T
     zi=zi.T
 
-    
-        
+
+
     zout = 0.5*(zi + numpy.roll(zi,axis=1,shift=-1))
     zout = zout[:,0:-1,:]
 
@@ -2674,7 +2673,7 @@ class state(object):
 
 
     self.add_field_from_array(temp,'temp_remap',var_dict=var_dict)
-    self.add_field_from_array(salt,'salt_remap',var_dict=var_dict)            
+    self.add_field_from_array(salt,'salt_remap',var_dict=var_dict)
 
 
   def remap_ALE(self,fields=None,z_bounds=None,zbax_data=None,method='pcm',bndy_extrapolation=False,memstats=False):
@@ -2698,13 +2697,13 @@ class state(object):
     following (White and Adcroft, JCP, 2008, vol 227, pp 7394-7422).
 
     """
-    
+
 
     try:
         import vertmap_ALE
     except:
         print """ ALE/vertmap not installed """
-        return 
+        return
 
     if z_bounds is None:
         print 'No output grid in call to vert_remap'
@@ -2718,20 +2717,20 @@ class state(object):
             ztype='Fixed'
 
 
-            
+
     for fld in fields:
 
         # initialize an array for output data
 
-        nt = vars(self)[fld].shape[0];nj=vars(self)[fld].shape[2];ni=vars(self)[fld].shape[3] 
-        
+        nt = vars(self)[fld].shape[0];nj=vars(self)[fld].shape[2];ni=vars(self)[fld].shape[3]
+
         fld_out = numpy.ma.zeros((nt,nx2,nj,ni))
 
         vdict=self.var_dict[fld].copy()
 
         vdict['Z']='level'
         vdict['Y']='latitude'
-        vdict['X']='longitude'        
+        vdict['X']='longitude'
 
         vdict['zb_indices']=numpy.arange(0,nx2+1)
 
@@ -2744,21 +2743,21 @@ class state(object):
         else:
             vdict['zbax_data']=None
             vdict['zax_data']=None
-            vdict['Zb']=None            
+            vdict['Zb']=None
 
         vdict['z_indices']=numpy.arange(0,nx2+1)
 
         vdict['z_interfaces']=z_bounds.copy()
 
         vdict['Ztype']=ztype
-        
+
         if ztype == 'Fixed':
-            vdict['dz']=numpy.zeros((nx2,nj,ni))            
+            vdict['dz']=numpy.zeros((nx2,nj,ni))
             vdict['z']=numpy.zeros((nx2,nj,ni))
         else:
-            vdict['z']=numpy.zeros((nt,nx2,nj,ni))            
+            vdict['z']=numpy.zeros((nt,nx2,nj,ni))
             vdict['dz']=numpy.zeros((nt,nx2,nj,ni))
-            
+
         for n in numpy.arange(nt):
 
             # Convention is x is monotonic and increasing.
@@ -2767,7 +2766,7 @@ class state(object):
             # Output grid is further adjusted so that the
             # outer edges of x1,x2 are aligned. The modified
             # edges are stored in a temporary copy of the
-            # global array t-slice here.  
+            # global array t-slice here.
 
 
             if self.var_dict[fld]['Ztype'] in ['Isopycnal','Generalized','Sigma']:
@@ -2780,20 +2779,20 @@ class state(object):
             else:
 #                xb2=numpy.take(z_bounds,[n],axis=0)
                 xb2 = z_bounds[n,:]
-                
+
             nx1=xb1.shape[0]-1
 #            xb2=sq(xb2)
 
             print xb1.shape
             print xb2.shape
-            
+
             xb1[0,:,:]=xb2[0,:,:] # reset top interface to xb1[0]
             for k in numpy.arange(1,xb1.shape[0]):
                 xb1[k,:,:]=numpy.minimum(xb1[k-1,:,:]-1.e-9,xb1[k,:,:]) # avoid zero thicknesses
-            xb1[-1,:]=numpy.minimum(xb1[-1,:],xb2[-1,:]-1.e-9)            
+            xb1[-1,:]=numpy.minimum(xb1[-1,:],xb2[-1,:]-1.e-9)
 #            xb2[0,:,:]=xb1[0,:,:] # reset top interface to xb1[0]
 #            for k in numpy.arange(1,xb2.shape[0]):
-#                xb2[k,:,:]=numpy.minimum(xb2[k-1,:,:]-1.e-9,xb2[k,:,:]) # avoid zero thicknesses 
+#                xb2[k,:,:]=numpy.minimum(xb2[k-1,:,:]-1.e-9,xb2[k,:,:]) # avoid zero thicknesses
 
 
             h2=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=0)-xb2)
@@ -2804,13 +2803,13 @@ class state(object):
                 vdict['z_interfaces'][:]=xb2
                 zout=0.5*(xb2+numpy.roll(xb2,shift=-1,axis=0))
                 vdict['z']=zout[:-1,:,:]
-                vdict['dz'][:]=h2                
+                vdict['dz'][:]=h2
             else:
                 vdict['z_interfaces'][n,:]=xb2
                 zout=0.5*(xb2+numpy.roll(xb2,shift=-1,axis=0))
-                vdict['z'][n,:]=zout[:-1,:,:]                
+                vdict['z'][n,:]=zout[:-1,:,:]
                 vdict['dz'][n,:]=h2
-                
+
             data=numpy.take(vars(self)[fld],[n],axis=0)
             data2=numpy.zeros((nx2,nj,ni))
 
@@ -2823,21 +2822,31 @@ class state(object):
             xb1= -xb1.T
             xb2= -sq(xb2).T
 
+            h1=np.roll(xb1,shift=-1)-xb1
+            h1=h1[:-1]
+            h2=np.roll(xb2,shift=-1)-xb2
+            h2=h2[:-1]
+
+            imethod=0
+            for meth,imeth in zip(['plm','ppm_h4','ppm_ih4','pqm_ih4_ih3','pqm_ih6_ih5'],[1,2,3,4,5]):
+                if method == meth:
+                    imethod = imeth
+
             if memstats:
-                print 'Memory usage vertmap_ALE (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss                        
+                print 'Memory usage vertmap_ALE (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             vertmap_ALE.pyale_mod.remap(data,data2,xb1,xb2,method,bndy_extrapolation=bndy_extrapolation,missing=missing_value)
             if memstats:
-                print 'Memory usage vertmap_ALE (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss            
+                print 'Memory usage vertmap_ALE (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             data2=data2.T
             xb2=-xb2.T
 
-            if ztype == 'Fixed':            
+            if ztype == 'Fixed':
                 dz=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=0)-xb2)
                 dz=dz[:-1,:]
             else:
                 dz=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=1)-xb2)
                 dz=dz[:,:-1,:]
-                
+
             mask=dz.copy()
             mask[mask>1.e-9]=1.0
             mask[mask<=1.e-9]=0.0
@@ -2851,27 +2860,27 @@ class state(object):
 
 
 
-    
+
   def adjust_thickness(self,field=None,min_thickness=0.0,z_top=None):
     """
 
     Adjust cell thicknesses based on grid.D
     and optionally top interface position.
-    
+
     """
 
-    
+
     if self.var_dict[field]['Z'] is None:
       return None
-      
+
 
     if self.var_dict[field]['Ztype'] == 'Fixed':
-        
+
         dz = self.var_dict[field]['dz']
 
         dz=numpy.ma.filled(dz,0.)
-        
-        nz = vars(self)[field].shape[1]    
+
+        nz = vars(self)[field].shape[1]
         D = numpy.tile(self.grid.D,(nz+1,1,1))
         ztop = numpy.zeros((nz+1,self.grid.jm,self.grid.im))
         if z_top is not None:
@@ -2886,12 +2895,12 @@ class state(object):
             zbot[zbot>-self.grid.D]=-self.grid.D[zbot>-self.grid.D]
             zb[-1,:]=zbot
             dz = zb[:-1]-zb[1:]
-            
+
             ztop=ztop[0,:]
             ztop=ztop[numpy.newaxis,:]
             zb=ztop-numpy.cumsum(dz,axis=0)
             zb=numpy.concatenate((ztop,zb),axis=0)
-            
+
         else:
             zb=self.var_dict[field]['z_interfaces'].copy()
             zb=numpy.ma.filled(zb,0.)
@@ -2900,26 +2909,26 @@ class state(object):
             zbot=sq(zb[-1,:])
             zbot[zbot<self.grid.D]=self.grid.D[zbot<self.grid.D]
             zb[-1,:]=zbot
-            
+
             dz = zb[1:]-zb[:-1]
-            
+
             ztop=ztop[0,:]
             ztop=ztop[numpy.newaxis,:]
             zb=ztop+numpy.cumsum(dz,axis=0)
             zb=numpy.concatenate((ztop,zb),axis=0)
 
-        z=0.5*(zb[1:]+zb[0:-1])   
+        z=0.5*(zb[1:]+zb[0:-1])
 
 
 
-        self.var_dict[field]['dz']=dz        
+        self.var_dict[field]['dz']=dz
         self.var_dict[field]['z']=z
         self.var_dict[field]['z_interfaces']=zb
     else:
-        
+
         dz = self.var_dict[field]['dz']
         dz = numpy.ma.filled(dz,0.)
-        
+
         dz[dz<epsln]=epsln
 
 
@@ -2940,14 +2949,14 @@ class state(object):
             zbot=sq(zb[0,-1,:])
             zbot[zbot>-self.grid.D]=-self.grid.D[zbot>-self.grid.D]
             zb[:,-1,:]=zbot
-            
+
             dz = zb[:,:-1]-zb[:,1:]
-            
+
             ztop=ztop[:,0,:]
             ztop=ztop[:,numpy.newaxis,:]
             zb=ztop-numpy.cumsum(dz,axis=1)
             zb=numpy.concatenate((ztop,zb),axis=1)
-            
+
         else:
             zb=self.var_dict[field]['z_interfaces'].copy()
             zb=numpy.ma.filled(zb,0.)
@@ -2956,9 +2965,9 @@ class state(object):
             zbot=sq(zb[0,-1,:])
             zbot[zbot<self.grid.D]=self.grid.D[zbot<self.grid.D]
             zb[:,-1,:]=zbot
-            
+
             dz = zb[:,1:]-zb[:,:-1]
-            
+
             ztop=ztop[:,0,:]
             ztop=ztop[:,numpy.newaxis,:]
             zb=ztop+numpy.cumsum(dz,axis=1)
@@ -2966,21 +2975,21 @@ class state(object):
 
         z=0.5*(zb[:,1:]+zb[:,0:-1])
 
-        self.var_dict[field]['dz']=dz        
+        self.var_dict[field]['dz']=dz
         self.var_dict[field]['z']=z
         self.var_dict[field]['z_interfaces']=zb
-        
+
   def horiz_interp(self,field=None,target=None,src_modulo=None,method='bilinear',PrevState=None,field_x=None,field_y=None,verbose=0):
     """
       Interpolate from a spherical grid to a general logically
       rectangular grid using a non-conservative \"bilinear\" interpolation
       algorithm (the default) or \"conservative\" area-weighted.
     """
-    
+
     import fms_hinterp as hinterp
 
     print 'Memory usage hinterp (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    
+
     is_vector = False
     if field_x is not None:
         if field_y is not None:
@@ -3006,9 +3015,9 @@ class state(object):
                 return None
 
 
-    
+
     open('input.nml','w+')
-    
+
     deg_to_rad=numpy.pi/180.
 
     add_NP=True
@@ -3018,7 +3027,7 @@ class state(object):
 
 
     nj_in = self.grid.lonh.shape[0]; ni_in = self.grid.lonh.shape[0]
-    
+
     if method=='conservative0':
         if hasattr(self.grid,'x_T_bounds'):
             lon_in=self.grid.x_T_bounds
@@ -3042,7 +3051,7 @@ class state(object):
             print """Conservative interpolation not available for
                   supergrids"""
             return None
-        
+
 
     elif method == 'bilinear':
         if hasattr(self.grid,'x_T'):
@@ -3055,7 +3064,7 @@ class state(object):
         else:
             print """ Unable to read grid cell boundaries on input grid"""
             return None
-            
+
         if hasattr(target,'x_T'):
             nj=target.x_T.shape[0];ni=target.x_T.shape[1]
             lon_out = target.x_T
@@ -3067,30 +3076,30 @@ class state(object):
     else:
         print 'Invalid method in call to hinterp'
         return None
-      
+
     max_lat_in = numpy.max(lat_in)
     if numpy.logical_and(max_lat_in < 90.0 - epsln,add_NP):
         add_np=True
         np_lat = numpy.reshape(numpy.tile([90.0],(ni_in)),(1,ni_in))
-        np_lon = numpy.reshape(lon_in[-1,:],(1,ni_in))            
+        np_lon = numpy.reshape(lon_in[-1,:],(1,ni_in))
         lat_in=numpy.concatenate((lat_in,np_lat))
         lon_in=numpy.concatenate((lon_in,np_lon))
-            
+
     min_lat_in = numpy.min(lat_in)
 
     if numpy.logical_and(min_lat_in > -90.0 + epsln,add_SP):
         add_sp=True
         sp_lat = numpy.reshape(numpy.tile([-90.0],(ni_in)),(1,ni_in))
-        sp_lon = numpy.reshape(lon_in[0,:],(1,ni_in))                        
+        sp_lon = numpy.reshape(lon_in[0,:],(1,ni_in))
         lat_in=numpy.concatenate((sp_lat,lat_in))
         lon_in=numpy.concatenate((lon_in,sp_lon))
 
-    
+
     ny=lat_in.shape[0];nx=lon_in.shape[1]
-    
+
     lon_in=lon_in*deg_to_rad
-    lat_in=lat_in*deg_to_rad    
-    
+    lat_in=lat_in*deg_to_rad
+
     lon_out = lon_out*deg_to_rad
     lat_out = lat_out*deg_to_rad
 
@@ -3099,8 +3108,8 @@ class state(object):
     else:
         mask_out=numpy.ones((target.x_T.shape))
 
-    
-    
+
+
     if is_vector:
         if self.var_dict[field_x]['missing_value'] is not None:
             missing = numpy.float64(self.var_dict[field_x]['missing_value'])
@@ -3108,7 +3117,7 @@ class state(object):
             missing = numpy.float64(self.var_dict[field_x]['_FillValue'])
         else:
             missing = numpy.float64(-1.e34)
-            
+
         varin_x = vars(self)[field_x].astype('float64')
         varin_y = vars(self)[field_y].astype('float64')
         if numpy.ma.is_masked(varin_x):
@@ -3120,7 +3129,7 @@ class state(object):
 
         nk=varin_x.shape[1];nt=varin_x.shape[0]
         varin_x[numpy.abs(varin_x-missing)<1.e-3*numpy.abs(missing)]=missing
-        varin_y[numpy.abs(varin_y-missing)<1.e-3*numpy.abs(missing)]=missing        
+        varin_y[numpy.abs(varin_y-missing)<1.e-3*numpy.abs(missing)]=missing
     else:
         if self.var_dict[field]['missing_value'] is not None:
             missing = numpy.float64(self.var_dict[field]['missing_value'])
@@ -3128,7 +3137,7 @@ class state(object):
             missing = numpy.float64(self.var_dict[field]['_FillValue'])
         else:
             missing = numpy.float64(-1.e34)
-            
+
         varin = vars(self)[field].astype('float64')
         if numpy.ma.is_masked(varin):
             mask_in = numpy.ma.getmask(varin)
@@ -3136,12 +3145,12 @@ class state(object):
             mask[mask_in]=0
         else:
             mask=numpy.ones((varin.shape))
-            
-        varin[numpy.abs(varin-missing)<1.e-3*numpy.abs(missing)]=missing            
+
+        varin[numpy.abs(varin-missing)<1.e-3*numpy.abs(missing)]=missing
 
         nk=varin.shape[1];nt=varin.shape[0]
-    
-    
+
+
     if add_np:
       if is_vector:
           last_row=varin_x[:,:,-1,:]
@@ -3157,12 +3166,12 @@ class state(object):
           if hasattr(self.grid,'angle_dx'):
               angle_dx = self.grid.angle_dx
               angle_dx = angle_dx[numpy.newaxis,numpy.newaxis,:]
-              angle_dx = numpy.tile(angle_dx,(nt,nk,1,1))              
+              angle_dx = numpy.tile(angle_dx,(nt,nk,1,1))
               last_row=angle_dx[:,:,-1,:]
               pole=numpy.ma.average(last_row,axis=2)
               pole=numpy.reshape(pole,(nt,nk,1,1))
               pole=numpy.tile(pole,(1,1,1,nx))
-              angle_dx=numpy.concatenate((angle_dx,pole),axis=2)              
+              angle_dx=numpy.concatenate((angle_dx,pole),axis=2)
       else:
           last_row=varin[:,:,-1,:]
           pole=numpy.ma.average(last_row,axis=2)
@@ -3191,7 +3200,7 @@ class state(object):
               pole=numpy.ma.average(first_row,axis=2)
               pole=numpy.reshape(pole,(nt,nk,1,1))
               pole=numpy.tile(pole,(1,1,1,nx))
-              angle_dx=numpy.concatenate((pole,angle_dx),axis=2)              
+              angle_dx=numpy.concatenate((pole,angle_dx),axis=2)
       else:
           first_row=varin[:,:,0,:]
           pole=numpy.ma.average(first_row,axis=2)
@@ -3203,7 +3212,7 @@ class state(object):
       pole=numpy.reshape(pole,(nt,nk,1,1))
       pole=numpy.tile(pole,(1,1,1,nx))
       mask=numpy.concatenate((pole,mask),axis=2)
-      
+
 
     if src_modulo is not None:
         src_modulo = self.grid.cyclic_x
@@ -3211,31 +3220,31 @@ class state(object):
 
     if src_modulo:
       mask=numpy.concatenate((mask,numpy.take(mask,[0],axis=3)),axis=3)
-      mask=numpy.concatenate((numpy.take(mask,[-2],axis=3),mask),axis=3)                          
+      mask=numpy.concatenate((numpy.take(mask,[-2],axis=3),mask),axis=3)
       if is_vector:
           varin_x=numpy.concatenate((varin_x,numpy.take(varin_x,[0],axis=3)),axis=3)
-          varin_x=numpy.concatenate((numpy.take(varin_x,[-2],axis=3),varin_x),axis=3)                          
+          varin_x=numpy.concatenate((numpy.take(varin_x,[-2],axis=3),varin_x),axis=3)
           varin_y=numpy.concatenate((varin_y,numpy.take(varin_y,[0],axis=3)),axis=3)
           varin_y=numpy.concatenate((numpy.take(varin_y,[-2],axis=3),varin_y),axis=3)
           if hasattr(self.grid,'angle_dx'):
               angle_dx=numpy.concatenate((angle_dx,numpy.take(angle_dx,[0],axis=3)),axis=3)
-              angle_dx=numpy.concatenate((numpy.take(angle_dx,[-2],axis=3),angle_dx),axis=3)                                        
+              angle_dx=numpy.concatenate((numpy.take(angle_dx,[-2],axis=3),angle_dx),axis=3)
       else:
           varin=numpy.concatenate((varin,numpy.take(varin,[0],axis=3)),axis=3)
-          varin=numpy.concatenate((numpy.take(varin,[-2],axis=3),varin),axis=3)                                    
+          varin=numpy.concatenate((numpy.take(varin,[-2],axis=3),varin),axis=3)
 
       lat_in=numpy.concatenate((lat_in,numpy.take(lat_in,[0],axis=1)),axis=1)
       lat_in=numpy.concatenate((numpy.take(lat_in,[-2],axis=1),lat_in),axis=1)
       lon_in=numpy.concatenate((lon_in,numpy.take(lon_in,[0],axis=1)+2.0*numpy.pi),axis=1)
       lon_in=numpy.concatenate((numpy.take(lon_in,[-2],axis=1)-2.0*numpy.pi,lon_in),axis=1)
- 
+
 
 
     lon_in=numpy.float64(lon_in)
     lat_in=numpy.float64(lat_in)
     lon_out=numpy.float64(lon_out)
     lat_out=numpy.float64(lat_out)
-      
+
     if is_vector:
         varin_x=numpy.ma.filled(varin_x,missing)
         varout_x=numpy.zeros((nt,nk,nj,ni))
@@ -3245,22 +3254,22 @@ class state(object):
             x=varin_x.copy()
             y=varin_y.copy()
             varin_x = x*numpy.cos(angle_dx) + y*numpy.sin(angle_dx)
-            varin_y = y*numpy.cos(angle_dx) - x*numpy.sin(angle_dx) 
+            varin_y = y*numpy.cos(angle_dx) - x*numpy.sin(angle_dx)
 
         varin_x=numpy.float64(varin_x)
-        varin_y=numpy.float64(varin_y)                
-        
+        varin_y=numpy.float64(varin_y)
+
         if method=='conservtive0':
             hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_x.T,lon_out.T,lat_out.T,varout_x.T,False,0,missing)
             hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_y.T,lon_out.T,lat_out.T,varout_y.T,False,0,missing)
         elif method == 'bilinear':
             hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_x.T,lon_out.T,lat_out.T,varout_x.T,False,1,missing)
             hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin_y.T,lon_out.T,lat_out.T,varout_y.T,False,1,missing)
-            
+
         angle_dx = target.angle_dx[numpy.newaxis,numpy.newaxis,:]
         angle_dx = numpy.tile(angle_dx,(nt,nk,1,1))
         x_rot = varout_x*numpy.cos(angle_dx) - varout_y*numpy.sin(angle_dx)
-        y_rot = varout_y*numpy.cos(angle_dx) + varout_x*numpy.sin(angle_dx)        
+        y_rot = varout_y*numpy.cos(angle_dx) + varout_x*numpy.sin(angle_dx)
     else:
         varout=numpy.zeros((nt,nk,nj,ni))
 
@@ -3270,7 +3279,7 @@ class state(object):
             hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin.T,lon_out.T,lat_out.T,varout.T,False,0,missing,verbose)
         elif method == 'bilinear':
             hinterp.hinterp_mod.hinterp(lon_in.T,lat_in.T,varin.T,lon_out.T,lat_out.T,varout.T,False,1,missing,verbose)
-            
+
     if PrevState is not None:
       S=PrevState
     else:
@@ -3289,26 +3298,26 @@ class state(object):
         var_dict_x['xax_data']=target.lonh
         var_dict_x['yax_data']=target.lath
         var_dict_y['xax_data']=target.lonh
-        var_dict_y['yax_data']=target.lath        
+        var_dict_y['yax_data']=target.lath
 
         if var_dict_x['z_interfaces'] is not None:
             if var_dict_x['z_interfaces'].ndim == 4:
                 zi=var_dict_x['z_interfaces'][0,:,0,0]
             elif var_dict_x['z_interfaces'].ndim == 3:
                 zi=var_dict_x['z_interfaces'][:,0,0]
-        
-                
+
+
             zi=zi.reshape(len(zi),1,1)
             zi=numpy.tile(zi,(1,nj,ni))
             var_dict_x['z_interfaces']=zi
-            var_dict_y['z_interfaces']=zi            
+            var_dict_y['z_interfaces']=zi
 
-        if var_dict_x['Z'] is not None:        
+        if var_dict_x['Z'] is not None:
             if var_dict_x['z'].ndim == 4:
                 z=var_dict_x['z'][0,:,0,0]
             elif var_dict_x['z'].ndim == 3:
                 z=var_dict_x['z'][:,0,0]
-        
+
             z=z.reshape(len(z),1,1)
             z=numpy.tile(z,(1,nj,ni))
             var_dict['z']=z
@@ -3316,76 +3325,76 @@ class state(object):
             dz=dz.reshape(len(dz),1,1)
             dz=numpy.tile(dz,(1,nj,ni))
             var_dict_x['dz']=dz
-            var_dict_y['dz']=dz                
-    
-    
-    
+            var_dict_y['dz']=dz
+
+
+
         S.var_dict[field_x]=var_dict_x
         S.var_dict[field_y]=var_dict_y
 
         if S.var_dict[field_x]['masked']:
             vars(S)[field_x] = numpy.ma.masked_where(numpy.abs(varout_x - missing) < numpy.abs(missing)*1.e-3,x_rot)
-            vars(S)[field_y] = numpy.ma.masked_where(numpy.abs(varout_y - missing) < numpy.abs(missing)*1.e-3,y_rot)            
-  
+            vars(S)[field_y] = numpy.ma.masked_where(numpy.abs(varout_y - missing) < numpy.abs(missing)*1.e-3,y_rot)
+
     else:
         vars(S)[field]=varout
         S.variables[field]=field
         var_dict=self.var_dict[field].copy()
         var_dict['X']=str(var_dict['X']);var_dict['Y']=str(var_dict['Y'])
         var_dict['xax_data']=target.lonh
-        var_dict['yax_data']=target.lath        
+        var_dict['yax_data']=target.lath
 
         if var_dict['z_interfaces'] is not None:
             if var_dict['z_interfaces'].ndim == 4:
                 zi=var_dict['z_interfaces'][0,:,0,0]
             elif var_dict['z_interfaces'].ndim == 3:
                 zi=var_dict['z_interfaces'][:,0,0]
-        
-                
+
+
             zi=zi.reshape(len(zi),1,1)
             zi=numpy.tile(zi,(1,nj,ni))
             var_dict['z_interfaces']=zi
 
-        if var_dict['Z'] is not None:        
+        if var_dict['Z'] is not None:
             if var_dict['z'].ndim == 4:
                 z=var_dict['Z'][0,:,0,0]
-                dz=var_dict['dz'][0,:,0,0]                
+                dz=var_dict['dz'][0,:,0,0]
             elif var_dict['z'].ndim == 3:
                 z=var_dict['z'][:,0,0]
-                dz=var_dict['dz'][:,0,0]                                
+                dz=var_dict['dz'][:,0,0]
             elif var_dict['z'].ndim == 1:
                 z=var_dict['z'][:]
                 try:
                     dz=var_dict['dz'][:]
                 except:
                     dz=numpy.ones(z.shape)
-                
+
             z=z.reshape(len(z),1,1)
             z=numpy.tile(z,(1,nj,ni))
             var_dict['z']=z
 
             dz=dz.reshape(len(dz),1,1)
             dz=numpy.tile(dz,(1,nj,ni))
-            var_dict['dz']=dz    
-    
-    
-    
+            var_dict['dz']=dz
+
+
+
         S.var_dict[field]=var_dict
         S.interfaces=None
 
         if S.var_dict[field]['masked']:
             vars(S)[field] = numpy.ma.masked_where(numpy.abs(varout - missing) < numpy.abs(missing)*1.e-3,varout)
 
-            
+
     print 'Memory usage hinterp (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    
+
     return S
 
   def subtile(self,field=None,target=None,debug=0):
 
       """
-      Use corner on target grid and centroids on source grid 
-      to find the source grid indices which fall within the 
+      Use corner on target grid and centroids on source grid
+      to find the source grid indices which fall within the
       target cell boundary defined by the corners.
 
       Calculate mean, max and min of source grid points on the current list.
@@ -3398,24 +3407,24 @@ class state(object):
       The grid roughness, std = J**0.5.
 
       Refer to horiz_interp or make_xgrid for conservative interpolation.
-      
+
       X===Source grid centers
       O===Target grid corners
-            
+
               n-w X     X    X     X     X       X n-e
-                        
+
                        O----------------------O
                        |                      |
-                  X    |X    X     X     X    |  X 
+                  X    |X    X     X     X    |  X
                        |                      |
                        |                      |
                        |                      |
                        O----------------------O
                   X     X    X     X     X       X
               s-w                                  s-e
-      
+
                        """
-      
+
       from scipy import optimize
 
       def linfit2d(x,y,z):
@@ -3428,11 +3437,11 @@ class state(object):
  """
           a_init = [0.0,0.0,0.0]
 
-    
+
           fitfunc = lambda a, x, y: a[0] + a[1]*x + a[2]*y
 
           ff= fitfunc(a_init,x,y)
-    
+
           errfunc = lambda a, x, y, z: z - fitfunc(a,x,y)
 
           err_res= errfunc(a_init,x,y,z)
@@ -3442,8 +3451,8 @@ class state(object):
           a_final=out[0]
 
           return a_final
-      
-      try:      
+
+      try:
           from mpl_toolkits.basemap import interp as Interp
       except:
           print """ need mpl_toolkits.basemap for this function """
@@ -3464,15 +3473,15 @@ class state(object):
                  subtile does not work between cartesian grids and lat-lon grids
                     """
               return None
-          
-      
+
+
       if self.grid.is_latlon:
           deg_to_rad=numpy.pi/180.
       else:
           deg_to_rad=1.0
 
       add_np=False
-      add_sp=False    
+      add_sp=False
 
       missing=-1.e20
 
@@ -3481,14 +3490,14 @@ class state(object):
           if numpy.logical_or(shape_in[0]>1,shape_in[1]>1):
               print "subtile is currently only written to handle lat-lon arrays without a time or vertical dimension"
               return None
-          
+
       nj_in = self.grid.lath.shape[0]; ni_in = self.grid.lonh.shape[0]
 
       if hasattr(self.grid,'lonh'):
           lon_in=self.grid.lonh.copy()
           lat_in=self.grid.lath.copy()
           lon_edge_in=self.grid.lonq.copy()
-          lat_edge_in=self.grid.latq.copy()          
+          lat_edge_in=self.grid.latq.copy()
       else:
           print """ Unable to read grid cell locations on input grid"""
           return None
@@ -3508,10 +3517,10 @@ class state(object):
       if target_type < 0 :
           print 'unknown target grid type '
           raise
-      
+
       if target.is_latlon is True:
           lon_out[lon_out<lon_edge_in[0]]=lon_out[lon_out<lon_edge_in[0]]+360.0
-          lon_out[lon_out>lon_edge_in[-1]]=lon_out[lon_out>lon_edge_in[-1]]-360.0      
+          lon_out[lon_out>lon_edge_in[-1]]=lon_out[lon_out>lon_edge_in[-1]]-360.0
 
       i_indices = numpy.arange(0,ni_in) #.astype(int)
       i_indices = i_indices[numpy.newaxis,:]
@@ -3521,10 +3530,10 @@ class state(object):
       j_indices = numpy.tile(j_indices,(1,ni_in))
 
       x_out = Interp(i_indices,lon_in,lat_in,lon_out,lat_out)
-      y_out = Interp(j_indices,lon_in,lat_in,lon_out,lat_out)      
+      y_out = Interp(j_indices,lon_in,lat_in,lon_out,lat_out)
 
       iwest = numpy.floor(x_out).astype(int)
-      jsouth = numpy.floor(y_out).astype(int)      
+      jsouth = numpy.floor(y_out).astype(int)
 
       if field is None:
           return x_out, y_out
@@ -3532,15 +3541,15 @@ class state(object):
           data_in = numpy.ma.masked_invalid(sq(vars(self)[field]))
           ieast = numpy.roll(iwest,shift=-1,axis=1) # Left face of cell to the coordinate east
           jnorth = numpy.roll(jsouth,shift=-1,axis=0)
-          
+
           meanval = numpy.ma.zeros((nj,ni))
           maxval  = numpy.ma.zeros((nj,ni))
           minval  = numpy.ma.zeros((nj,ni))
           std     = numpy.ma.zeros((nj,ni))
-          count     = numpy.zeros((nj,ni)).astype(int)          
+          count     = numpy.zeros((nj,ni)).astype(int)
 
-          
-          
+
+
           for j in numpy.arange(0,nj):
               for i in numpy.arange(0,ni):
                   j_list=numpy.arange(jsouth[j,i],jnorth[j,i]+1)
@@ -3559,7 +3568,7 @@ class state(object):
                           else:
                               i1=ieast[j,i];i2=iwest[j,i]
                               i_list = numpy.arange(i1,i2+1)
-#                              i_list = numpy.concatenate((numpy.arange(i2,ni_in),numpy.arange(0,i1+1)))                              
+#                              i_list = numpy.concatenate((numpy.arange(i2,ni_in),numpy.arange(0,i1+1)))
                       else:
                           if target.cyclic_x and ieast[j,i]==0:
                               i_list=numpy.arange(iwest[j,i],ni_in)
@@ -3571,7 +3580,7 @@ class state(object):
                           print 'i_list count=',len(i_list)
                           print 'i_list = ',i_list
 
-                          
+
                   i_arr,j_arr = numpy.meshgrid(i_list,j_list)
                   if len(i_arr) > 1:
                       i_arr=i_arr.flatten()
@@ -3606,18 +3615,18 @@ class state(object):
           meanval=numpy.ma.masked_where(meanval==missing,meanval)
           maxval=numpy.ma.masked_where(maxval==missing,maxval)
           minval=numpy.ma.masked_where(minval==missing,minval)
-          std=numpy.ma.masked_where(std==missing,std)  
+          std=numpy.ma.masked_where(std==missing,std)
 
 
-          
+
           S = state(grid=target)
           var_dict=self.var_dict[field].copy()
           S.variables={}
-          
+
           var_dict['_Fillvalue']=missing
           var_dict['Z'] = None
-          var_dict['T'] = None          
-          
+          var_dict['T'] = None
+
           if hasattr(target,'lonh'):
               var_dict['xax_data']=target.lonh
               var_dict['yax_data']=target.lath
@@ -3628,32 +3637,32 @@ class state(object):
               var_dict['xax_data']=xnew
               ynew = target.grid_y.copy()
               ynew = 0.5*(ynew+numpy.roll(ynew,shift=-1))
-              ynew = numpy.take(ynew,numpy.arange(0,nj))              
+              ynew = numpy.take(ynew,numpy.arange(0,nj))
               var_dict['yax_data']=ynew
 
           S.mean=meanval[numpy.newaxis,numpy.newaxis,:,:]
           S.var_dict['mean']=var_dict.copy()
-          S.variables['mean']='mean'          
+          S.variables['mean']='mean'
           S.max=maxval[numpy.newaxis,numpy.newaxis,:,:]
           S.var_dict['max']=var_dict.copy()
-          S.variables['max']='max'          
+          S.variables['max']='max'
           S.min=minval[numpy.newaxis,numpy.newaxis,:,:]
           S.var_dict['min']=var_dict.copy()
-          S.variables['min']='min'                    
+          S.variables['min']='min'
           S.count=count[numpy.newaxis,numpy.newaxis,:,:]
           S.var_dict['count']=var_dict.copy()
-          S.variables['count']='count'                              
+          S.variables['count']='count'
           S.std=std[numpy.newaxis,numpy.newaxis,:,:]
           S.var_dict['std']=var_dict.copy()
-          S.variables['std']='std'                                        
+          S.variables['std']='std'
 
 
           return S
 
 
-     
+
   def pickle_it(self,file):
-    
+
     pickle.dump(self,open(file,'wb'))
 
     return None
@@ -3678,12 +3687,12 @@ class state(object):
                   sout=sout[numpy.newaxis,:]
       else:
           return None
-      
+
       return sout
 
   def uncompress_field(self,arr,field=None):
 
-      
+
       if field is None:
           return None
 
@@ -3703,7 +3712,7 @@ class state(object):
 # (field) and store this along with principal
 
       normalize = 1
-      
+
 
       if field is None:
           return None
@@ -3716,9 +3725,9 @@ class state(object):
       if normalize == 1:
           v=numpy.max(numpy.var(arr,axis=0))
           arr=arr/v
-          
+
       arr=arr-arr.mean(axis=0)
-      
+
 
 
       if nt < nv:
@@ -3727,11 +3736,11 @@ class state(object):
 
           cov=numpy.zeros((nt,nt))
 
-# Compute upper part of time covariance matrix          
+# Compute upper part of time covariance matrix
           for n in numpy.arange(0,nt):
               for m in numpy.arange(n,nt):
                   cov[m,n]=arr[n,:].dot(arr[m,:])/(nv-1.0)
-              
+
           w,efunct=numpy.linalg.eigh(cov,UPLO='L')
 
           arg_sort = w.argsort()
@@ -3739,7 +3748,7 @@ class state(object):
           w=w[arg_sort]
           efunct=efunct[:,arg_sort]
 
-              
+
           w=w[::-1]
           efunct=efunct[:,::-1]
 
@@ -3754,10 +3763,10 @@ class state(object):
           for n in numpy.arange(0,rank):
               cvv=cvv+fcv[n]
               print 'evec#=',n,' ; % ',fcv[n], ' cum % ',cvv
-              if cvv > cutoff_percentage: 
+              if cvv > cutoff_percentage:
                   rank_cutoff=n
                   break
-              
+
           cv=numpy.cumsum(fcv)
 
           for n in numpy.arange(0,rank_cutoff):
@@ -3765,23 +3774,23 @@ class state(object):
 
           for n in numpy.arange(1,rank_cutoff):
               print 'efunct.dot (0,',n,') = ', efunct[:,0].dot(efunct[:,n])
-          
+
 
           efunc=numpy.zeros((nv,rank_cutoff))
 
           for j in numpy.arange(0,rank_cutoff):
               for i in numpy.arange(0,nv):
-                  efunc[i,j]=arr[:,i].dot(efunct[:,j]) 
+                  efunc[i,j]=arr[:,i].dot(efunct[:,j])
 
           for n in numpy.arange(1,rank_cutoff):
               print 'efunc.dot (0,',n,') = ', efunc[:,0].dot(efunc[:,n])
-                  
+
       else:
           cov=numpy.zeros((nv,nv))
           for n in numpy.arange(0,nv):
               for m in numpy.arange(n,nv):
                   cov[m,n]=arr[:,n].dot(arr[:,m])/(nt-1.0)
-              
+
           w,efunc=numpy.linalg.eigh(cov,UPLO='L')
 
           arg_sort = w.argsort()
@@ -3789,7 +3798,7 @@ class state(object):
           w=w[arg_sort]
           efunc=efunc[:,arg_sort]
 
-              
+
           w=w[::-1]
           efunc=efunc[:,::-1]
 
@@ -3803,7 +3812,7 @@ class state(object):
           for n in numpy.arange(0,rank):
               cvv=cvv+fcv[n]
               print 'eigenvector=',n,' ; % ',fcv[n], ' cumulative % ',cvv
-              if cvv > cutoff_percentage: 
+              if cvv > cutoff_percentage:
                   rank_cutoff=n
                   break
 
@@ -3817,7 +3826,7 @@ class state(object):
 
 ####
 
-              
+
       for n in numpy.arange(0,rank_cutoff):
           norm=numpy.sqrt(efunc[:,n].dot(efunc[:,n]))
           if norm > epsln:
@@ -3838,16 +3847,16 @@ class state(object):
           rnorm = 1.0/max(norm,epsln)
           pc[:,n]=pc[:,n]*rnorm # normalized
           efunc[:,n]=efunc[:,n]*norm*v # data units
-              
+
       for n in numpy.arange(1,rank_cutoff):
           print 'pc.dot (0,',n,') = ', pc[:,0].dot(pc[:,n])
-              
+
       expression='self.'+field+'[0,0,:]'+'*0.0'
       nam=field+'_evec'
 
       var_dict=self.var_dict[field].copy()
 
-      
+
       # eigenvectors of fields with a vertical
       # extent are not CURRENTLY calculated with
       # appropriate depth-weighting. [TO DO]
@@ -3862,7 +3871,7 @@ class state(object):
 
 
 
-      
+
       self.create_field(expression,nam,var_dict=var_dict)
 
       vars(self)[nam]=numpy.tile(vars(self)[nam],(1,rank_cutoff,1,1))
@@ -3872,7 +3881,7 @@ class state(object):
       self.uncompress_field(efunc[:,0:rank_cutoff].T,field=nam)
 
       cond=nam+'==0.0'
-  
+
       self.mask_where(field=nam,condition=cond)
 
       pc_dict=self.var_dict[field].copy()
@@ -3885,23 +3894,23 @@ class state(object):
       pc_dict['z_interfaces']=None
       pc_dict['zax_data']=numpy.arange(0,rank_cutoff)
 
-      
+
       expression='self.'+field+'[:,0,0,0]*0.0'
       nam=field+'_pc'
 
       self.create_field(expression,nam,var_dict=pc_dict)
 
       vars(self)[nam]=numpy.tile(vars(self)[nam],(1,rank_cutoff,1,1))
-      
-      vars(self)[nam]=pc
-              
 
-              
-              
+      vars(self)[nam]=pc
+
+
+
+
   def sfc_buoyancy_production(self,sst=None, sss=None,heat_flux=None,fw_flux=None,salt_flux=None,p_ref=0.0,rho_bounds=None):
 
       import remap_sfc_fluxes
-      
+
       rho0 = 1.e3
       Irho0 = 1.0/rho0
       cp=3989.0
@@ -3911,7 +3920,7 @@ class state(object):
 
 
       ny=vars(self)[sst].shape[2]
-      
+
       SST=self.compress_field(sst)
       SSS=self.compress_field(sss)
 
@@ -3920,12 +3929,12 @@ class state(object):
       AREA=numpy.ma.masked_where(sq(vars(self)[sst][0,0,:].mask),AREA)
       LAT=numpy.ma.masked_where(sq(vars(self)[sst][0,0,:].mask),LAT)
       AREA = numpy.ma.compressed(AREA)
-      LAT = numpy.ma.compressed(LAT)      
-    
+      LAT = numpy.ma.compressed(LAT)
+
       nt=SST.shape[0];nv=SST.shape[1]
       p_ref=numpy.reshape(p_ref,(1,1))
       P_REF=numpy.tile(p_ref,(nt,nv))
-      rho = wright_eos(SST,SSS,P_REF)    
+      rho = wright_eos(SST,SSS,P_REF)
       drho_dT = alpha_wright_eos(SST,SSS,P_REF)
       drho_dT = -Irho0*drho_dT
       drho_dS = Irho0*beta_wright_eos(SST,SSS,P_REF)
@@ -3941,27 +3950,27 @@ class state(object):
       dR=numpy.zeros((nrho))
       IdR=numpy.zeros((nrho))
       R=numpy.zeros((nrho))
-      
+
       for k in numpy.arange(0,nrho):
           dR[k]=rho_bounds[k+1]-rho_bounds[k]
           R[k]=rho_bounds[k]+0.5*dR[k]
           IdR[k]=1.0/dR[k]
-          
+
       bf_heat_d = numpy.zeros((nt,nrho,ny))
       bf_fw_d = numpy.zeros((nt,nrho,ny))
       tmp_arr = numpy.zeros((nt,nrho))
-      tmp_arr2 = numpy.zeros((nt,nrho))            
+      tmp_arr2 = numpy.zeros((nt,nrho))
 
       area_mask=numpy.zeros(LAT.shape)
 
       for j_indx in numpy.arange(0,ny):
           area_mask=AREA.copy()
-          area_mask[LAT<self.grid.latq[j_indx]]=0.0          
+          area_mask[LAT<self.grid.latq[j_indx]]=0.0
           for n in numpy.arange(0,nt):
               remap_sfc_fluxes.remap_sfc_fluxes.remap(bf_heat[n,:]*area_mask[:],rho[n,:],rho_bounds,tmp_arr[n,:])
               remap_sfc_fluxes.remap_sfc_fluxes.remap(bf_fw[n,:]*area_mask[:],rho[n,:],rho_bounds,tmp_arr2[n,:])
           bf_heat_d[:,:,j_indx]=tmp_arr[:,:].copy()
-          bf_fw_d[:,:,j_indx]=tmp_arr2[:,:].copy()  
+          bf_fw_d[:,:,j_indx]=tmp_arr2[:,:].copy()
 
       for k in numpy.arange(0,nrho):
           bf_heat_d[:,k,:]=bf_heat_d[:,k,:]*Igrav*IdR[k]
@@ -3973,7 +3982,7 @@ class state(object):
       self.uncompress_field(bf_heat,field='thermal_buoyancy_flux')
       self.add_field_from_array(vars(self)[heat_flux],'fw_buoyancy_flux',var_dict=vdict)
       self.uncompress_field(bf_fw,field='fw_buoyancy_flux')
-      vdict['units']='m3 s-1'      
+      vdict['units']='m3 s-1'
       vdict['X']=None
       vdict['Z']='potential_density'
       vdict['zax_data']=R
@@ -3982,22 +3991,22 @@ class state(object):
       vdict['Zdir']=-1
       vdict['Ztype']='Fixed'
       self.add_field_from_array(bf_heat_d,'thermal_buoyancy_flux_d',var_dict=vdict)
-      self.add_field_from_array(bf_fw_d,'fw_buoyancy_flux_d',var_dict=vdict)            
-      
+      self.add_field_from_array(bf_fw_d,'fw_buoyancy_flux_d',var_dict=vdict)
+
       return None
 
 
   def write_nc(self,filename=None,fields=None,format='NETCDF3_CLASSIC',append=False,write_interface_positions=False,verbose=False):
 
-    import os.path      
+    import os.path
     """
 
-    Write (fields) to an NetCDF file. 
+    Write (fields) to an NetCDF file.
 
     """
     if verbose:
         print 'Memory usage write_nc(pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    
+
     if fields is None:
       return None
 
@@ -4008,7 +4017,7 @@ class state(object):
     dims=[]
     vars=[]
 
-    
+
     if append == True:
         if os.path.exists(filename):
             if verbose:
@@ -4022,12 +4031,12 @@ class state(object):
             for v in varlist:
                 vars.append(str(v))
         else:
-            f=netCDF4.Dataset(filename,'w',format=format)            
+            f=netCDF4.Dataset(filename,'w',format=format)
     else:
         f=netCDF4.Dataset(filename,'w',format=format)
-        
+
     write_interfaces=False
-    
+
     if file_exists == True:
         outv=[]
         for field in fields:
@@ -4063,8 +4072,8 @@ class state(object):
                    if tunits_out[0:3]=='day':
                        tdat_.append(t + t_delta.days)
                    if tunits_out[0:3]=='hou':
-                       tdat_.append(t + t_delta.days * 24.)                                                                     
-                   
+                       tdat_.append(t + t_delta.days * 24.)
+
                tdat=tdat_
 
 #               print "adjusted time stamps = ",tdat
@@ -4084,7 +4093,7 @@ class state(object):
                     self.interfaces=ifield
                     self.var_dict[ifield]={}
                     self.var_dict[ifield]['Z']='interfaces'
-                        
+
                 zi=self.var_dict[field]['z_interfaces'][:]
                 ziax=self.var_dict[field]['zbax_data'][:]
 
@@ -4093,10 +4102,10 @@ class state(object):
                     if v == 'eta':
                         outv.append(f.variables[v])
 
-                
+
         nt=len(tdat)
         tstart=len(tv[:])
-    else:    
+    else:
         for field in fields:
             dim_nam=str(self.var_dict[field]['T'])
             if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
@@ -4111,12 +4120,12 @@ class state(object):
                 tv=f.createVariable(dim_nam,'f8',(dim_nam,))
                 if self.var_dict[field].has_key('tunits'):
                     tv.units= self.var_dict[field]['tunits']
-                if self.var_dict[field].has_key('calendar'):              
+                if self.var_dict[field].has_key('calendar'):
                     tv.calendar= self.var_dict[field]['calendar']
 
                 nt=len(tdat)
                 tstart = 0
-                tv.cartesian_axis = 'T'          
+                tv.cartesian_axis = 'T'
             dim_nam=str(self.var_dict[field]['Z'])
             if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
                 dims.append(dim_nam)
@@ -4149,7 +4158,7 @@ class state(object):
                                 write_interfaces = True
                             elif self.var_dict[field]['Ztype'] in ['Generalized','Isopycnal']:
                                 write_interfaces = True
-                            
+
                 if write_interfaces == True:
                     if self.interfaces is not None:
                         ifield=self.interfaces
@@ -4158,7 +4167,7 @@ class state(object):
                         self.interfaces=ifield
                         self.var_dict[ifield]={}
                         self.var_dict[ifield]['Z']='interfaces'
-                        
+
                     zi=self.var_dict[field]['z_interfaces'][:]
                     ziax=self.var_dict[field]['zbax_data'][:]
 
@@ -4171,7 +4180,7 @@ class state(object):
                 xv.units =   self.var_dict[field]['yunits']
                 xv[:]=xdat
                 xv.cartesian_axis='Y'
-                
+
             dim_nam=str(self.var_dict[field]['X'])
             if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
                 dims.append(dim_nam)
@@ -4182,7 +4191,7 @@ class state(object):
                 xv[:]=xdat
                 xv.cartesian_axis='X'
             vars.append(field)
-    
+
         outv=[]
         n=0
 
@@ -4194,11 +4203,11 @@ class state(object):
             if self.var_dict[self.interfaces].has_key('zunits'):
                 xv.units =   self.var_dict[self.interfaces]['zunits']
             xv.cartesian_axis = 'Z'
-            if self.var_dict[self.interfaces].has_key('Zdir'):            
+            if self.var_dict[self.interfaces].has_key('Zdir'):
                 xv.orientation = self.var_dict[self.interfaces]['Zdir']
             xv[:]=ziax
 
-      
+
         for field in fields:
             dims=[]
             if self.var_dict[field]['T'] is not None:
@@ -4219,24 +4228,24 @@ class state(object):
                 var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
 
             elif self.var_dict[field]['_FillValue'] is not None :
-                FillValue = self.var_dict[field]['_FillValue']                
+                FillValue = self.var_dict[field]['_FillValue']
                 var=f.createVariable(field,'f4',dimensions=dims,fill_value=FillValue)
             elif self.var_dict[field]['missing_value'] is not None :
-                MissingValue = self.var_dict[field]['missing_value']                
-                var=f.createVariable(field,'f4',dimensions=dims,fill_value=MissingValue)                      
+                MissingValue = self.var_dict[field]['missing_value']
+                var=f.createVariable(field,'f4',dimensions=dims,fill_value=MissingValue)
             else:
                 var=f.createVariable(field,'f4',dimensions=dims)
 
-                
+
             if self.var_dict[field]['missing_value'] is not None:
                 var.missing_value = self.var_dict[field]['missing_value']
 
             if 'longname' in self.var_dict[field].keys():
                 var.longname = self.var_dict[field]['longname']
-          
+
             if 'units' in self.var_dict[field].keys():
                 var.units = self.var_dict[field]['units']
-          
+
             outv.append(var)
 
 
@@ -4244,22 +4253,22 @@ class state(object):
             dims=[]
             for field in fields:
                 if  self.var_dict[field]['stagger'] is '00' and self.var_dict[field]['Z'] is not None:
-                    self.var_dict[ifield]['T']=self.var_dict[field]['T']                    
+                    self.var_dict[ifield]['T']=self.var_dict[field]['T']
                     self.var_dict[ifield]['X']=self.var_dict[field]['X']
                     self.var_dict[ifield]['Y']=self.var_dict[field]['Y']
                     self.var_dict[ifield]['Zdir']=self.var_dict[field]['Zdir']
                     if zi.ndim == 4:
                         self.var_dict[ifield]['Ztype']='Generalized'
                     else:
-                        self.var_dict[ifield]['Ztype']='Fixed'                        
-                    self.var_dict[ifield]['units']=self.var_dict[field]['zunits']                    
+                        self.var_dict[ifield]['Ztype']='Fixed'
+                    self.var_dict[ifield]['units']=self.var_dict[field]['zunits']
                     break
-            
-                    
+
+
             if  self.var_dict[ifield]['Ztype'] != 'Fixed':
                 dims.append(str(self.var_dict[ifield]['T']))
             if self.var_dict[ifield]['Z'] is not None:
-                dims.append('interfaces')        
+                dims.append('interfaces')
             if self.var_dict[ifield]['Y'] is not None:
                 dims.append(str(self.var_dict[ifield]['Y']))
             if self.var_dict[ifield]['X'] is not None:
@@ -4268,8 +4277,8 @@ class state(object):
             if FillValue is None:
                 FillValue=-1.e34
 
-            
-            var=f.createVariable('eta','f4',dims,fill_value=FillValue)                
+
+            var=f.createVariable('eta','f4',dims,fill_value=FillValue)
             outv.append(var)
 
         m=0
@@ -4297,18 +4306,18 @@ class state(object):
                     outv[-1][n,:]=sq(zi[n-tstart,:])
 
                 tv[n]=tdat[n-tstart]
-                p=p+1                
+                p=p+1
         m=m+1
 
 
-            
-    
+
+
     f.sync()
     f.close()
 
     if verbose:
         print 'Memory usage write_nc(post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    
+
   def fill_nearest(self,field):
 
       """
@@ -4321,7 +4330,7 @@ class state(object):
 
       nz = vars(self)[field].shape[1]
       missing = self.var_dict[field]['missing_value']
-      
+
 
       tmp_km = vars(self)[field][:,0,:].copy()
       for k in numpy.arange(1,nz):
@@ -4331,9 +4340,9 @@ class state(object):
           tmp_km=tmp
 
       return
-  
+
   def calculate_bias(self,path=None,varin=None,varout=None,monthly_clim=False,ann_clim=False):
-      
+
       """
       Read a field from path/varin and calculate bias statistics
       with respect to varout
@@ -4347,7 +4356,7 @@ class state(object):
       grid_obs = quadmesh(path,var=varin)
       O=state(path,grid=grid_obs,fields=[varin],default_calendar='noleap')
 
-      
+
       if ~O.var_dict[varin].has_key('Ztype'):
           O.var_dict[varin]['Ztype'] = 'Fixed'
 
@@ -4361,11 +4370,11 @@ class state(object):
           O.time_avg(varin,vol_weight=True)
           var = varin+'_tav'
           O.del_field(varin)
-          O.rename_field(var,varin)          
-          Obs=O.horiz_interp(varin,target=self.grid,src_modulo=True)          
+          O.rename_field(var,varin)
+          Obs=O.horiz_interp(varin,target=self.grid,src_modulo=True)
       else:
           Obs=O.horiz_interp(varin,target=self.grid,src_modulo=True)
-          
+
       self.obs = {}
       self.obs[varin]=Obs
 
@@ -4374,10 +4383,10 @@ class state(object):
       return
 
 
-  
+
   def add_figure(self,name,commands):
     """
-    
+
     Add (commands) to write figures from self
 
     """
@@ -4385,13 +4394,13 @@ class state(object):
     try:
       self.fig_dict[name] = commands
     except:
-      
+
       self.fig_dict={}
       self.fig_dict[name] = commands
-      
 
-      
-      
+
+
+
   def __getstate__(self):
 
     dict = self.__dict__.copy()
@@ -4407,7 +4416,7 @@ class state(object):
       except:
         pass
     del dict['variables']
-      
+
     return dict
 
   def __setstate__(self,dict):
@@ -4417,12 +4426,12 @@ class state(object):
 #      dict['rootgrp']=netCDF4.MFDataset(dict['path'])
 #    else:
 #      dict['rootgrp']=netCDF4.Dataset(dict['path'])
-      
+
     dict['variables'] = {}
-    
+
     for v in dict['var_dict'].keys():
       dict['variables'][v] = v
-      
+
     self.__dict__.update(dict)
 
 if __name__ == "__main__":
