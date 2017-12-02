@@ -10,8 +10,8 @@ install:
  - hash -r
  - conda config --add channels conda-forge
  - conda install f90wrap
- - git clone https://github.com/angus-g/mom6-coordinate.git
- - (cd mom6-coordinate;git submodule init;git submodule update;cd remapping;./build.sh)
+# - git clone https://github.com/angus-g/mom6-coordinate.git
+# - (cd mom6-coordinate;git submodule init;git submodule update;cd remapping;./build.sh)
  - conda config --set always_yes yes --set changeps1 no
  - conda config --add channels matthewharrison
  - conda config --add channels ioos
