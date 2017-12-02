@@ -39,11 +39,14 @@ requirements:
     - scipy 0.17.0
     - basemap 1.0.7
     - dateutil 2.4.1
+    - esmf 7.0.0
+    - esmpy 7.0.0
+
 test:
   imports:
     - midas.rectgrid
-#    - fms_hinterp
-#    - vertmap_ALE
+    - fms_hinterp
+    - vertmap_ALE
   commands:
     - echo "Testing from the meta.yaml"
     - echo "This is Windows" # [win]
