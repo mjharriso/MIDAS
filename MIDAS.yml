@@ -13,5 +13,5 @@ dependencies:
 - netcdf4=1.2.7
 - dateutil=2.4.1
 - jupyter
-- midas=1.2.2
-- glib=2.43.0
+- midas=1.2.3
+

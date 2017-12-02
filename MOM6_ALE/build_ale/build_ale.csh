@@ -2,8 +2,8 @@
 
 set workdir = $cwd
 set root = $cwd:h:h
-#set platform = linux
-set platform = gfdl_hpcs
+set platform = linux
+#set platform = gfdl_hpcs
 
 set maledir=$root/MOM6_ALE/src
 
@@ -30,7 +30,7 @@ endif
 \rm path_names*
 $LISTPATHS $maledir
 
-$MKMF -m Makefile -a $workdir  -t $mkmfTemplate -p libale.a -c "$cppDefs"  path_names 
+$MKMF -m Makefile -a $workdir  -t $mkmfTemplate -p libale.a -c "$cppDefs"  path_names
 
 make DEBUG=1 libale.a
 
