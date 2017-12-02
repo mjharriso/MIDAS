@@ -19,7 +19,7 @@ source:
 requirements:
   build:
     - python 2.7.11
-    - libnetcdf 4.4.1
+    - libnetcdf 4.4.0
     - libgfortran 3.0.0
     - libnetcdff 4.4.4
     - hdf5 1.8.17
@@ -28,7 +28,7 @@ requirements:
     - numpy 1.10.4
   run:
     - python 2.7.11
-    - libnetcdf 4.4.1
+    - libnetcdf 4.4.0
     - libnetcdff 4.4.4
     - libgfortran 3.0.0
     - hdf4 4.2.12

@@ -2,7 +2,7 @@ name: MIDAS
 dependencies:
 - python=2.7.11
 - libgfortran=3.0.0
-- libnetcdf=4.4.1
+- libnetcdf=4.4.0
 - libnetcdff=4.4.4
 - basemap=1.0.7
 - hdf4=4.2.12
