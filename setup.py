@@ -46,7 +46,7 @@ vertmap_ALE = Extension(name = 'vertmap_ALE',
 if __name__ == '__main__':
     from numpy.distutils.core import setup
     setup(name = "midas",
-          version = '1.2.3',
+          version = '1.2.3_glib2.12',
           description = doclines[0],
           long_description = "\n".join(doclines[2:]),
           author = "Matthew Harrison",
