@@ -26,6 +26,7 @@ requirements:
     - hdf4 4.2.12
     - jpeg 9b
     - numpy 1.10.4
+    - glibc 2.17
   run:
     - python 2.7.11
     - libnetcdf 4.4.1
@@ -39,6 +40,7 @@ requirements:
     - scipy 0.17.0
     - basemap 1.0.7
     - dateutil 2.4.1
+    - glibc 2.17
 test:
   imports:
     - midas.rectgrid

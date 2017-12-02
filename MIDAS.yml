@@ -14,4 +14,4 @@ dependencies:
 - dateutil=2.4.1
 - jupyter
 - midas=1.2.3
-
+- glibc=2.17
