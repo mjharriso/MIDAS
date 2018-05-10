@@ -1113,13 +1113,14 @@ class state(object):
                print 'z_indices and z_bounds incompatible'
                raise()
 
+
            if z_indices is not None:
                if numpy.isscalar(z_indices):
                    z_indices=numpy.array([z_indices,z_indices+1])
 
                nz = len(z_indices)
            else:
-               nz = len(f.variables[var_dict['Z']][:])
+               nz = len(f.variables[var_dict['Z']])
                if nz<=1:
                    z_indices=numpy.arange(0,1)
                else:
@@ -1127,24 +1128,35 @@ class state(object):
 
 
            var_dict['zax_data']= f.variables[var_dict['Z']][z_indices]
-
+           zb_indices=numpy.concatenate((z_indices,numpy.asarray([z_indices[-1]+1])))
+#           print var_dict['zax_data']
+#           print z_indices
            zdat=f.variables[var_dict['Z']][z_indices]
            if len(zdat) > 1:
                zint=numpy.hstack((1.5*zdat[0]-0.5*zdat[1],0.5*(zdat[0:-1]+zdat[1:])))
                zint=numpy.hstack((zint,zint[-1]+zdat[-1]-zdat[-2]))
+#               var_dict['zbax_data']=zint[z_indices]
                var_dict['zbax_data']=zint
            else:
                var_dict['zbax_data']=None
 
            if var_dict['Zb'] is not None:
 
-               var_dict['zbax_data'] = f.variables[var_dict['Zb']][:]
+#               var_dict['zbax_data'] = f.variables[var_dict['Zb']][zb_indices]
+#               print 'in vdict_init--: ',var_dict['zbax_data']
+#               z_interfaces = numpy.concatenate((z_indices,numpy.asarray([z_indices[-1]+1])))
+#               var_dict['zbax_data']=var_dict['zbax_data'][z_indices]
 
+#               var_dict['zbax_data'][z_indices]=var_dict['zbax_data'][z_indices]
                if var_dict['Ztype'] is 'Fixed':
                    if f.variables[var_dict['Zb']].ndim == 2:
                        zb_last = f.variables[var_dict['Zb']][-1,1]
-                       var_dict['zbax_data']=var_dict['zbax_data'][:,0]
+#                       print var_dict['zbax_data'].shape
+#                       print var_dict['zbax_data']
+                       var_dict['zbax_data']=var_dict['zbax_data'][:]
                        var_dict['zbax_data'] = numpy.hstack((var_dict['zbax_data'],[zb_last]))
+                       var_dict['zbax_data'] = var_dict['zbax_data'][zb_indices]
+#                       print 'in vdict_init----: ',var_dict['zbax_data']
                else:
                    zdat=var_dict['zax_data']
                    if len(zdat) > 1:
@@ -1154,15 +1166,15 @@ class state(object):
                    else:
                        var_dict['zbax_data']=None
 
-               z_interfaces=numpy.arange(0,nz+1)
-               var_dict['zbax_data']=var_dict['zbax_data'][z_interfaces]
+#               z_interfaces=numpy.arange(0,nz+1)
+#               var_dict['zbax_data']=var_dict['zbax_data'][z_interfaces]
 
            else:
                z_interfaces = None
 
 
            var_dict['z_indices']=z_indices
-           var_dict['zb_indices']=z_interfaces
+#           var_dict['zb_indices']=
 
 
       if self.grid is not None:
@@ -1283,25 +1295,24 @@ class state(object):
            var_dict['z_interfaces']  = var_dict['Zdir']*numpy.tile(tmp,(1,ny,nx))
            tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
            var_dict['z'] = tmp[0:-1,:,:]
-           var_dict['dz'] = (var_dict['z_interfaces'] - numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
+           var_dict['dz'] = var_dict['Zdir']*(numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1)-var_dict['z_interfaces'])
            var_dict['dz'] = var_dict['dz'][0:-1,:,:]
-
+#           print 'Z_init, dz min,max= ',var_dict['dz'].min(),var_dict['dz'].max()
+#           print 'Z_init, z min,max= ',var_dict['z'].min(),var_dict['z'].max()
+#           print 'Z_init, Zdir= ',var_dict['Zdir']
        if var_dict['Z'] is not None and var_dict['Ztype'] is 'Fixed' and self.interfaces is not None:
            var_dict['z_interfaces']  = vars(self)[self.interfaces]
-
            tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
            var_dict['z'] = tmp[0:-1,:,:]
-
-           var_dict['dz'] = (var_dict['z_interfaces'] - numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1))
+           var_dict['dz'] = var_dict['Zdir']*(numpy.roll(var_dict['z_interfaces'],axis=0,shift=-1)-var_dict['z_interfaces'])
            var_dict['dz'] = var_dict['dz'][0:-1,:,:]
-
        if var_dict['Z'] is not None and var_dict['Ztype'] is 'Generalized' and self.interfaces is not None:
            var_dict['z_interfaces']  = vars(self)[self.interfaces]
-
            tmp = 0.5*(var_dict['z_interfaces']+numpy.roll(var_dict['z_interfaces'],axis=1,shift=-1))
            var_dict['z'] = tmp[:,0:-1,:,:]
-           var_dict['dz'] = (var_dict['z_interfaces'] - numpy.roll(var_dict['z_interfaces'],axis=1,shift=-1))
+           var_dict['dz'] = var_dict['Zdir']*(numpy.roll(var_dict['z_interfaces'],axis=1,shift=-1)-var_dict['z_interfaces'])
            var_dict['dz'] = var_dict['dz'][:,0:-1,:,:]
+
 
 
   def add_field(self,field,path=None,MFpath=None,use_interfaces=False,verbose=True,memstats=False,z_indices=None):
@@ -2701,7 +2712,6 @@ class state(object):
 
     try:
         import vertmap_ALE
-#        from remapping import mom_remapping
     except:
         print """ ALE/vertmap not installed """
         return
@@ -2771,34 +2781,34 @@ class state(object):
 
 
             if self.var_dict[fld]['Ztype'] in ['Isopycnal','Generalized','Sigma']:
-                xb1 = self.var_dict[fld]['z_interfaces'][n,:]
+                xb1 = vdict['Zdir']*self.var_dict[fld]['z_interfaces'][n,:]
             else:
-                xb1 = self.var_dict[fld]['z_interfaces'][:]
+                xb1 = vdict['Zdir']*self.var_dict[fld]['z_interfaces'][:]
 
             if ztype == 'Fixed':
                 xb2=z_bounds
             else:
-#                xb2=numpy.take(z_bounds,[n],axis=0)
                 xb2 = z_bounds[n,:]
 
             nx1=xb1.shape[0]-1
-#            xb2=sq(xb2)
-
-            print xb1.shape
-            print xb2.shape
-
-            xb1[0,:,:]=xb2[0,:,:] # reset top interface to xb1[0]
             for k in numpy.arange(1,xb1.shape[0]):
-                xb1[k,:,:]=numpy.minimum(xb1[k-1,:,:]-1.e-9,xb1[k,:,:]) # avoid zero thicknesses
-            xb1[-1,:]=numpy.minimum(xb1[-1,:],xb2[-1,:]-1.e-9)
-#            xb2[0,:,:]=xb1[0,:,:] # reset top interface to xb1[0]
-#            for k in numpy.arange(1,xb2.shape[0]):
-#                xb2[k,:,:]=numpy.minimum(xb2[k-1,:,:]-1.e-9,xb2[k,:,:]) # avoid zero thicknesses
+                xb1[k,:,:]=numpy.maximum(xb1[k-1,:,:]+1.e-9,xb1[k,:,:]) # avoid zero thicknesses
 
 
-            h2=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=0)-xb2)
+
+            if xb2.min()<0:
+                xb2=-xb2
+            xb2[0,:,:]=xb1[0,:,:] # reset top and bottom interfaces of target to source
+            xb2[-1,:]=xb1[-1,:]
+            for k in numpy.arange(xb2.shape[0]-2,0,-1):
+                xb2[k,:,:]=numpy.minimum(xb2[k+1,:,:],xb2[k,:,:]) # avoid negative thicknesses
+
+            h2=(numpy.roll(xb2,shift=-1,axis=0)-xb2)
             h2=h2[:-1,:]
 
+#            bi=numpy.where(h2)
+#            print bi
+#            print h2.min()
 
             if ztype == 'Fixed':
                 vdict['z_interfaces'][:]=xb2
@@ -2818,41 +2828,29 @@ class state(object):
             vdict['missing_value']=missing_value
             data=numpy.ma.filled(data,missing_value)
 
+            if ztype == 'Fixed':
+                dz=(numpy.roll(xb2,shift=-1,axis=0)-xb2)
+                dz=dz[:-1,:]
+            else:
+                dz=(numpy.roll(xb2,shift=-1,axis=1)-xb2)
+                dz=dz[:,:-1,:]
+
+            mask=dz.copy()
+            mask[mask>1.e-3]=1.0
+            mask[mask<=1.e-3]=0.0
             data=sq(data).T
             data2=data2.T
-            xb1= -xb1.T
-            xb2= -sq(xb2).T
-
-            h1=np.roll(xb1,shift=-1)-xb1
-            h1=h1[:-1]
-            h2=np.roll(xb2,shift=-1)-xb2
-            h2=h2[:-1]
-
-            imethod=0
-            for meth,imeth in zip(['plm','ppm_h4','ppm_ih4','pqm_ih4_ih3','pqm_ih6_ih5'],[1,2,3,4,5]):
-                if method == meth:
-                    imethod = imeth
-
+            xb1= xb1.T
+            xb2= sq(xb2).T
             if memstats:
                 print 'Memory usage vertmap_ALE (pre): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             vertmap_ALE.pyale_mod.remap(data,data2,xb1,xb2,method,bndy_extrapolation=bndy_extrapolation,missing=missing_value)
             if memstats:
                 print 'Memory usage vertmap_ALE (post): %s (kb)' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
             data2=data2.T
-            xb2=-xb2.T
-
-            if ztype == 'Fixed':
-                dz=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=0)-xb2)
-                dz=dz[:-1,:]
-            else:
-                dz=vdict['Zdir']*(numpy.roll(xb2,shift=-1,axis=1)-xb2)
-                dz=dz[:,:-1,:]
-
-            mask=dz.copy()
-            mask[mask>1.e-9]=1.0
-            mask[mask<=1.e-9]=0.0
-
-            data2=numpy.ma.masked_where(mask==0.0,data2)
+            data2[dz<1.e-3]=missing_value
+            data2=numpy.ma.masked_inside(data2,missing_value-0.001*missing_value,missing_value+0.001*missing_value)
             data2=numpy.ma.filled(data2,vdict['missing_value'])
             fld_out[n,:]=data2
 
