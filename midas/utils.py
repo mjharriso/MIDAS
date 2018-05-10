@@ -43,7 +43,7 @@ def image_from_array(arr):
   try:
     from PIL import Image
   except:
-    print "PIL is not installed."
+    print("PIL is not installed.")
     return None
 
   arr_min=numpy.min(arr)
@@ -66,7 +66,7 @@ def array_from_image(img,flipud=False):
   try:
     from PIL import Image
   except:
-    print "PIL is not installed."
+    print("PIL is not installed.")
     return None
  
   from scipy.misc import fromimage
@@ -268,7 +268,7 @@ def find_date_bounds(dates_in,tmin,tmax):
 
 
   if DEBUG == 1:
-      print tmin,tmax,dates[ts],dates[te],ts,te
+      print(tmin,tmax,dates[ts],dates[te],ts,te)
   
   return ts,te
 

@@ -1,4 +1,5 @@
 from midas.rectgrid import *
+from midas.profiles import *
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,7 +21,6 @@ plt.grid()
 plt.xlabel('Longitude')
 plt.ylabel('Latitude')
 zplt=S.var_dict['t_an']['zax_data'][0]
-print zplt
 tit='ANN Temperature from NODC WOA09 at Z= %(zplt)s  meters '%{'zplt':zplt}
 plt.title(tit,fontsize=8)
 

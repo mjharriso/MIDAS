@@ -32,7 +32,7 @@ class supergrid(object):
       >>> x=numpy.arange(0.,360.);y=numpy.arange(-90.,90.);X,Y=numpy.meshgrid(x,y)
       >>> sgrid=supergrid(xdat=X,ydat=Y)
       >>> hash=hashlib.md5(sgrid.x)
-      >>> print hash.hexdigest()
+      >>> print(hash.hexdigest())
       0960e0376d9b5639f4b78ed7b5518c25
 
 
@@ -113,13 +113,9 @@ class supergrid(object):
 
           if displace_pole:
             r,phi = self.displaced_pole(r0_pole,lon0_pole,excluded_fraction=doughnut)
-            print 'phi.shape=',phi.shape
-            print 'r.shape=',r.shape
             self.x=phi.copy()
-#            self.x[:-1,-1]=self.x[:-1,-1]+360.
             self.y=r.copy()
             self.grid_x = self.x[-1,:]
-#            self.grid_x[-1]=self.grid_x[-1]+360.0
             self.grid_y=self.y[:,nxtot/4]
             vdict['nxtot']=self.grid_x.shape[0]-1
             vdict['nytot']=self.grid_y.shape[0]-1
@@ -147,7 +143,7 @@ class supergrid(object):
 
         else:
 
-          print """ Both xdat,ydat need to be defined if one is"""
+          print('Both xdat,ydat need to be defined if one is')
           return None
 
       vdict={}
@@ -217,12 +213,9 @@ class supergrid(object):
         self.y=lat
       if displace_pole:
         r,phi = self.displaced_pole(r0_pole,lon0_pole,excluded_fraction=doughnut)
-        print 'phi.shape=',phi.shape
-        print 'r.shape=',r.shape
         self.x=phi.copy()
         self.y=r.copy()
         self.grid_x = self.x[-1,:]
- #       self.grid_x[-1]=self.grid_x[-1]+360.0
         self.grid_y=self.y[:,nxtot/4]
 
       self.dict['nxtot']=self.grid_x.shape[0]-1
@@ -239,7 +232,7 @@ class supergrid(object):
     >>> sgrid=supergrid(360,180,'mercator','degrees',-60.,120.,0.,360.)
     >>> dydj=sgrid.dy_dj(0.)
     >>> hash=hashlib.md5(dydj)
-    >>> print hash.hexdigest()
+    >>> print(hash.hexdigest())
     bb119dc580e9847bc3ef6ca9237b5f0d
 
     """
@@ -263,7 +256,7 @@ class supergrid(object):
     >>> sgrid=supergrid(360,180,'mercator','degrees',-60.,120.,0.,360.)
     >>> dsdj=sgrid.ds_dj(0.)
     >>> hash=hashlib.md5(dsdj)
-    >>> print hash.hexdigest()
+    >>> print(hash.hexdigest())
     ea1fe561e2aeb7cec82520ef7c5e2ed2
 
 
@@ -282,11 +275,11 @@ class supergrid(object):
     >>> sgrid=supergrid(360,180,'mercator','degrees',-60.,120.,0.,360.)
     >>> dxdi=sgrid.dx_di(0.);dxdi=numpy.asarray(dxdi)
     >>> hash=hashlib.md5(dxdi)
-    >>> print hash.hexdigest()
+    >>> print(hash.hexdigest())
     bb119dc580e9847bc3ef6ca9237b5f0d
     >>> dsdi=sgrid.ds_di(0.,0.);dsdi=numpy.asarray(dsdi)
     >>> hash=hashlib.md5(dsdi)
-    >>> print hash.hexdigest()
+    >>> print(hash.hexdigest())
     ea1fe561e2aeb7cec82520ef7c5e2ed2
 
 
@@ -389,8 +382,7 @@ class supergrid(object):
       fnbot=self.Int_dj_dy(ybot) - fnval
 
       if numpy.logical_and(itt > 50,fnbot>0.0):
-        print """
-              Unable to find bottom bound for grid function"""
+        print('Unable to find bottom bound for grid function')
         raise
 
     if y+2.0*self.dy_dj(y) < 0.5*(y+ymax):
@@ -409,8 +401,7 @@ class supergrid(object):
       fntop=self.Int_dj_dy(ytop)-fnval
 
       if numpy.logical_and(itt>50,fntop<0.0):
-        print """
-              Unable to find top bound for grid function"""
+        print('Unable to find top bound for grid function')
         raise
 
     for itt in numpy.arange(10):
@@ -501,7 +492,7 @@ class supergrid(object):
     >>> import hashlib
     >>> sgrid=supergrid(360,30,'spherical','degrees',-90.,30.,0.,360.)
     >>> r,phi = sgrid.displaced_pole(0.25,180.)
-    >>> print numpy.sum(r),numpy.max(r),numpy.min(r)
+    >>> print(numpy.sum(r),numpy.max(r),numpy.min(r))
     -833161.400782 -60.0 -89.4690265487
 
 
@@ -512,22 +503,22 @@ class supergrid(object):
       radius = 90.+self.grid_y[-1]
       r=(90.0+self.y)/radius
       if verbose:
-        print 'ending latitude = ',self.grid_y[-1]
+        print('ending latitude = ',self.grid_y[-1])
     else:  # Did not test this option yet (probably does not work)
       radius = 90.-self.grid_y[0]
       r=(90.0-self.y)/radius
       if verbose:
-        print 'ending latitude = ',self.grid_y[0]
+        print('ending latitude = ',self.grid_y[0])
 
     ra=ra2
 
     if verbose:
-      print 'applying a conformal remapping of the pole, original  radius = ',radius, ' degrees'
-      print 'displaced pole location (relative to unit sphere) = ',ra
-      print 'displaced pole angle ( clockwise degrees relative to Greenwich) = ', -phia+180.
+      print('applying a conformal remapping of the pole, original  radius = ',radius, ' degrees')
+      print('displaced pole location (relative to unit sphere) = ',ra)
+      print('displaced pole angle ( clockwise degrees relative to Greenwich) = ', -phia+180.)
 
       if excluded_fraction is not None:
-        print 'excluding inner ',excluded_fraction*100.,' percent of the grid'
+        print('excluding inner ',excluded_fraction*100.,' percent of the grid')
 
     a=numpy.complex(ra2*numpy.cos(PI_180*-phia),ra2*numpy.sin(PI_180*-phia))
 
@@ -662,8 +653,8 @@ class supergrid(object):
 
 
     if verbose:
-      print 'Truncating grid at latitudes= ',y_bnds[0],y_bnds[1]
-      print 'Truncating grid at y indices= ',y0,y1
+      print('Truncating grid at latitudes= ',y_bnds[0],y_bnds[1])
+      print('Truncating grid at y indices= ',y0,y1)
 
 
 
@@ -747,7 +738,7 @@ class supergrid(object):
     quadrangles.
     """
     if  self.dict['axis_units'] != 'degrees':
-      print 'WARNING: This method is not appropriate for cartesian grids. Aborting.'
+      print('WARNING: This method is not appropriate for cartesian grids. Aborting.')
       return
 
     def angle_p1p2(p1, p2):
@@ -810,7 +801,7 @@ class supergrid(object):
     if field in f.variables:
       self.mask = f.variables[field][:]
     else:
-      print ' Field ',field,' is not present in file ',path
+      print(' Field ',field,' is not present in file ',path)
       return None
 
 
@@ -823,7 +814,7 @@ class supergrid(object):
       grid=copy.copy(self)
       return grid
     else:
-      print """Supergrid extraction not supported yet """
+      print('Supergrid extraction not supported yet')
       return None
 
   def write_nc(self,fnam=None,format='NETCDF3_CLASSIC'):

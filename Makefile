@@ -4,6 +4,6 @@ all: MIDAS
 
 MIDAS: 
 	-rm -rf build/*
-	python setup.py install --home=$(INSTALL_PATH)
+	python setup_no_fort.py install --home=$(INSTALL_PATH)
 
 
