@@ -18,7 +18,7 @@ source:
 
 requirements:
   build:
-    - python 3.0
+    - python 3.6
     - libnetcdf 
     - libgfortran
     - libnetcdff 
