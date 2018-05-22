@@ -18,7 +18,7 @@ source:
 
 requirements:
   build:
-    - python 3.6
+    - python >=3.0
     - libnetcdf 
     - libgfortran
     - libnetcdff 
@@ -28,7 +28,7 @@ requirements:
     - numpy
     - netcdf4 
   run:
-    - python 3.0
+    - python >=3.0
     - libnetcdf 
     - libnetcdff
     - libgfortran
@@ -40,8 +40,6 @@ requirements:
     - scipy
     - basemap
     - dateutil
-    - esmf 
-    - esmpy
 
 test:
   imports:

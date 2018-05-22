@@ -84,7 +84,9 @@ contains
               else if (method == 2) then
                   xax_in=lon_in(:,1)
                   yax_in=lat_in(1,:)
-                  call horiz_interp_new(Interp(k),xax_in,yax_in,lon_out,lat_out,interp_method="bicubic")
+                  print *,'Invalid interpolation method passed to hinterp: ',method
+                  return
+!                  call horiz_interp_new(Interp(k),xax_in,yax_in,lon_out,lat_out,interp_method="bicubic")
               else
                   print *,'Invalid interpolation method passed to hinterp: ',method
                   return

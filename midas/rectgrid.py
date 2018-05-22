@@ -23,10 +23,10 @@ import resource as resource
 import numpy as numpy
 import netCDF4 as netCDF4
 import datetime as datetime
-from utils import *
-from rectgrid_utils import *
-from rectgrid_gen import *
-from  wright_eos import *
+from midas.utils import *
+from midas.rectgrid_utils import *
+from midas.rectgrid_gen import *
+from midas.wright_eos import *
 
 # Optional packages
 
@@ -1366,9 +1366,10 @@ class state(object):
     with associated (var_dict).
     """
 
-    cmd = string.join(['self.',name,'=',expression],sep='')
-    exec(cmd)
-
+    cmd = name.join(['=',expression],sep='')
+    ld=locals()
+    exec(cmd,globals(),ld)
+    vars(self)[name]=ld[name]
     self.variables[name]=name
 
     if var_dict is not None:
@@ -1408,9 +1409,10 @@ class state(object):
     Delete (field)
     """
 
-    f = self.rootgrp
-    cmd = string.join(['del(self.',field,')'],sep='')
-    exec(cmd)
+    del(vars(self)[field])
+#    f = self.rootgrp
+#    cmd = string.join(['del(self.',field,')'],sep='')
+#    exec(cmd)
 
     self.variables.pop(field)
     self.var_dict.pop(field)
@@ -1424,9 +1426,9 @@ class state(object):
 
     f = self.rootgrp
     cmd = string.join(['self.',field_new,'=vars(self)[\'',field,'\'].copy()'],sep='')
-
-    exec(cmd)
-
+    ld=locals()
+    exec(cmd,globals(),ld)
+    self.field_new=ld[field]
     self.variables.pop(field)
     self.variables[field_new]=field_new
     self.var_dict[field_new] = dict.copy(self.var_dict[field])
@@ -2019,10 +2021,12 @@ class state(object):
     if self.var_dict[field]['T'] is None:
       return None
 
-
-    cmd = string.join(['sout=self.',field],sep='')
-    exec(cmd)
-
+    cmd='sout=self.'+field
+    print(cmd)
+    ld=locals()
+    exec(cmd,globals(),ld)
+    sout=ld['sout']
+    print(sout.shape)
     var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
 
 

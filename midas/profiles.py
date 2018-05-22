@@ -16,7 +16,7 @@ import netCDF4 as netCDF4
 import datetime as datetime
 import copy
 from dateutil import parser
-from wright_eos import *
+from midas import wright_eos
 from numpy import squeeze as sq
 import string
 

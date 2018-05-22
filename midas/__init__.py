@@ -1,5 +1,5 @@
 """
- MIDAS (Modular Isolayer Data Analysis System)
+ MIDAS (Midas Is Data Analysis Software)
 
  matthew.harrison@noaa.gov (2011-)
 
@@ -26,12 +26,12 @@
 """
 
 
-import profiles 
-import wright_eos
-import utils
-import rectgrid
-import rectgrid_gen
-import rectgrid_utils
+from midas import profiles 
+from midas import wright_eos
+from midas import utils
+from midas import rectgrid
+from midas import rectgrid_gen
+from midas import rectgrid_utils
 
 
 

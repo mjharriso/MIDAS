@@ -2,13 +2,14 @@
 
 set workdir = $cwd
 set root = $cwd:h
-#set platform = linux
-set platform = gfdl_hpcs
+set platform = linux
+#####set platform = gfdl_hpcs
 set mkmfTemplate = $root/fms/site/$platform/mkmf.template
 set npes = 1
 
 set sharedir     = $root/fms/shared        
 set includedir   = $sharedir/{include,mosaic}
+set sysincludedir = $CONDA_PREFIX/include
 set mppincludedir   = $sharedir/mpp/include
 set MKMF         = $root/fms/bin/mkmf
 #set cppDefs      = ("-Duse_netCDF -Duse_netCDF3 -Duse_libMPI" )
@@ -30,7 +31,7 @@ egrep "shared/fms|shared/mpp|shared/horiz_interp|shared/platform|shared/constant
 
 cd $workdir
 \rm *.{o,mod}
-$MKMF -m Makefile -a $root  -t $mkmfTemplate -p libfms.a -c "$cppDefs"  $root/path_names  $includedir $mppincludedir 
+$MKMF -m Makefile -a $root  -t $mkmfTemplate -p libfms.a -c "$cppDefs"  $root/path_names  $includedir $mppincludedir $sysincludedir
 
 make NETCDF=3  libfms.a
 

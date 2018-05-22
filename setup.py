@@ -25,7 +25,7 @@ remap_sfc_fluxes = Extension(name = 'remap_sfc_fluxes',
 
 hinterp = Extension(name = 'fms_hinterp',
                 include_dirs = ['fms_build'],
-                library_dirs = ['fms_build'],
+                library_dirs = ['fms_build',"$CONDA_PREFIX/lib"],
                 libraries = ['fms','netcdf','netcdff'],
                 extra_objects = ['fms_build/*.o'],
                 sources = ['hinterp/hinterp.f90'])
@@ -46,7 +46,7 @@ vertmap_ALE = Extension(name = 'vertmap_ALE',
 if __name__ == '__main__':
     from numpy.distutils.core import setup
     setup(name = "midas",
-          version = '1.2.3_glib2.12',
+          version = '1.2.4',
           description = doclines[0],
           long_description = "\n".join(doclines[2:]),
           author = "Matthew Harrison",
