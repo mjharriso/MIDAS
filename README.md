@@ -25,45 +25,45 @@
 
 # CONDA INSTALL
 
-**download and install miniconda**
+1. Download and install miniconda
 
 ```
 (wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh;./Miniconda3-latest-Linux-x86_64.sh)
 ```
 
-_or, alternatively full Anaconda_
+or, alternatively full Anaconda
 
 ```
 (wget https://repo.anaconda.com/archive/Anaconda3-5.1.0-Linux-x86_64.sh;./Anaconda3-5.1.0-Linux-x86_64.sh)
 ```
 
-_Update your existing shell to add conda to your path_
+2. Update your existing shell to add conda to your path
 
 ```
 source ~/.bashrc
 ```
 
-_Now update conda_
+3. Now update conda
 
 ```
 conda update conda
 ```
 
-_Install libgfortran (if needed)_
+4. Install libgfortran (if needed)
 
 ```
 sudo apt-get install libgfortran-6-dev
 ```
 
-_Activate Conda and setup the default (root) environment_
+5. Activate Conda and setup the default (root) environment
 
 ```
-. activate
+source activate
 ```
 
-_For best results, build these libraries yourself - conda does not handle_
-_dependencies for linking c and c++ libraries to fortran APIs - consider yourself_
-_lucky if you can work with pre-compiled packages and associated libraries_
+5. Build zlib/hdf5/libnetcdf/libnetcdff
+
+For best results, build these libraries yourself - conda does not handle dependencies for linking c and c++ libraries to fortran APIs - consider yourself lucky if you can work with pre-compiled packages and associated libraries
 
 ```
 conda install conda-build
@@ -74,33 +74,27 @@ git clone git@github.com:MJHarrison-GFDL/conda-recipes.git
 (cd conda-recipes/libnetcdff;conda build .;conda install --use-local libnetcdff)
 ```
 
-_Optionally install with mpich2_
-_If you have root privleges_
+6. Optionally install with mpich2 if you have root privileges
 
 ```
 (sudo apt-get install libmpich2-dev)
 ```
 
-_Or else if you do not have root privleges_
+Or else if you do not have root privileges
 
 ```
 (wget http://www.mpich.org/static/downloads/3.2.1/mpich-3.2.1.tar.gz;cd Downloads;tar xvf mpich-3.2.1.tar.gz;cd mpich-?3.2.1;./configure --enable-sha\
 red --prefix=/home/$USER/anaconda3;make; make install)
 ```
 
-_missing libcomm_err.so.3 at runtime?_
 
-```
-ln -s /home/$USER/anaconda3/pkgs/krb5-1.14.6-0/lib/libcom_err.so.3 /home/$USER/anaconda3/lib/.
-```
-
-# install the netCDF4 python API
+7. install the netCDF4 python API
 
 ```
 pip install netCDF4
 ```
 
-_Setup a custom environment for MIDAS_
+8. Setup a custom environment for MIDAS
 
 ```
 git clone git@github.com:mjharriso/MIDAS.git
@@ -118,6 +112,13 @@ if you have a problem with libmkl missing:
 conda install nomkl numpy scipy scikit-learn numexpr
 conda remove mkl mkl-service
 ```
+
+missing libcomm_err.so.3 at runtime?
+
+```
+ln -s /home/$USER/anaconda3/pkgs/krb5-1.14.6-0/lib/libcom_err.so.3 /home/$USER/anaconda3/lib/.
+```
+
 
 **EXAMPLES**
 
