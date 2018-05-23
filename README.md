@@ -84,7 +84,7 @@ Or else if you do not have root privileges
 
 ```
 (wget http://www.mpich.org/static/downloads/3.2.1/mpich-3.2.1.tar.gz;cd Downloads;tar xvf mpich-3.2.1.tar.gz;cd mpich-?3.2.1;./configure --enable-sha\
-red --prefix=/home/$USER/anaconda3;make; make install)
+red --prefix=$CONDA_PREFIX;make; make install)
 ```
 
 
@@ -116,7 +116,7 @@ conda remove mkl mkl-service
 missing libcomm_err.so.3 at runtime?
 
 ```
-ln -s /home/$USER/anaconda3/pkgs/krb5-1.14.6-0/lib/libcom_err.so.3 /home/$USER/anaconda3/lib/.
+ln -s CONDA_PREFIX/pkgs/krb5-1.14.6-0/lib/libcom_err.so.3 $CONDA_PREFIX/lib/.
 ```
 
 
