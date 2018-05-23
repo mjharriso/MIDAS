@@ -16,9 +16,9 @@
      * dates (datetime); conservative re-mapping in the vertical dimension using
      MOM6/ALE developed at Princeton and NOAA/GFDL
      * spatial integration in one to three cartesian directions, e.g. 'X','XY' or 'XYZ'
-     *and temporal averaging (Datetime).
+       and temporal averaging (Datetime).
 
- MIDAS was first developed by Matthew Harrison 2011-2012 as an employee of NOAA in the
+ MIDAS was first developed by Matthew Harrison as an employee of NOAA in the
  GFDL Oceans and Sea Ice Processes Group.
 
  This work is licensed under the Creative Commons
@@ -31,10 +31,15 @@
 # CONDA INSTALL
 
 > wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-> #(cd Downloads;./Miniconda3-latest-Linux-x86_64.sh)
+
+> (cd Downloads;./Miniconda3-latest-Linux-x86_64.sh)
+
 > wget https://repo.anaconda.com/archive/Anaconda3-5.1.0-Linux-x86_64.sh
+
 > (cd Downloads;./Anaconda3-5.1.0-Linux-x86_64.sh)
+
 > source ~/.bashrc
+
 > conda update conda
 
 * Activate Conda and setup the default (root) environment
