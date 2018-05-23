@@ -100,8 +100,7 @@ pip install netCDF4
 git clone git@github.com:mjharriso/MIDAS.git
 conda create --name MIDAS
 . deactivate
-. activate MIDAS
-(cd MIDAS;git checkout dev/py36;. build.sh)
+(. activate MIDAS;cd MIDAS;git checkout dev/py36;. build.sh)
 ```
 
 **TROUBLESHOOTING**
