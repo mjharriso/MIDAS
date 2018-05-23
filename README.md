@@ -61,7 +61,7 @@ sudo apt-get install libgfortran-6-dev
 source activate
 ```
 
-5. Build zlib/hdf5/libnetcdf/libnetcdff
+6. Build zlib/hdf5/libnetcdf/libnetcdff
 
 For best results, build these libraries yourself - conda does not handle dependencies for linking c and c++ libraries to fortran APIs - consider yourself lucky if you can work with pre-compiled packages and associated libraries
 
@@ -74,7 +74,7 @@ git clone git@github.com:MJHarrison-GFDL/conda-recipes.git
 (cd conda-recipes/libnetcdff;conda build .;conda install --use-local libnetcdff)
 ```
 
-6. Optionally install with mpich2 if you have root privileges
+7. Optionally install with mpich2 if you have root privileges
 
 ```
 (sudo apt-get install libmpich2-dev)
@@ -88,13 +88,13 @@ red --prefix=/home/$USER/anaconda3;make; make install)
 ```
 
 
-7. install the netCDF4 python API
+8. install the netCDF4 python API
 
 ```
 pip install netCDF4
 ```
 
-8. Setup a custom environment for MIDAS
+9. Setup a custom environment for MIDAS
 
 ```
 git clone git@github.com:mjharriso/MIDAS.git
