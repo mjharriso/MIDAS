@@ -2,20 +2,21 @@
 
 # DESCRIPTION
 
-
  MIDAS (MIDAS Midas is Data Analysis Software)
  is a Python package primarily for processing
  gridded data stored in CF-compliant NetCDF/HDF5 format
  (http://cfconventions.org).
 
- A handful of functions have been employed as class methods.
- For example: spatial interpolation between quadrilateral meshes using
- the FMS code developed at NOAA/GFDL; temporal interpolation between calendar
- dates (datetime); conservative re-mapping in the vertical dimension using
- MOM6/ALE developed at Princeton and NOAA/GFDL; spatial
- integration in one to three cartesian directions, e.g. 'X','XY' or 'XYZ';
- and temporal averaging (Datetime).
+ A handful of functions have been added.
+ For example:
 
+     * spatial interpolation between quadrilateral meshes using
+     the FMS code developed at NOAA/GFDL
+     * temporal interpolation between calendar
+     * dates (datetime); conservative re-mapping in the vertical dimension using
+     MOM6/ALE developed at Princeton and NOAA/GFDL
+     * spatial integration in one to three cartesian directions, e.g. 'X','XY' or 'XYZ'
+     *and temporal averaging (Datetime).
 
  MIDAS was first developed by Matthew Harrison 2011-2012 as an employee of NOAA in the
  GFDL Oceans and Sea Ice Processes Group.
@@ -26,8 +27,6 @@
  http://creativecommons.org/licenses/by-nc-sa/3.0/
  or send a letter to Creative Commons, 444 Castro Street,
  Suite 900, Mountain View, California, 94041, USA.
-
-
 
 # CONDA INSTALL
 
@@ -42,10 +41,10 @@
 
 > . activate
 > sudo apt-get instal libgfortran-6-dev
-* Which version of gcc do I have? 
+* Which version of gcc do I have?
 > gcc -v
-...
-gcc version 6.3.0 20170516 (Debian 6.3.0-18+deb9u1)
+> ...
+> gcc version 6.3.0 20170516 (Debian 6.3.0-18+deb9u1)
 
 
 * For best results, build these libraries yourself - conda does not handle
@@ -63,7 +62,6 @@ gcc version 6.3.0 20170516 (Debian 6.3.0-18+deb9u1)
 
 * Optionally install with mpich2
 * If you have root privleges
-
 
 > (sudo apt-get install libmpich2-dev)
 
@@ -89,8 +87,6 @@ red --prefix=/home/$USER/anaconda3;make; make install)
 > . activate MIDAS
 > (cd MIDAS;git checkout dev/py36;. build.sh)
 
-
-
 * TROUBLESHOOTING
 
 if you have a problem with libmkl missing:
@@ -98,10 +94,7 @@ if you have a problem with libmkl missing:
 > conda install nomkl numpy scipy scikit-learn numexpr
 > conda remove mkl mkl-service
 
-
-
 * EXAMPLES
-
 
 > cd examples
 > source activate MIDAS
@@ -113,17 +106,16 @@ if you have a problem with libmkl missing:
 > 		       		  # cell average bathymetry and roughness. Example along the Eastern US
 > source deactivate
 
-
 * HOW TO OBTAIN DOCUMENTATION
 
 > ipython
->>> import midas.rectgrid as rectgrid
->>> rectgrid.[Tab]   # complete listing of methods
->>> rectgrid.quadmesh       # a generic rectangular grid description
+> import midas.rectgrid as rectgrid
+> rectgrid.[Tab]   # complete listing of methods
+> rectgrid.quadmesh       # a generic rectangular grid description
 >				    # Can be read from a file or provided as
 >				    # 2-d lat/lon position arrays.
- >>> rectgrid.state?  # Description of state instance
->>> rectgrid.state.state.[Tab] # available methods for state objects
->>> rectgrid.state.volume_integral?  # integrate scalars over the domain
+> rectgrid.state?  # Description of state instance
+> rectgrid.state.state.[Tab] # available methods for state objects
+> rectgrid.state.volume_integral?  # integrate scalars over the domain
 >				     # in 'X','Y','Z','XY' or 'XYZ'
->>> rectgrid.state?? # View the code
+> rectgrid.state?? # View the code
