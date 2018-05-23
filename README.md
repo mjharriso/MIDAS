@@ -94,13 +94,11 @@ red --prefix=$CONDA_PREFIX;make; make install)
 pip install netCDF4
 ```
 
-9. Setup a custom environment for MIDAS
+9. Install MIDAS in the root environment (libraries present)
 
 ```
 git clone git@github.com:mjharriso/MIDAS.git
-conda create --name MIDAS
-. deactivate
-(. activate MIDAS;cd MIDAS;git checkout dev/py36;. build.sh)
+(cd MIDAS;git checkout dev/py36;. build.sh)
 ```
 
 **TROUBLESHOOTING**
