@@ -146,3 +146,46 @@ rectgrid.state.volume_integral?  # integrate scalars over the domain
 				     # in 'X','Y','Z','XY' or 'XYZ'
 rectgrid.state?? # View the code
 ```
+
+**MORE INFORMATION**
+
+type
+
+```
+conda list
+```
+
+this returns your current environment which should look like this:
+
+```
+File Edit Options Buffers Tools Help
+sqlalchemy                1.2.1            py36h14c3975_0
+sqlite                    3.22.0               h1bed415_0
+statsmodels               0.8.0            py36h8533d0b_0
+sympy                     1.1.1            py36hc6d1c1c_0
+tblib                     1.3.2            py36h34cf8b6_0
+terminado                 0.8.1                    py36_1
+testpath                  0.3.1            py36h8cadb63_0
+tk                        8.6.7                hc745277_3
+toolz                     0.9.0                    py36_0
+tornado                   4.5.3                    py36_0
+traitlets                 4.3.2            py36h674d592_0
+typing                    3.6.2            py36h7da032a_0
+unicodecsv                0.14.1           py36ha668878_0
+unixodbc                  2.3.4                hc36303a_1
+urllib3                   1.22             py36hbe7ace6_0
+wcwidth                   0.1.7            py36hdf4376a_0
+webencodings              0.5.1            py36h800622e_1
+werkzeug                  0.14.1                   py36_0
+wheel                     0.30.0           py36hfd4bba0_1
+widgetsnbextension        3.1.0                    py36_0
+wrapt                     1.10.11          py36h28b7045_0
+xlrd                      1.1.0            py36h1db9f0c_1
+xlsxwriter                1.0.2            py36h3de1aca_0
+xlwt                      1.3.0            py36h7b00a1f_0
+xz                        5.2.3                h55aa19d_2
+yaml                      0.1.7                had09818_2
+zict                      0.1.3            py36h3a3bf81_0
+zlib                      1.2.11                        1    local
+
+```
