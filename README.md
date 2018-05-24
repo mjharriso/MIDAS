@@ -9,11 +9,14 @@
 
  * spatial interpolation between quadrilateral meshes
  * temporal interpolation between calendar dates (datetime)
- * conservative re-mapping in the vertical dimension using MOM6/ALE
- * spatial integration/averaging
+ * conservative re-mapping in the vertical dimension (MOM6/ALE)
+ * spatial integration/averaging with generalized horizontal/vertical coordinates
  * temporal averaging (Datetime).
 
- MIDAS was first developed by Matt Harrison as an employee of NOAA/GFDL.
+ MIDAS was first developed by Matt Harrison as an employee of NOAA/GFDL
+ and has been used for the generation of some of the realistic model configurations
+ and post-run analysis scripts (https://github.com/NOAA-GFDL/MOM6-examples.git)
+
 
  This work is licensed under the Creative Commons
  Attribution-NonCommercial-ShareAlike 3.0 Unported License.
