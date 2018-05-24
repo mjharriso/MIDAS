@@ -13,8 +13,7 @@
  * spatial integration/averaging
  * temporal averaging (Datetime).
 
- MIDAS was first developed by Matthew Harrison as an employee of NOAA in the
- GFDL Oceans and Sea Ice Processes Group.
+ MIDAS was first developed by Matt Harrison as an employee of NOAA/GFDL.
 
  This work is licensed under the Creative Commons
  Attribution-NonCommercial-ShareAlike 3.0 Unported License.
@@ -71,6 +70,10 @@ On linux platforms, simply type
 ```
 make
 ```
+
+This will take some time, since the Makefile will be downloading and compiling several large packages, like hdf5 and netcdf. Why are we compiling everything when there are pre-compiled binaries avaialble from the Anaconda cloud? Problems arise when linking c and c++ libraries to fortran APIs. There are often strict requirements for matching versions and glibc compatability which make using pre-compiled code unfeasible.
+
+For platforms with multiple users, it is recommended that the compiled libraries and Python packages be made available through a local channel.
 
 # MIDAS STEP-BY-STEP INSTALLATION
 
