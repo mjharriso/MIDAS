@@ -25,9 +25,6 @@
 
 # CONDA INSTALLATION
 
-On most Debian-based Linux platforms, gfortran libraries not not
-usually installed by default.
-
 1. Download and install Anaconda
 
 ```
