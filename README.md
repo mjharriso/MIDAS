@@ -101,7 +101,7 @@ Install MIDAS
 
 ```
 git clone git@github.com:mjharriso/MIDAS.git
-(. activate MIDAS; cd MIDAS;git checkout dev/py36;. build.sh)
+(. activate MIDAS; cd MIDAS;git checkout master;. build.sh)
 ```
 
 **TROUBLESHOOTING**
