@@ -23,15 +23,12 @@
  or send a letter to Creative Commons, 444 Castro Street,
  Suite 900, Mountain View, California, 94041, USA.
 
-# CONDA INSTALL
+# CONDA INSTALLATION
 
-1. Download and install miniconda
+On most Debian-based Linux platforms, gfortran libraries not not
+usually installed by default.
 
-```
-(wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh;./Miniconda3-latest-Linux-x86_64.sh)
-```
-
-or, alternatively full Anaconda
+1. Download and install Anaconda
 
 ```
 (wget https://repo.anaconda.com/archive/Anaconda3-5.1.0-Linux-x86_64.sh;./Anaconda3-5.1.0-Linux-x86_64.sh)
@@ -47,34 +44,16 @@ source ~/.bashrc
 
 ```
 conda update conda
+conda install conda-build
 ```
 
-4. Install libgfortran (if needed)
+4. Install gfortran development libraries (if needed)
 
 ```
 sudo apt-get install libgfortran-6-dev
 ```
 
-5. Activate Conda and setup the default (root) environment
-
-```
-source activate
-```
-
-6. Build zlib/hdf5/libnetcdf/libnetcdff
-
-For best results, build these libraries yourself - conda does not handle dependencies for linking c and c++ libraries to fortran APIs - consider yourself lucky if you can work with pre-compiled packages and associated libraries
-
-```
-conda install conda-build
-git clone git@github.com:MJHarrison-GFDL/conda-recipes.git
-(cd conda-recipes/zlib;conda build .;conda install --use-local zlib)
-(cd conda-recipes/hdf5;conda build .;conda install --use-local hdf5)
-(cd conda-recipes/libnetcdf;conda build .;conda install --use-local libnetcdf)
-(cd conda-recipes/libnetcdff;conda build .;conda install --use-local libnetcdff)
-```
-
-7. Optionally install with mpich2 if you have root privileges
+optionally install mpich2 and associated libraries
 
 ```
 (sudo apt-get install libmpich2-dev)
@@ -83,22 +62,43 @@ git clone git@github.com:MJHarrison-GFDL/conda-recipes.git
 Or else if you do not have root privileges
 
 ```
-(wget http://www.mpich.org/static/downloads/3.2.1/mpich-3.2.1.tar.gz;cd Downloads;tar xvf mpich-3.2.1.tar.gz;cd mpich-?3.2.1;./configure --enable-sha\
+(. activate;wget http://www.mpich.org/static/downloads/3.2.1/mpich-3.2.1.tar.gz;cd Downloads;tar xvf mpich-3.2.1.tar.gz;cd mpich-?3.2.1;./configure --enable-sha\
 red --prefix=$CONDA_PREFIX;make; make install)
 ```
 
 
-8. install the netCDF4 python API
+# MIDAS INSTALLATION
+
+On linux platforms, simply type
 
 ```
-pip install netCDF4
+make
 ```
 
-9. Install MIDAS in the root environment (libraries present)
+# MIDAS STEP-BY-STEP INSTALLATION
+
+For best results, build the following libraries yourself - conda does not handle dependencies for linking c and c++ libraries to fortran APIs - consider yourself lucky if you can work with pre-compiled packages and associated libraries
+
+```
+(conda create --name MIDAS)
+git clone git@github.com:MJHarrison-GFDL/conda-recipes.git
+(. activate MIDAS; cd conda-recipes/zlib;conda build .;conda install --use-local zlib)
+(. activate MIDAS; cd conda-recipes/hdf5;conda build .;conda install --use-local hdf5)
+(. activate MIDAS; cd conda-recipes/libnetcdf;conda build .;conda install --use-local libnetcdf)
+(. activate MIDAS; cd conda-recipes/libnetcdff;conda build .;conda install --use-local libnetcdff)
+```
+
+Install the netCDF4 python API
+
+```
+(. activate MIDAS;pip install netCDF4)
+```
+
+Install MIDAS
 
 ```
 git clone git@github.com:mjharriso/MIDAS.git
-(cd MIDAS;git checkout dev/py36;. build.sh)
+(. activate MIDAS; cd MIDAS;git checkout dev/py36;. build.sh)
 ```
 
 **TROUBLESHOOTING**
@@ -106,14 +106,14 @@ git clone git@github.com:mjharriso/MIDAS.git
 if you have a problem with libmkl missing:
 
 ```
-conda install nomkl numpy scipy scikit-learn numexpr
-conda remove mkl mkl-service
+(. activate MIDAS; conda install nomkl numpy scipy scikit-learn numexpr)
+(. activate MIDAS; conda remove mkl mkl-service)
 ```
 
 missing libcomm_err.so.3 at runtime?
 
 ```
-ln -s CONDA_PREFIX/pkgs/krb5-1.14.6-0/lib/libcom_err.so.3 $CONDA_PREFIX/lib/.
+(ln -s $CONDA_PREFIX/pkgs/krb5-1.14.6-0/lib/libcom_err.so.3 $CONDA_PREFIX/lib/.)
 ```
 
 
