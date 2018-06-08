@@ -14,7 +14,7 @@
  * temporal averaging (Datetime).
 
  MIDAS was first developed by Matt Harrison as an employee of NOAA/GFDL
- and has been used for the generation of some of the realistic model configurations
+ and has been used for the generation of realistic global model configurations
  and post-run analysis scripts (https://github.com/NOAA-GFDL/MOM6-examples.git)
 
 
@@ -24,6 +24,19 @@
  http://creativecommons.org/licenses/by-nc-sa/3.0/
  or send a letter to Creative Commons, 444 Castro Street,
  Suite 900, Mountain View, California, 94041, USA.
+
+# SIMPLE INSTALL (reduced functionality)
+
+If you just want the basics, and are not planning to use the remapping features, then simply type (bash)
+
+```
+INSTALL_PATH='/your/python/module/path'
+python setup_nofort.py install --prefix=$INSTALL_PATH
+
+```
+
+If you have root access and want to use default installation paths, then omit the prefix option.  If you are using conda, then the default location is specific to your current environment.
+
 
 # CONDA INSTALLATION
 
