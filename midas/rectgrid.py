@@ -969,9 +969,20 @@ class state(object):
 
            try:
              var_dict['Zb'] = getattr(f.variables[var_dict['Z']],'bounds')
+             try: # make sure bounds variable actually exists
+                 ans=f.variables[var_dict['Zb']]
+#                 print(ans)
+             except:
+                 var_dict['Zb'] = None
            except:
                try:
                    var_dict['Zb'] = getattr(f.variables[var_dict['Z']],'edges')
+                   try: # make sure bounds variable actually exists
+                       ans=f.variables[var_dict['Zb']]
+#                       print(ans)
+                   except:
+                       var_dict['Zb'] = None
+
                except:
                    var_dict['Zb'] = None
 
@@ -979,13 +990,17 @@ class state(object):
 
          if cart == 'T':
            var_dict['tax_data'] = f.variables[var_dict['T']][:]
+
+           if isinstance(var_dict['tax_data'],numpy.ma.MaskedArray):
+               var_dict['tax_data'] = numpy.ma.filled(var_dict['tax_data'],0.)
+
            try:
                var_dict['tunits'] = f.variables[var_dict['T']].units
            except:
                var_dict['tunits'] = 'none'
 
            try:
-             var_dict['calendar'] = string.lower(f.variables[var_dict['T']].calendar)
+             var_dict['calendar'] = f.variables[var_dict['T']].calendar.lower()
            except:
              if self.default_calendar is not None:
                var_dict['calendar']=self.default_calendar
@@ -1022,9 +1037,10 @@ class state(object):
                   var_dict['tbax_data'] = f.variables[Tb][:,0]
                   tb =  f.variables[Tb][:]
                   tb_last = tb[-1,1]
-                  var_dict['tbax_data'] = numpy.hstack((var_dict['tbax_data'],[tb_last]))
-
-
+                  try:
+                      var_dict['tbax_data'] = numpy.hstack((var_dict['tbax_data'],[tb_last])).compressed()
+                  except:
+                      pass
               else:
                   var_dict['tbax_data'] = f.variables[Tb][:]
 
@@ -1036,6 +1052,11 @@ class state(object):
                   var_dict['tbax_data']=tint
               else:
                   var_dict['tbax_data']=None
+
+          if isinstance(var_dict['tax_data'],numpy.ma.MaskedArray):
+              var_dict['tax_data']=numpy.ma.filled(var_dict['tax_data'],-1.)
+          if isinstance(var_dict['tbax_data'],numpy.ma.MaskedArray):
+              var_dict['tbax_data']=numpy.ma.filled(var_dict['tbax_data'],-1.)
 
 
           if var_dict['tbax_data'] is not None and var_dict['calendar'] is not None:
@@ -1288,6 +1309,18 @@ class state(object):
            var_dict['dz'] = var_dict['Zdir']*(numpy.roll(var_dict['z_interfaces'],axis=1,shift=-1)-var_dict['z_interfaces'])
            var_dict['dz'] = var_dict['dz'][:,0:-1,:,:]
 
+       # Convert from sigma coordinates if needed (using surface geopotential)
+       lname=None
+       try:
+           lname=self.rootgrp.variables[var_dict['Z']].long_name
+       except:
+           pass
+       if lname is not None:
+           if lname.find('sigma')>-1:
+               var_dict['z']=var_dict['z']*self.grid.D
+               var_dict['Zdir']=1 # sign confusion
+               var_dict['dz']=-var_dict['dz']*self.grid.D
+               var_dict['z_interfaces']=var_dict['z_interfaces']*self.grid.D
 
 
   def add_field(self,field,path=None,MFpath=None,use_interfaces=False,verbose=True,memstats=False,z_indices=None):
@@ -1308,7 +1341,7 @@ class state(object):
     t_indices=self.var_dict[str(vc)]['t_indices']
 
     if field in f.variables:
-      nam = string.join(['self',field],sep='.')
+      nam = '.'.join(['self',field])
       self.variables[field] = f.variables[field]  # netCDF4 variable object
       self.vdict_init(field,stagger='00',rootgrp=f,time_indices=t_indices,z_indices=z_indices)
       var_dict=self.var_dict[field]
@@ -1425,10 +1458,10 @@ class state(object):
     """
 
     f = self.rootgrp
-    cmd = string.join(['self.',field_new,'=vars(self)[\'',field,'\'].copy()'],sep='')
+    cmd = ''.join(['self.',field_new,'=vars(self)[\'',field,'\'].copy()'])
     ld=locals()
     exec(cmd,globals(),ld)
-    self.field_new=ld[field]
+    self.field_new=ld['field']
     self.variables.pop(field)
     self.variables[field_new]=field_new
     self.var_dict[field_new] = dict.copy(self.var_dict[field])
@@ -1446,7 +1479,11 @@ class state(object):
       return None
     else:
       cmd = 'result=self.'+condition
-      exec(cmd)
+      ld=locals()
+#    print('ld=',ld)
+      exec(cmd,globals(),ld)
+#      exec(cmd)
+      result=ld['result']
       shape_result = result.shape
       shape = vars(self)[field].shape
 
@@ -2206,7 +2243,7 @@ class state(object):
       return None
 
 
-    cmd = string.join(['sout=self.',field],sep='')
+    cmd = ''.join(['sout=self.',field])
     exec(cmd)
 
     var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
@@ -2320,7 +2357,7 @@ class state(object):
         year_ref=1
 
 
-    if self.var_dict[field].has_key('date_bounds'):
+    if 'date_bounds' in self.var_dict[field].keys():
             date_start = self.var_dict[field]['date_bounds'][0]
             date_end = self.var_dict[field]['date_bounds'][-1]
     else:
@@ -2379,7 +2416,7 @@ class state(object):
     if target is None:
         return None
 
-    cmd = string.join(['sout=self.',field],sep='')
+    cmd = ''.join(['sout=self.',field])
     exec(cmd)
 
     var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
@@ -2475,7 +2512,7 @@ class state(object):
       return None
 
 
-    cmd = string.join(['sout=self.',field],sep='')
+    cmd = ''.join(['sout=self.',field])
     exec(cmd)
 
     var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
@@ -2484,7 +2521,7 @@ class state(object):
     if clim_name not in self.var_dict.keys():
         self.monthly_avg(field,vol_weight=vol_weight)
 
-    cmd = string.join(['climout=self.',clim_name],sep='')
+    cmd = ''.join(['climout=self.',clim_name])
     exec(cmd)
 
     shape=sout.shape
@@ -2805,11 +2842,12 @@ class state(object):
 
 
 
-  def adjust_thickness(self,field=None,min_thickness=0.0,z_top=None):
+  def adjust_thickness(self,field=None,min_thickness=0.0,z_top=None,compress_only=False):
     """
 
     Adjust cell thicknesses based on grid.D
-    and optionally top interface position.
+    and optionally top interface position. If compress_only=True, then cells are only
+    adjusted if the thickness exceeds the bottom depth, otherwise, they are unmodified.
 
     """
 
@@ -2836,7 +2874,8 @@ class state(object):
             zb[zb>ztop]=ztop[zb>ztop]
             zb[zb<-D]=-D[zb<-D]
             zbot=sq(zb[-1,:])
-            zbot[zbot>-self.grid.D]=-self.grid.D[zbot>-self.grid.D]
+            if not compress_only:
+                zbot[zbot>-self.grid.D]=-self.grid.D[zbot>-self.grid.D]
             zb[-1,:]=zbot
             dz = zb[:-1]-zb[1:]
 
@@ -2851,7 +2890,10 @@ class state(object):
             zb[zb<ztop]=ztop[zb<ztop]
             zb[zb>D]=D[zb>D]
             zbot=sq(zb[-1,:])
-            zbot[zbot<self.grid.D]=self.grid.D[zbot<self.grid.D]
+            Depth=numpy.ma.filled(self.grid.D,0)
+            if not compress_only:
+                iind=numpy.where(zbot<Depth)
+                zbot[iind]=Depth[iind]
             zb[-1,:]=zbot
 
             dz = zb[1:]-zb[:-1]
@@ -2891,7 +2933,8 @@ class state(object):
             zb[zb>ztop]=ztop[zb>ztop]
             zb[zb<-D]=-D[zb<-D]
             zbot=sq(zb[0,-1,:])
-            zbot[zbot>-self.grid.D]=-self.grid.D[zbot>-self.grid.D]
+            if not compress_only:
+                zbot[zbot>-self.grid.D]=-self.grid.D[zbot>-self.grid.D]
             zb[:,-1,:]=zbot
 
             dz = zb[:,:-1]-zb[:,1:]
@@ -2907,7 +2950,8 @@ class state(object):
             zb[zb<ztop]=ztop[zb<ztop]
             zb[zb>D]=D[zb>D]
             zbot=sq(zb[0,-1,:])
-            zbot[zbot<self.grid.D]=self.grid.D[zbot<self.grid.D]
+            if not compress_only:
+                zbot[zbot<self.grid.D]=self.grid.D[zbot<self.grid.D]
             zb[:,-1,:]=zbot
 
             dz = zb[:,1:]-zb[:,:-1]
@@ -3972,7 +4016,7 @@ class state(object):
                 return
 
             dim_nam=str(self.var_dict[field]['T'])
-            if string.lower(dim_nam).count('none') == 0:
+            if dim_nam.lower().count('none') == 0:
                 tdat_=self.var_dict[field]['tax_data']
                 if numpy.isscalar(tdat_):
                     tdat=[]
@@ -4031,7 +4075,7 @@ class state(object):
     else:
         for field in fields:
             dim_nam=str(self.var_dict[field]['T'])
-            if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
+            if dim_nam not in dims and dim_nam.lower().count('none') == 0:
                 dims.append(dim_nam)
                 tdat_=self.var_dict[field]['tax_data']
                 if numpy.isscalar(tdat_):
@@ -4041,16 +4085,16 @@ class state(object):
                     tdat=tdat_
                 tdim=f.createDimension(dim_nam,None)
                 tv=f.createVariable(dim_nam,'f8',(dim_nam,))
-                if self.var_dict[field].has_key('tunits'):
+                if 'tunits' in self.var_dict[field].keys():
                     tv.units= self.var_dict[field]['tunits']
-                if self.var_dict[field].has_key('calendar'):
+                if 'calendar' in self.var_dict[field].keys():
                     tv.calendar= self.var_dict[field]['calendar']
 
                 nt=len(tdat)
                 tstart = 0
                 tv.cartesian_axis = 'T'
             dim_nam=str(self.var_dict[field]['Z'])
-            if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
+            if dim_nam not in dims and dim_nam.lower().count('none') == 0:
                 dims.append(dim_nam)
                 xdat=self.var_dict[field]['zax_data'][:]
                 xdim=f.createDimension(dim_nam,len(xdat))
@@ -4095,7 +4139,7 @@ class state(object):
                     ziax=self.var_dict[field]['zbax_data'][:]
 
             dim_nam=str(self.var_dict[field]['Y'])
-            if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
+            if dim_nam not in dims and dim_nam.lower().count('none') == 0:
                 dims.append(dim_nam)
                 xdat=self.var_dict[field]['yax_data'][:]
                 xdim=f.createDimension(dim_nam,len(xdat))
@@ -4105,7 +4149,7 @@ class state(object):
                 xv.cartesian_axis='Y'
 
             dim_nam=str(self.var_dict[field]['X'])
-            if dim_nam not in dims and string.lower(dim_nam).count('none') == 0:
+            if dim_nam not in dims and dim_nam.lower().count('none') == 0:
                 dims.append(dim_nam)
                 xdat=self.var_dict[field]['xax_data'][:]
                 xdim=f.createDimension(dim_nam,len(xdat))
@@ -4123,10 +4167,10 @@ class state(object):
             dims.append(dim_nam)
             xdim=f.createDimension(dim_nam,len(ziax))
             xv=f.createVariable(dim_nam,'f8',(dim_nam,))
-            if self.var_dict[self.interfaces].has_key('zunits'):
+            if 'zunits' in self.var_dict[self.interfaces].keys():
                 xv.units =   self.var_dict[self.interfaces]['zunits']
             xv.cartesian_axis = 'Z'
-            if self.var_dict[self.interfaces].has_key('Zdir'):
+            if 'Zdir' in self.var_dict[self.interfaces].keys():
                 xv.orientation = self.var_dict[self.interfaces]['Zdir']
             xv[:]=ziax
 
@@ -4357,4 +4401,3 @@ class state(object):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-

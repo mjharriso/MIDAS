@@ -3,7 +3,7 @@
 
  This work is licensed under the Creative Commons
  Attribution-NonCommercial-ShareAlike 3.0 Unported License.
- To view a copy of this license, visit   
+ To view a copy of this license, visit
  http://creativecommons.org/licenses/by-nc-sa/3.0/
  or send a letter to Creative Commons, 444 Castro Street,
  Suite 900, Mountain View, California, 94041, USA.
@@ -14,7 +14,7 @@
 
 import numpy
 from netCDF4 import num2date
-import  datetime 
+import  datetime
 import string
 import copy
 import types
@@ -30,7 +30,7 @@ def sq(arr):
     res=numpy.squeeze(arr)
 
     return res
-  
+
 #==============================
 # Working with Images
 #==============================
@@ -68,12 +68,12 @@ def array_from_image(img,flipud=False):
   except:
     print("PIL is not installed.")
     return None
- 
+
   from scipy.misc import fromimage
 
   if flipud:
     img=img.transpose(Image.FLIP_TOP_BOTTOM)
-    
+
   arr=fromimage(img)
 
   return arr
@@ -99,9 +99,9 @@ def unpickle(file):
   """
  Unpickle a state
   """
-    
+
   S=pickle.load(open(file,'rb'))
-  
+
   return S
 
 
@@ -115,7 +115,7 @@ def get_axis_cart(dimension,dimname=None):
  parameters, returns [X,Y,Z,T]
  **********************************************************************
 
- 
+
  """
 
 
@@ -128,13 +128,13 @@ def get_axis_cart(dimension,dimname=None):
 
   # first try to retreive the cartesian attribute
 
-  try: 
+  try:
       cart  = getattr(dimension,'cartesian_axis')
       return cart
   except:
       pass
 
-  try: 
+  try:
       cart  = getattr(dimension,'axis')
       return cart
   except:
@@ -149,39 +149,39 @@ def get_axis_cart(dimension,dimname=None):
 
   if cart not in ['X','Y','Z','T']:
       cart = None
-      
+
   if cart is None:
     try:
       ax_units = getattr(dimension,'units')
       for units in valid_t_units:
-        if string.lower(ax_units).count(units) > 0:
+        if ax_units.lower().count(units) > 0:
           cart = 'T'
       for units in valid_y_units:
-        if string.lower(ax_units).count(units) > 0:
+        if ax_units.lower().count(units) > 0:
           cart = 'Y'
       for units in valid_x_units:
-        if string.lower(ax_units).count(units) > 0:
+        if ax_units.lower().count(units) > 0:
           cart = 'X'
       for units in valid_z_units:
-        if string.lower(ax_units).count(units) > 0:
-          cart = 'Z'          
+        if ax_units.lower().count(units) > 0:
+          cart = 'Z'
     except:
        pass
 
-  
+
   if cart is None and dimname is not None:
-      if string.lower(dimname).count('latitude') >0:
+      if dimname.lower().count('latitude') >0:
           cart = 'Y'
-      if string.lower(dimname).count('longitude') >0:          
+      if dimname.lower().count('longitude') >0:
           cart = 'X'
-      if string.lower(dimname).count('time') >0:          
-          cart = 'T'          
-          
-      
+      if dimname.lower().count('time') >0:
+          cart = 'T'
+
+
   if cart == 'Z':
     try:
       orient = getattr(dimension,'positive')
-      if string.lower(orient) == 'down':
+      if orient.lower() == 'down':
         orientation = -1
       elif orient == -1:
         orientation = -1
@@ -197,13 +197,13 @@ def get_axis_direction(dimension):
 
   if len(dimension) == 1:
       return dir
-  
+
   if dimension[0] > dimension[1]:
       dir=-1
-      
+
   try:
     orient = getattr(dimension,'positive')
-    if string.lower(orient) == 'down':
+    if orient.lower() == 'down':
       dir = -1
     elif orient == -1:
       dir = -1
@@ -216,8 +216,8 @@ def get_axis_direction(dimension):
       dir = -1
   except:
     pass
-  
-  
+
+
 
   return dir
 
@@ -234,19 +234,19 @@ def instance_to_datetime(dates_in):
         d=y+d[4:]
         dates.append(datetime.datetime.strptime(str(d),fmt))
 
-        
+
 #    dates=[datetime.datetime.strptime(str(d),fmt) for d in dates_in]
 
     return dates
 
 #def instance_to_datetime(date_in):
-#    
+#
 #    mon=int(date_in.strftime()[5:7])
 #    year=numpy.maximum(int(date_in.strftime()[0:4]),1)
 #    day=int(date_in.strftime()[8:10])
 #    hr=int(date_in.strftime()[11:13])
 #    mn=int(date_in.strftime()[14:16])
-#    sec=int(date_in.strftime()[17:19])      
+#    sec=int(date_in.strftime()[17:19])
 #    date=datetime(year,mon,day,hr,mn,sec)
 
 #    return date
@@ -257,7 +257,7 @@ def find_date_bounds(dates_in,tmin,tmax):
   else:
      dates = dates_in
 
-  
+
   ts=-1;te=-1
   for i in numpy.arange(0,numpy.maximum(1,len(dates)-1)):
       if ts == -1 and tmin <= dates[i+1] and tmin >= dates[i]:
@@ -269,7 +269,7 @@ def find_date_bounds(dates_in,tmin,tmax):
 
   if DEBUG == 1:
       print(tmin,tmax,dates[ts],dates[te],ts,te)
-  
+
   return ts,te
 
 def time_interp_weights(dates_in,target_in):
@@ -294,10 +294,10 @@ def time_interp_weights(dates_in,target_in):
             target=instance_to_datetime(target_in)
         else:
             target=target_in
-            
+
     if nt > 1:
         t1=numpy.zeros(nt,dtype=numpy.int); t2=numpy.zeros(nt,dtype=numpy.int)
-        w1=numpy.zeros(nt); w2=numpy.zeros(nt)        
+        w1=numpy.zeros(nt); w2=numpy.zeros(nt)
         for i in numpy.arange(0,nt):
             t1[i],t2[i]=find_date_bounds(dates,target[i],target[i])
             date1=dates[t1[i]]
@@ -309,7 +309,7 @@ def time_interp_weights(dates_in,target_in):
             else:
                 w1[i]=1.0
             w2[i]=1.0-w1[i]
-            
+
     else:
         t1,t2=find_date_bounds(dates,target,target)
         date1=dates[t1];date2=dates[t2]
@@ -320,7 +320,7 @@ def time_interp_weights(dates_in,target_in):
         else:
             w1=1.0
         w2=1.0-w1
-        
+
     return t1,t2,w1,w2
 
 def get_months(dates_in):
@@ -343,7 +343,7 @@ def make_monthly_axis(year=1900):
         dates.append(datetime.datetime(year,i,1))
 
     dates.append(datetime.datetime(year+1,1,1))
-    
+
     for i in numpy.arange(0,12):
         delta.append((dates[i+1]-dates[i])/2)
 
@@ -351,5 +351,3 @@ def make_monthly_axis(year=1900):
         dates[i]=dates[i]+delta[i]
 
     return dates[0:12]
-        
-
