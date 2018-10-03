@@ -19,7 +19,7 @@ MIDAS:	fms_build/libfms.a MOM6_ALE/build_ale/libale.a
 
 fms_build/libfms.a:
 	(cd fms;tar xvf fms_env.tar)
-	(cd fms;git clone https://github.com/NOAA-GFDL/FMS.git shared;git checkout 34097d0)
+	(cd fms;git clone https://github.com/NOAA-GFDL/FMS.git shared;cd shared;git checkout 34097d0)
 	(cd fms_build;./build_fms.csh)
 
 MOM6_ALE/build_ale/libale.a:
