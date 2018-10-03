@@ -8,16 +8,16 @@ MIDAS: fms_build/libfms.a MOM6_ALE/build_ale/libale.a
 	--f90flags="-fcray-pointer -fdefault-real-8 \
 	-ffixed-line-length-132 -ffree-line-length-0 -DPY_SOLO" build
 	python setup.py install
-	
+
 fms_build/libfms.a:
 	(cd fms;tar xvf fms_env.tar)
-	(cd fms;git clone https://github.com/NOAA-GFDL/FMS.git shared)
+	(cd fms;git clone https://github.com/NOAA-GFDL/FMS.git shared; git checkout 34097d0)
 	(cd fms_build;cp build_fms.csh tmp;\
 	  sed -e 's/#set platform = linux/set platform = linux/' < tmp > tmp2;\
 	  sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_fms.csh;\
 	  chmod +x ./build_fms.csh;./build_fms.csh)
 
-MOM6_ALE/build_ale/libale.a: 
+MOM6_ALE/build_ale/libale.a:
 	(cd MOM6_ALE/build_ale;cp build_ale.csh tmp;\
  	  sed -e 's/#set platform = linux/set platform = linux/' < tmp > tmp2;\
 	  sed -e 's/set platform = gfdl_hpcs/#set platform = gfdl_hpcs/' < tmp2 > build_ale.csh;\
