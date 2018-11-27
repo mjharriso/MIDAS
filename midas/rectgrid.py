@@ -498,6 +498,7 @@ class quadmesh(object):
      section['y']=numpy.arange(ys,max(ye,ys+1))
      section['yax_data']= self.lath[section['y']]
 
+     section['yax_data']=numpy.asarray(section['yax_data'])
 
      if xe>=xs:
          section['x']=numpy.arange(xs,max(xe,xs+1))
@@ -521,6 +522,8 @@ class quadmesh(object):
          lonh[lonh<lon0]=lonh[lonh<lon0]+360.
 
      section['xax_data']=lonh
+
+     section['xax_data']=numpy.asarray(section['xax_data'])
 
      section['lon0']=lon0
 
@@ -885,7 +888,7 @@ class state(object):
                  ivar_dict=self.var_dict[interfaces]
 
                  slice_read = ivar_dict['slice_read']
-                 shape_read = vari_dict['shape_read']
+                 shape_read = ivar_dict['shape_read']
 
                  data_int_read = numpy.ma.masked_array(f_interfaces.variables[interfaces][slice_read])
                  data_int_read = numpy.reshape(data_int_read,(shape_read))
@@ -959,6 +962,7 @@ class state(object):
          if cart is None and dimnam == 'interfaces':  # Special case
              var_dict['Z']=f.variables[v].dimensions[n]
              var_dict['Zb']=None
+
 
          if cart == 'Z':
            var_dict['Zdir'] = get_axis_direction(dim)
@@ -1399,10 +1403,11 @@ class state(object):
     with associated (var_dict).
     """
 
-    cmd = name.join(['=',expression],sep='')
+    cmd = ''.join(['self.',name,'=',expression])
+    print(cmd)
     ld=locals()
     exec(cmd,globals(),ld)
-    vars(self)[name]=ld[name]
+#    vars(self)[name]=ld[name]
     self.variables[name]=name
 
     if var_dict is not None:
@@ -1460,6 +1465,7 @@ class state(object):
     f = self.rootgrp
     cmd = ''.join(['self.',field_new,'=vars(self)[\'',field,'\'].copy()'])
     ld=locals()
+#    print('ld=',ld)
     exec(cmd,globals(),ld)
     self.field_new=ld['field']
     self.variables.pop(field)
@@ -2244,7 +2250,13 @@ class state(object):
 
 
     cmd = ''.join(['sout=self.',field])
-    exec(cmd)
+    print(cmd)
+    ld=locals()
+    exec(cmd,globals(),ld)
+    sout=ld['sout']
+    print(sout.shape)
+
+
 
     var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
 
@@ -3672,7 +3684,9 @@ class state(object):
       if self.var_dict[field]['masked']:
           sout = numpy.zeros(vars(self)[field].shape)
           mask=numpy.ma.getmask(vars(self)[field])
-          sout[~mask]=arr
+          print('mask.shape=',mask.shape)
+          print('arr.shape=',arr.shape)
+          sout[~mask]=arr.reshape(sout.shape)
           vars(self)[field] = sout.copy()
 
       return None
@@ -4304,64 +4318,6 @@ class state(object):
           tmp_km=tmp
 
       return
-
-  def calculate_bias(self,path=None,varin=None,varout=None,monthly_clim=False,ann_clim=False):
-
-      """
-      Read a field from path/varin and calculate bias statistics
-      with respect to varout
-
-      """
-
-      if path is None or varin is None or varout is None:
-          print('path, varin and varout need to be specified')
-          return
-
-      grid_obs = quadmesh(path,var=varin)
-      O=state(path,grid=grid_obs,fields=[varin],default_calendar='noleap')
-
-
-      if ~O.var_dict[varin].has_key('Ztype'):
-          O.var_dict[varin]['Ztype'] = 'Fixed'
-
-      if monthly_clim:
-          O.monthly_avg(varin,vol_weight=True)
-          var = varin+'_monthly'
-          O.del_field(varin)
-          O.rename_field(var,varin)
-          Obs=O.horiz_interp(varin,target=self.grid)
-      elif ann_clim:
-          O.time_avg(varin,vol_weight=True)
-          var = varin+'_tav'
-          O.del_field(varin)
-          O.rename_field(var,varin)
-          Obs=O.horiz_interp(varin,target=self.grid,src_modulo=True)
-      else:
-          Obs=O.horiz_interp(varin,target=self.grid,src_modulo=True)
-
-      self.obs = {}
-      self.obs[varin]=Obs
-
-
-
-      return
-
-
-
-  def add_figure(self,name,commands):
-    """
-
-    Add (commands) to write figures from self
-
-    """
-
-    try:
-      self.fig_dict[name] = commands
-    except:
-
-      self.fig_dict={}
-      self.fig_dict[name] = commands
-
 
 
 

@@ -340,9 +340,9 @@ def get_months(dates_in):
 def make_monthly_axis(year=1900):
     dates=[];delta=[]
     for i in numpy.arange(1,13):
-        dates.append(datetime.datetime(year,i,1))
+        dates.append(datetime.datetime(int(year),i,1))
 
-    dates.append(datetime.datetime(year+1,1,1))
+    dates.append(datetime.datetime(int(year+1),1,1))
 
     for i in numpy.arange(0,12):
         delta.append((dates[i+1]-dates[i])/2)
