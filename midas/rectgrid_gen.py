@@ -436,7 +436,7 @@ class supergrid(object):
   def bp_colat(self):
 
 
-    d=mdist(self.x,self.lon_bpnp)
+    d=rectgrid_utils.mdist(self.x,self.lon_bpnp)
     phi=d*PI_180
 
 
@@ -710,8 +710,8 @@ class supergrid(object):
     ymid_i = 0.5*(self.y+numpy.roll(self.y,shift=-1,axis=1))
     dy_j = numpy.roll(self.y,shift=-1,axis=0) - self.y
     dy_i = numpy.roll(self.y,shift=-1,axis=1) - self.y
-    dx_i = mdist(numpy.roll(self.x,shift=-1,axis=1),self.x)
-    dx_j = mdist(numpy.roll(self.x,shift=-1,axis=0),self.x)
+    dx_i = rectgrid_utils.mdist(numpy.roll(self.x,shift=-1,axis=1),self.x)
+    dx_j = rectgrid_utils.mdist(numpy.roll(self.x,shift=-1,axis=0),self.x)
     self.dx = metric*metric*(dy_i*dy_i + dx_i*dx_i*numpy.cos(ymid_i*PI_180)*numpy.cos(ymid_i*PI_180))
     self.dx = numpy.sqrt(self.dx)
     self.dy = metric*metric*(dy_j*dy_j + dx_j*dx_j*numpy.cos(ymid_j*PI_180)*numpy.cos(ymid_j*PI_180))
