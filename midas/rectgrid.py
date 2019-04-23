@@ -1037,16 +1037,22 @@ class state(object):
               Tb = None
 
           if Tb is not None:
-              if f.variables[Tb].ndim == 2:
-                  var_dict['tbax_data'] = f.variables[Tb][:,0]
-                  tb =  f.variables[Tb][:]
-                  tb_last = tb[-1,1]
-                  try:
-                      var_dict['tbax_data'] = numpy.hstack((var_dict['tbax_data'],[tb_last])).compressed()
-                  except:
-                      pass
-              else:
-                  var_dict['tbax_data'] = f.variables[Tb][:]
+              try:
+                  if f.variables[Tb].ndim == 2:
+                      var_dict['tbax_data'] = f.variables[Tb][:,0]
+                      tb =  f.variables[Tb][:]
+                      tb_last = tb[-1,1]
+                      try:
+                          var_dict['tbax_data'] = numpy.hstack((var_dict['tbax_data'],[tb_last])).compressed()
+                      except:
+                          pass
+                  else:
+                      var_dict['tbax_data'] = f.variables[Tb][:]
+
+
+              except:
+                  Tb=None
+                  var_dict['tbax_data']=None
 
           else:
               tdat=var_dict['tax_data']
