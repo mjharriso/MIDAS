@@ -1640,7 +1640,7 @@ class state(object):
     """
 
     cmd = ''.join(['self.',name,'=',expression])
-    print(cmd)
+#    print(cmd)
     ld=locals()
     exec(cmd,globals(),ld)
 #    vars(self)[name]=ld[name]
@@ -2301,11 +2301,11 @@ class state(object):
       return None
 
     cmd='sout=self.'+field
-    print(cmd)
+#    print(cmd)
     ld=locals()
     exec(cmd,globals(),ld)
     sout=ld['sout']
-    print(sout.shape)
+#    print(sout.shape)
     var_dict = dict.copy(self.var_dict[field]) # inherit variable dictionary from parent
 
 
@@ -2486,11 +2486,11 @@ class state(object):
 
 
     cmd = ''.join(['sout=self.',field])
-    print(cmd)
+#    print(cmd)
     ld=locals()
     exec(cmd,globals(),ld)
     sout=ld['sout']
-    print(sout.shape)
+#    print(sout.shape)
 
 
 
@@ -3090,7 +3090,7 @@ class state(object):
 
 
 
-  def adjust_thickness(self,field=None,min_thickness=0.0,z_top=None,compress_only=False):
+  def adjust_thickness(self,field=None,min_thickness=0.0,z_top=None,z_bot=None,compress_only=False):
     """
 
     Adjust cell thicknesses based on grid.D
@@ -3107,27 +3107,32 @@ class state(object):
     if self.var_dict[field]['Ztype'] == 'Fixed':
 
         dz = self.var_dict[field]['dz']
-
         dz=numpy.ma.filled(dz,0.)
-
         nz = vars(self)[field].shape[1]
         D = numpy.tile(self.grid.D,(nz+1,1,1))
         ztop = numpy.zeros((nz+1,self.grid.jm,self.grid.im))
+        zbot = numpy.zeros((nz+1,self.grid.jm,self.grid.im))
+
         if z_top is not None:
-            ztop = z_top
-            ztop = numpy.tile(ztop,(nz+1,1,1))
+            ztop[:] = z_top
+#            ztop = numpy.tile(ztop,(nz+1,1,1))
+        if z_bot is not None:
+            zbot[:] = z_bot
+#            zbot = numpy.tile(zbot,(nz+1,1,1))
 
         if self.var_dict[field]['Zdir']==-1:
             zb=self.var_dict[field]['z_interfaces'].copy()
-            zb[zb>ztop]=ztop[zb>ztop]
+            if z_top is not None:
+                zb[zb>ztop]=ztop[zb>ztop]
+            if z_bot is not None:
+                zb[zb<-zbot]=-zbot[zb<-zbot]
             zb[zb<-D]=-D[zb<-D]
-            zbot=sq(zb[-1,:])
-            if not compress_only:
-                zbot[zbot>-self.grid.D]=-self.grid.D[zbot>-self.grid.D]
-            zb[-1,:]=zbot
+            zbot_=sq(zb[-1,:])
+            if not compress_only and z_bot is None:
+                zbot_[zbot_>-self.grid.D]=-self.grid.D[zbot_>-self.grid.D]
+            zb[-1,:]=zbot_
             dz = zb[:-1]-zb[1:]
-
-            ztop=ztop[0,:]
+            ztop=zb[0,:]
             ztop=ztop[numpy.newaxis,:]
             zb=ztop-numpy.cumsum(dz,axis=0)
             zb=numpy.concatenate((ztop,zb),axis=0)
@@ -3135,18 +3140,21 @@ class state(object):
         else:
             zb=self.var_dict[field]['z_interfaces'].copy()
             zb=numpy.ma.filled(zb,0.)
-            zb[zb<ztop]=ztop[zb<ztop]
+            if z_top is not None:
+                zb[zb<ztop]=ztop[zb<ztop]
+#            print('zb max before compress=',zb.max())
+            if z_bot is not None:
+                zb[zb>zbot]=zbot[zb>zbot]
             zb[zb>D]=D[zb>D]
-            zbot=sq(zb[-1,:])
+#            print('zb max after compress=',zb.max())
+            zbot_=sq(zb[-1,:])
             Depth=numpy.ma.filled(self.grid.D,0)
-            if not compress_only:
-                iind=numpy.where(zbot<Depth)
-                zbot[iind]=Depth[iind]
-            zb[-1,:]=zbot
-
+            if not compress_only and z_bot is None:
+                iind=numpy.where(zbot_<Depth)
+                zbot_[iind]=Depth[iind]
+                zb[-1,:]=zbot_
             dz = zb[1:]-zb[:-1]
-
-            ztop=ztop[0,:]
+            ztop=zb[0,:]
             ztop=ztop[numpy.newaxis,:]
             zb=ztop+numpy.cumsum(dz,axis=0)
             zb=numpy.concatenate((ztop,zb),axis=0)
@@ -3159,6 +3167,10 @@ class state(object):
         self.var_dict[field]['z']=z
         self.var_dict[field]['z_interfaces']=zb
     else:
+
+        if z_top is not None or z_bot is not None:
+            print('Dyaamic grid adjustment not configured yet.')
+            return None
 
         dz = self.var_dict[field]['dz']
         dz = numpy.ma.filled(dz,0.)
