@@ -1,0 +1,2 @@
+NETCDFPATH inside the mkmf.template file may need to modify as below, if installed it through conda. 
+NETCDFPATH = $(CONDA_PREFIX)
