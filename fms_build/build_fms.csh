@@ -27,7 +27,7 @@ cd $root
 $LISTPATHS $sharedir
 mv -f path_names pt_orig
 #egrep -v "atmos_ocean_fluxes|coupler_types|coupler_util|drifters|oda_tools" pt_orig > path_names
-egrep "shared/fms|shared/mpp|shared/horiz_interp|shared/platform|shared/constants|shared/memutils|shared/mosaic" pt_orig > path_names
+egrep "string_utils|shared/fms|shared/mpp|shared/horiz_interp|shared/platform|shared/constants|shared/memutils|shared/mosaic" pt_orig > path_names
 
 cd $workdir
 \rm *.{o,mod}
